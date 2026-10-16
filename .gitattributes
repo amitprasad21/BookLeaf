@@ -1,0 +1,8 @@
+# Normalise line endings so Windows and Linux checkouts produce identical diffs.
+* text=auto eol=lf
+
+# Binary assets
+*.pdf binary
+*.png binary
+*.jpg binary
+*.ico binary
