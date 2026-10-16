@@ -23,6 +23,7 @@
 | D-016 | Full blueprint documentation tree | accepted | 2026-10-16 |
 | D-017 | Hosting: Vercel ×2 + Render + Supabase cloud | proposed | 2026-10-16 |
 | D-018 | Dependency policy: exact pins, newest stable ≥ 14 days old; TypeScript 6.0.3; npm ≥ 11 | accepted | 2026-10-16 |
+| D-019 | Tooling: ESLint 9 flat config (Next rules scoped to React workspaces), Prettier for code only, Redocly OpenAPI lint, `prepare` builds shared packages | accepted | 2026-10-16 |
 
 ---
 
@@ -111,3 +112,10 @@
 - **Choice:** Pin exact versions (`.npmrc save-exact=true`, lockfile committed), choosing the newest stable release published at least 14 days before install. **TypeScript 6.0.3**, not 7.x: 7.x is the new native compiler, and staying on 6.x avoids betting on Next.js tooling compatibility during a 4-day build. Requires **npm ≥ 11** (npm 10.2.x crashes on this workspace).
 - **Approved by:** user, 2026-10-16 (exact list in [skills-and-tools.md](skills-and-tools.md)).
 - **Revisit:** Before deploy (`npm audit`); when a security advisory affects a pinned version; TypeScript 7 after the build is stable.
+- **Confirmed at SETUP-3:** typescript-eslint 8.71 supports TypeScript `< 6.1`, so TypeScript 7 would not have worked with linting either.
+
+### D-019: Lint, format and contract tooling
+- **Choice:** One root `eslint.config.mjs` (ESLint 9 flat config): `@eslint/js` + typescript-eslint everywhere; `eslint-config-next` (core-web-vitals + typescript) applied only to `author-frontend`, `admin-frontend` and `packages/ui`, plus `react/no-danger: error` (T-17). Prettier formats code and JSON/YAML/CSS only. Docs, `openapi.yaml`, the lockfile and the seed data are excluded. Redocly CLI lints `openapi.yaml` with the `recommended` ruleset. `info-license` is off (no license chosen), and two per-location exceptions with reasons are in `.redocly.lint-ignore.yaml`. A root `prepare` script builds `packages/shared` and `packages/ui` on every install, so fresh clones and hosting builds typecheck.
+- **ESLint 9, not 10:** `eslint-plugin-react` (inside `eslint-config-next`) supports ESLint `≤ ^9.7`. npm marks 9.39.5 as no longer supported. Accepted because ESLint is a dev-only tool that never ships to users.
+- **Approved by:** user, 2026-10-16.
+- **Revisit:** When `eslint-config-next` supports ESLint 10; add type-aware lint rules once real code exists.

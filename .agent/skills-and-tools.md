@@ -43,4 +43,6 @@ Policy (D-018): exact pins, the newest stable release at least 14 days old at in
 | `backend` | express 5.2.1, zod 4.6.5, @supabase/supabase-js 2.117.2, pino 10.4.0, pino-http 11.0.0, helmet 8.3.0, cors 2.8.6, express-rate-limit 8.7.0, swagger-ui-express 5.0.1, yaml 2.9.1 | typescript 6.0.3, tsx 4.23.15, vitest 5.0.3, supertest 7.3.1, @types/express 5.0.6, @types/cors 2.8.19, @types/supertest 7.2.1, @types/swagger-ui-express 4.1.8, @types/node 24.19.1 |
 | `author-frontend`, `admin-frontend` | next 16.3.8, react 19.3.0, react-dom 19.3.0, @supabase/supabase-js 2.117.2, @tanstack/react-query 5.104.1 | typescript 6.0.3, @types/react 19.3.0, @types/react-dom 19.3.0, @types/node 24.19.1 |
 
-Not yet installed: `@anthropic-ai/sdk` (AI-2), ESLint, Prettier and an OpenAPI linter (SETUP-3), and `@testing-library/react` (FE tasks). Each needs approval.
+| root (SETUP-3) | n/a | eslint 9.39.5, @eslint/js 9.39.5, typescript-eslint 8.71.0, eslint-config-next 16.3.8, globals 17.13.0, prettier 3.9.9, @redocly/cli 2.57.0 |
+
+Not yet installed: `@anthropic-ai/sdk` (AI-2) and `@testing-library/react` (FE tasks). Each needs approval. Transitive dependencies are not age-filtered; the lockfile pins them.

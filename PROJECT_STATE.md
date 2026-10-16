@@ -3,7 +3,7 @@
 **Owns:** the current milestone, verified facts, blockers and open questions. Update at the end of every session.
 
 **Last updated:** 2026-10-16
-**Milestone:** Phase 0 complete; SETUP-2 (workspace scaffold) complete on branch `feature/workspace-scaffold`. No features implemented yet.
+**Milestone:** Phase 0, SETUP-2 (workspace scaffold, merged to `main`) and SETUP-3 (tooling, on `feature/tooling`) complete. No features implemented yet.
 
 ## Verified facts (with evidence)
 
@@ -19,6 +19,8 @@
 | Workspace scaffold: `npm install` (npm 11.6.2) adds 206 packages; all 5 workspaces build; typecheck passes; 4 backend tests pass | [.agent/verification/2026-10-16-setup2.md](.agent/verification/2026-10-16-setup2.md) |
 | Running servers: `/api/v1/health` returns 200 with the success envelope; unknown routes return the 404 error envelope; both portals return 200 with baseline security headers | Same file |
 | The global npm 10.2.5 on PATH crashes on this workspace (npm bug); Node's bundled npm 11.6.2 works | Same file |
+| `main` fast-forwarded to the scaffold (`81446bf`) with the user's approval | `git branch -v` |
+| `npm run check` (format, lint, OpenAPI lint, typecheck, tests, build) exits 0; `openapi.yaml` is valid OpenAPI 3.1 with 18 operationIds; fresh `npm ci` rebuilds shared packages via `prepare` | [.agent/verification/2026-10-16-setup3.md](.agent/verification/2026-10-16-setup3.md) |
 
 ## Not done / not verified
 
@@ -49,4 +51,4 @@
 
 ## Next step
 
-Merge `feature/workspace-scaffold` into `main` (needs approval), then SETUP-3 (ESLint, Prettier, OpenAPI linter: an install approval is needed) and API-1 (backend skeleton: no credentials needed).
+Merge `feature/tooling` into `main` (needs approval), then API-1: the backend skeleton (request id, pino logging, CORS allowlist, error handler, Swagger UI). API-1 needs no credentials.

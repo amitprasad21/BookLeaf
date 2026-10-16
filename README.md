@@ -80,15 +80,13 @@ npm run dev:admin
 | Author portal | http://localhost:3000 |
 | Admin portal | http://localhost:3001 |
 
-Checks:
+Run every check (format, lint, OpenAPI lint, typecheck, tests, build) in one go:
 
 ```bash
-npm run typecheck
+npm run check
 ```
 
-```bash
-npm test
-```
+Or one at a time: `npm run format:check`, `npm run lint`, `npm run lint:api`, `npm run typecheck`, `npm test`, `npm run build`. `npm run format` rewrites code formatting (Markdown docs and `openapi.yaml` are excluded).
 
 Each runtime reads its own environment file. Variable names (never values) are listed in [.env.example](.env.example), and how to obtain each one is in [.agent/CREDENTIALS_GUIDE.md](.agent/CREDENTIALS_GUIDE.md).
 

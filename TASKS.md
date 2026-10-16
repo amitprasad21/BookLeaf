@@ -12,10 +12,11 @@
 | DOC-1 | Create the full blueprint documentation tree (root, `.agent/`, `.front/`, `.back/`) | none | done | All files present; relative links resolve; see [.agent/verification/2026-10-16-phase0.md](.agent/verification/2026-10-16-phase0.md) |
 | SETUP-1 | `git init`, `.gitignore`, `.gitattributes`, `.env.example`, root `GIT_WORKFLOW.md`, exact seed copy, blueprint sources under `docs/blueprint/` | none | done | `cmp` identical seed; `.env` patterns ignored; committed on `docs/initial-setup` |
 | SETUP-2 | Scaffold npm workspaces: `backend/`, `author-frontend/`, `admin-frontend/`, `packages/shared/`, `packages/ui/` | SETUP-1, install approval (given 2026-10-16) | done | Install, build, typecheck and 4 backend tests pass; live smoke of health + both portals ([.agent/verification/2026-10-16-setup2.md](.agent/verification/2026-10-16-setup2.md)) |
-| SETUP-3 | Tooling: TypeScript strict, ESLint, Prettier, Vitest, root scripts (`dev`, `build`, `test`, `typecheck`, `lint`) | SETUP-2 | todo | All scripts run green on the empty scaffold |
+| SETUP-3 | Tooling: TypeScript strict, ESLint, Prettier, Vitest, OpenAPI lint, root scripts (`dev`, `build`, `test`, `typecheck`, `lint`, `lint:api`, `format`, `check`) | SETUP-2, install approval (given 2026-10-16) | done | `npm run check` exits 0; fresh `npm ci` rebuilds shared packages and typechecks ([.agent/verification/2026-10-16-setup3.md](.agent/verification/2026-10-16-setup3.md)) |
 
 **SETUP-2 installed packages** (approved 2026-10-16; exact pins, newest release ≥ 14 days old, D-018). The versions are listed in [.agent/skills-and-tools.md](.agent/skills-and-tools.md).
-Still to add, each with approval: `@anthropic-ai/sdk` (AI-2); ESLint, Prettier and an OpenAPI linter (SETUP-3); `@testing-library/react` (FE tasks).
+SETUP-3 added the root dev tools (ESLint, Prettier, Redocly CLI) under the same policy.
+Still to add, each with approval: `@anthropic-ai/sdk` (AI-2) and `@testing-library/react` (FE tasks).
 
 ## Phase 1: Data and auth
 

@@ -2,12 +2,14 @@
 
 **Owns:** the checks a change must pass before it is called done. Area-specific cases live in [.back/TEST_PLAN.md](../.back/TEST_PLAN.md), [.front/admin/TEST_PLAN.md](../.front/admin/TEST_PLAN.md) and [.front/author/TEST_PLAN.md](../.front/author/TEST_PLAN.md).
 
-**Commands below are planned and do not exist until SETUP-3.** Record actual outputs in [verification/](verification/README.md).
+These commands exist since SETUP-3. `npm run check` runs them all in order. Record actual outputs in [verification/](verification/README.md).
 
 ## Every change
 
-- [ ] `npm run typecheck` passes
+- [ ] `npm run format:check` passes
 - [ ] `npm run lint` passes
+- [ ] `npm run lint:api` passes (if `openapi.yaml` changed)
+- [ ] `npm run typecheck` passes
 - [ ] `npm test` passes (unit + integration)
 - [ ] `npm run build` passes for affected workspaces
 - [ ] Full diff reviewed: no secrets, no `.env`, no unrelated files, no weakened checks, no deleted/skipped tests
