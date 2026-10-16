@@ -1,0 +1,9 @@
+# Justified, per-location exceptions to the OpenAPI lint rules (see redocly.yaml).
+# Each entry must say why. Remove an entry once its reason no longer holds.
+openapi.yaml:
+  # Only the local dev server is listed until the backend is deployed (task DEP-1 adds the real URL).
+  no-server-example.com:
+    - "#/servers/0/url"
+  # Public liveness check: it has no client-error case.
+  operation-4xx-response:
+    - "#/paths/~1health/get/responses"

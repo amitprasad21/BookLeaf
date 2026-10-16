@@ -11,8 +11,13 @@
     },
     "./tokens.css": "./src/tokens.css"
   },
-  "files": ["dist", "src/tokens.css"],
-  "sideEffects": ["*.css"],
+  "files": [
+    "dist",
+    "src/tokens.css"
+  ],
+  "sideEffects": [
+    "*.css"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"

@@ -1,0 +1,7 @@
+# OpenAPI lint configuration for openapi.yaml (run: npm run lint:api).
+# Individual, justified exceptions live in .redocly.lint-ignore.yaml.
+extends:
+  - recommended
+rules:
+  # No license has been chosen for this assessment repository yet.
+  info-license: off

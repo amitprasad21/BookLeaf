@@ -15,12 +15,27 @@
     "admin-frontend"
   ],
   "scripts": {
+    "prepare": "npm run build:packages",
     "build": "npm run build --workspaces --if-present",
     "build:packages": "npm run build -w @bookleaf/shared -w @bookleaf/ui",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "lint": "eslint .",
+    "lint:api": "redocly lint openapi.yaml",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run format:check && npm run lint && npm run lint:api && npm run typecheck && npm test && npm run build",
     "dev:backend": "npm run dev -w backend",
     "dev:author": "npm run dev -w author-frontend",
     "dev:admin": "npm run dev -w admin-frontend"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@redocly/cli": "2.57.0",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.3.8",
+    "globals": "17.13.0",
+    "prettier": "3.9.9",
+    "typescript-eslint": "8.71.0"
   }
 }

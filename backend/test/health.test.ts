@@ -29,6 +29,8 @@ describe("loadEnv", () => {
   });
 
   it("names the invalid variable without echoing its value", () => {
-    expect(() => loadEnv({ PORT: "not-a-port-secret-value" })).toThrow(/^Invalid environment configuration: PORT$/);
+    expect(() => loadEnv({ PORT: "not-a-port-secret-value" })).toThrow(
+      /^Invalid environment configuration: PORT$/,
+    );
   });
 });

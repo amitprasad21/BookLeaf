@@ -1,0 +1,16 @@
+# Documentation and the API contract keep their hand-written layout.
+*.md
+openapi.yaml
+docs/
+
+# Generated or locked files
+package-lock.json
+**/dist/
+**/.next/
+**/next-env.d.ts
+
+# Seed data must stay byte-identical to the provided file.
+supabase/seed/
+
+# Local tooling
+.claude/
