@@ -1,0 +1,91 @@
+/*
+ * BookLeaf design tokens (PROVISIONAL monochrome set).
+ * Source of truth: .front/DESIGN_SYSTEM.md. Change values there first, then here.
+ */
+:root {
+  color-scheme: dark;
+
+  /* Colour */
+  --color-bg: #0b0b0b;
+  --color-surface: #141414;
+  --color-surface-raised: #1c1c1c;
+  --color-surface-inverse: #f5f5f5;
+  --color-text: #f5f5f5;
+  --color-text-muted: #a3a3a3;
+  --color-text-subtle: #8a8a8a;
+  --color-text-inverse: #0b0b0b;
+  --color-border-control: #6b6b6b;
+  --color-border-strong: #a3a3a3;
+  --color-border-subtle: #2a2a2a;
+  --color-focus: #ffffff;
+  --color-disabled-text: #6b6b6b;
+
+  /* Typography */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --leading-xs: 1rem;
+  --leading-sm: 1.25rem;
+  --leading-md: 1.5rem;
+  --leading-lg: 1.75rem;
+  --leading-xl: 2rem;
+  --leading-2xl: 2.5rem;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Shape */
+  --radius-control: 4px;
+  --radius-panel: 8px;
+  --touch-target: 44px;
+
+  /* Motion */
+  --motion-fast: 150ms ease;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 100%;
+  line-height: var(--leading-md);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "bookleaf",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BookLeaf Author Support & Communication Portal (author portal, admin portal, shared REST API)",
+  "engines": {
+    "node": ">=20.9.0",
+    "npm": ">=11.0.0"
+  },
+  "workspaces": [
+    "packages/shared",
+    "packages/ui",
+    "backend",
+    "author-frontend",
+    "admin-frontend"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "build:packages": "npm run build -w @bookleaf/shared -w @bookleaf/ui",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "dev:backend": "npm run dev -w backend",
+    "dev:author": "npm run dev -w author-frontend",
+    "dev:admin": "npm run dev -w admin-frontend"
+  }
+}
