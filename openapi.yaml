@@ -16,10 +16,15 @@ servers:
     description: Local development
 tags:
   - name: System
+    description: Public liveness endpoint; carries no data.
   - name: Session
+    description: Caller profile and the real-time event stream, scoped to the authenticated user.
   - name: Author
+    description: Author-only routes. Every query is limited to the caller's own books and tickets.
   - name: Admin
+    description: Operations-team routes for the ticket queue, triage overrides, replies, notes and assignment.
   - name: Admin AI
+    description: AI draft generation and triage retries. These can return 503 AI_UNAVAILABLE; manual work always continues.
 security:
   - bearerAuth: []
 
@@ -28,6 +33,7 @@ paths:
     get:
       tags: [System]
       summary: Liveness check
+      operationId: getHealth
       security: []
       responses:
         '200':
@@ -49,6 +55,7 @@ paths:
     get:
       tags: [Session]
       summary: Current user's profile and role
+      operationId: getMe
       responses:
         '200':
           description: Profile
@@ -65,6 +72,7 @@ paths:
     get:
       tags: [Session]
       summary: Server-Sent Events stream of ticket changes scoped to the caller
+      operationId: streamEvents
       description: |
         Read with fetch streaming so the bearer token stays in the header.
         Payloads carry identifiers only; clients re-fetch via REST.
@@ -85,6 +93,7 @@ paths:
     get:
       tags: [Author]
       summary: The caller's books with royalty figures and a summary
+      operationId: listAuthorBooks
       responses:
         '200':
           description: Books and totals
@@ -109,6 +118,7 @@ paths:
     get:
       tags: [Author]
       summary: The caller's tickets, newest activity first
+      operationId: listAuthorTickets
       parameters:
         - $ref: '#/components/parameters/StatusFilter'
         - $ref: '#/components/parameters/Page'
@@ -132,6 +142,7 @@ paths:
     post:
       tags: [Author]
       summary: Create a support ticket
+      operationId: createAuthorTicket
       description: |
         The ticket is persisted before any AI processing. The response is 201
         even when AI is unavailable; triage happens asynchronously.
@@ -162,6 +173,7 @@ paths:
     get:
       tags: [Author]
       summary: One of the caller's tickets with its author-visible thread
+      operationId: getAuthorTicket
       parameters:
         - $ref: '#/components/parameters/TicketId'
       responses:
@@ -182,6 +194,7 @@ paths:
     post:
       tags: [Author]
       summary: Add a follow-up message (P2)
+      operationId: createAuthorMessage
       parameters:
         - $ref: '#/components/parameters/TicketId'
       requestBody:
@@ -209,6 +222,7 @@ paths:
     get:
       tags: [Admin]
       summary: Ticket queue across all authors
+      operationId: listAdminTickets
       parameters:
         - $ref: '#/components/parameters/StatusFilter'
         - name: category
@@ -261,6 +275,7 @@ paths:
     get:
       tags: [Admin]
       summary: Queue counts for the dashboard header
+      operationId: getAdminTicketSummary
       responses:
         '200':
           description: Counts
@@ -278,6 +293,7 @@ paths:
     get:
       tags: [Admin]
       summary: Full ticket with author context, thread, notes, AI suggestions and timeline
+      operationId: getAdminTicket
       parameters:
         - $ref: '#/components/parameters/TicketId'
       responses:
@@ -296,6 +312,7 @@ paths:
     patch:
       tags: [Admin]
       summary: Change status, override category/priority, or (un)assign yourself
+      operationId: updateAdminTicket
       parameters:
         - $ref: '#/components/parameters/TicketId'
       requestBody:
@@ -324,6 +341,7 @@ paths:
     post:
       tags: [Admin]
       summary: Send a reply to the author
+      operationId: createAdminReply
       description: |
         Creates an author-visible message. If the ticket is `open` it moves to
         `in_progress` unless `statusAfter` says otherwise. Records the first
@@ -357,6 +375,7 @@ paths:
     get:
       tags: [Admin]
       summary: Internal notes (never visible to authors)
+      operationId: listInternalNotes
       parameters:
         - $ref: '#/components/parameters/TicketId'
       responses:
@@ -377,6 +396,7 @@ paths:
     post:
       tags: [Admin]
       summary: Add an internal note
+      operationId: createInternalNote
       parameters:
         - $ref: '#/components/parameters/TicketId'
       requestBody:
@@ -403,6 +423,7 @@ paths:
     post:
       tags: [Admin AI]
       summary: Get the cached AI draft or generate a new one
+      operationId: getOrCreateDraft
       description: |
         Returns the latest valid draft when the ticket context (category,
         thread, linked book facts, prompt version) is unchanged, unless
@@ -448,6 +469,7 @@ paths:
     post:
       tags: [Admin AI]
       summary: Re-run AI triage (for tickets in manual review)
+      operationId: retryTriage
       description: Suggestions never overwrite admin overrides.
       parameters:
         - $ref: '#/components/parameters/TicketId'
@@ -464,6 +486,7 @@ paths:
     get:
       tags: [Admin AI]
       summary: Today's AI usage (P2)
+      operationId: getAiUsage
       responses:
         '200':
           description: Usage summary
