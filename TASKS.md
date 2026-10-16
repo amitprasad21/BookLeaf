@@ -11,12 +11,11 @@
 |---|---|---|---|---|
 | DOC-1 | Create the full blueprint documentation tree (root, `.agent/`, `.front/`, `.back/`) | none | done | All files present; relative links resolve; see [.agent/verification/2026-10-16-phase0.md](.agent/verification/2026-10-16-phase0.md) |
 | SETUP-1 | `git init`, `.gitignore`, `.gitattributes`, `.env.example`, root `GIT_WORKFLOW.md`, exact seed copy, blueprint sources under `docs/blueprint/` | none | done | `cmp` identical seed; `.env` patterns ignored; committed on `docs/initial-setup` |
-| SETUP-2 | Scaffold npm workspaces: `backend/`, `author-frontend/`, `admin-frontend/`, `packages/shared/`, `packages/ui/` | SETUP-1, **install approval** | blocked (B-01) | `npm install` and `npm run build` succeed for all workspaces |
+| SETUP-2 | Scaffold npm workspaces: `backend/`, `author-frontend/`, `admin-frontend/`, `packages/shared/`, `packages/ui/` | SETUP-1, install approval (given 2026-10-16) | done | Install, build, typecheck and 4 backend tests pass; live smoke of health + both portals ([.agent/verification/2026-10-16-setup2.md](.agent/verification/2026-10-16-setup2.md)) |
 | SETUP-3 | Tooling: TypeScript strict, ESLint, Prettier, Vitest, root scripts (`dev`, `build`, `test`, `typecheck`, `lint`) | SETUP-2 | todo | All scripts run green on the empty scaffold |
 
-**SETUP-2 proposed packages** (for approval, versions pinned at install):
-backend: `express`, `zod`, `@supabase/supabase-js`, `pino`, `pino-http`, `helmet`, `cors`, `express-rate-limit`, `swagger-ui-express`, `yaml`, `@anthropic-ai/sdk` (added at AI-2) · dev: `typescript`, `tsx`, `vitest`, `supertest`, `@types/*`.
-frontends: `next`, `react`, `react-dom`, `@supabase/supabase-js`, `@tanstack/react-query` · dev: `typescript`, `eslint`, `@testing-library/react`.
+**SETUP-2 installed packages** (approved 2026-10-16; exact pins, newest release ≥ 14 days old, D-018). The versions are listed in [.agent/skills-and-tools.md](.agent/skills-and-tools.md).
+Still to add, each with approval: `@anthropic-ai/sdk` (AI-2); ESLint, Prettier and an OpenAPI linter (SETUP-3); `@testing-library/react` (FE tasks).
 
 ## Phase 1: Data and auth
 

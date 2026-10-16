@@ -3,7 +3,7 @@
 **Owns:** the current milestone, verified facts, blockers and open questions. Update at the end of every session.
 
 **Last updated:** 2026-10-16
-**Milestone:** Phase 0 (sources inspected, documentation tree created, repository initialised). Implementation not started.
+**Milestone:** Phase 0 complete; SETUP-2 (workspace scaffold) complete on branch `feature/workspace-scaffold`. No features implemented yet.
 
 ## Verified facts (with evidence)
 
@@ -15,11 +15,15 @@
 | Git repository initialised; Phase 0 committed as three commits on `docs/initial-setup`; `main` has no commits until merged; nothing pushed | `git log --oneline` |
 | Local tools: git 2.44, Node 24.12, npm 10.2.5, pnpm 10.6.1, gh 2.88.1 | Version check 2026-10-16 |
 | Not installed: Supabase CLI, Vercel CLI, pandoc, XeLaTeX, Graphviz | Version check 2026-10-16 |
+| `main` created at the Phase 0 docs commit (with the user's approval) | `git branch -v` |
+| Workspace scaffold: `npm install` (npm 11.6.2) adds 206 packages; all 5 workspaces build; typecheck passes; 4 backend tests pass | [.agent/verification/2026-10-16-setup2.md](.agent/verification/2026-10-16-setup2.md) |
+| Running servers: `/api/v1/health` returns 200 with the success envelope; unknown routes return the 404 error envelope; both portals return 200 with baseline security headers | Same file |
+| The global npm 10.2.5 on PATH crashes on this workspace (npm bug); Node's bundled npm 11.6.2 works | Same file |
 
 ## Not done / not verified
 
-- No application code, no database, no Supabase project, no LLM key, no deployment.
-- No tests exist; nothing has been run against an API.
+- No database, no Supabase project, no LLM key, no deployment, no feature code (auth, books, tickets, AI).
+- Only scaffold tests exist (health route, 404 envelope, env validation).
 - Mermaid diagrams in the docs have not been rendered locally (no renderer installed); they target GitHub's renderer.
 - The blueprint PDF was not regenerated (pandoc/XeLaTeX not installed, and not required for this phase).
 
@@ -27,7 +31,7 @@
 
 | ID | Blocker | Blocks | Next action |
 |---|---|---|---|
-| B-01 | Approval to install dependencies and scaffold the workspace | SETUP-2 onwards | User approves the package list in [TASKS.md](TASKS.md) SETUP-2 |
+| B-01 | ~~Approval to install dependencies~~ | Resolved 2026-10-16 (approved pinned list) | n/a |
 | B-02 | Supabase project credentials (just in time) | DB-1 | Guided setup when DB-1 starts ([.agent/CREDENTIALS_GUIDE.md](.agent/CREDENTIALS_GUIDE.md)) |
 | B-03 | LLM provider confirmation + key (just in time) | AI-1 live smoke test only; mock provider unblocks everything else | Decide at AI-1 |
 
@@ -45,4 +49,4 @@
 
 ## Next step
 
-SETUP-2: scaffold the npm workspace (backend, two Next.js apps, shared packages). This needs install approval (B-01).
+Merge `feature/workspace-scaffold` into `main` (needs approval), then SETUP-3 (ESLint, Prettier, OpenAPI linter: an install approval is needed) and API-1 (backend skeleton: no credentials needed).

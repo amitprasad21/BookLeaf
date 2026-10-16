@@ -9,7 +9,9 @@ The blueprint refers to a separate skills/tools registry (S-09); it was not prov
 | Tool | State | Used for |
 |---|---|---|
 | git 2.44.0 | Installed | Version control |
-| Node.js 24.12.0 / npm 10.2.5 | Installed | Workspaces, build, tests |
+| Node.js 24.12.0 | Installed | Runtime, build, tests |
+| npm 11.6.2 (bundled with Node, `C:/Program Files/nodejs/node_modules/npm`) | Installed | **Use this one.** Workspaces install/build |
+| npm 10.2.5 (user-global, first on PATH) | Installed | **Do not use for installs.** Crashes on this workspace (`Cannot read properties of null (reading 'edgesOut')`) |
 | pnpm 10.6.1 | Installed (not used; npm workspaces chosen) | n/a |
 | GitHub CLI 2.88.1 | Installed | Creating the public repo / PRs, **only when approved** |
 | Python 3.14 (+ pypdf) | Installed | Ad-hoc data checks (e.g. seed verification during Phase 0) |
@@ -30,6 +32,15 @@ The blueprint refers to a separate skills/tools registry (S-09); it was not prov
 | Built-in browser pane | Visual checks of both portals at the required viewports (QA-1) |
 | Artifacts | Optional sharing of reports; not needed for the build |
 
-## Planned project dependencies
+## Project dependencies (installed 2026-10-16, approved list)
 
-Proposed in [TASKS.md](../TASKS.md) SETUP-2 and awaiting approval. Versions are pinned at install time and recorded here afterwards.
+Policy (D-018): exact pins, the newest stable release at least 14 days old at install time, and the lockfile committed.
+
+| Workspace | Runtime dependencies | Dev dependencies |
+|---|---|---|
+| `packages/shared` | zod 4.6.5 | typescript 6.0.3 |
+| `packages/ui` | react 19.3.0 (peer) | @types/react 19.3.0, typescript 6.0.3 |
+| `backend` | express 5.2.1, zod 4.6.5, @supabase/supabase-js 2.117.2, pino 10.4.0, pino-http 11.0.0, helmet 8.3.0, cors 2.8.6, express-rate-limit 8.7.0, swagger-ui-express 5.0.1, yaml 2.9.1 | typescript 6.0.3, tsx 4.23.15, vitest 5.0.3, supertest 7.3.1, @types/express 5.0.6, @types/cors 2.8.19, @types/supertest 7.2.1, @types/swagger-ui-express 4.1.8, @types/node 24.19.1 |
+| `author-frontend`, `admin-frontend` | next 16.3.8, react 19.3.0, react-dom 19.3.0, @supabase/supabase-js 2.117.2, @tanstack/react-query 5.104.1 | typescript 6.0.3, @types/react 19.3.0, @types/react-dom 19.3.0, @types/node 24.19.1 |
+
+Not yet installed: `@anthropic-ai/sdk` (AI-2), ESLint, Prettier and an OpenAPI linter (SETUP-3), and `@testing-library/react` (FE tasks). Each needs approval.

@@ -22,6 +22,7 @@
 | D-015 | Attachments are UI-only (filename metadata) unless stretch X-1 is done | proposed | 2026-10-16 |
 | D-016 | Full blueprint documentation tree | accepted | 2026-10-16 |
 | D-017 | Hosting: Vercel ×2 + Render + Supabase cloud | proposed | 2026-10-16 |
+| D-018 | Dependency policy: exact pins, newest stable ≥ 14 days old; TypeScript 6.0.3; npm ≥ 11 | accepted | 2026-10-16 |
 
 ---
 
@@ -104,3 +105,9 @@
 - **Choice:** Two Vercel projects (frontends), one Render web service (backend), Supabase cloud.
 - **Rationale:** Free tiers, Git-based deploys, simple env management.
 - **Known cost:** Render's free tier sleeps when idle, so the first request after idle is slow. Documented in the README.
+
+### D-018: Dependency version policy
+- **Context:** SETUP-2 installs. Several latest releases were only 1–7 days old (e.g. next 16.4.2, supabase-js 2.118.0). Compromised npm releases are usually caught within days.
+- **Choice:** Pin exact versions (`.npmrc save-exact=true`, lockfile committed), choosing the newest stable release published at least 14 days before install. **TypeScript 6.0.3**, not 7.x: 7.x is the new native compiler, and staying on 6.x avoids betting on Next.js tooling compatibility during a 4-day build. Requires **npm ≥ 11** (npm 10.2.x crashes on this workspace).
+- **Approved by:** user, 2026-10-16 (exact list in [skills-and-tools.md](skills-and-tools.md)).
+- **Revisit:** Before deploy (`npm audit`); when a security advisory affects a pinned version; TypeScript 7 after the build is stable.

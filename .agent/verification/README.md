@@ -12,3 +12,4 @@ Each entry records:
 | File | Scope |
 |---|---|
 | [2026-10-16-phase0.md](2026-10-16-phase0.md) | Source inspection, seed data integrity, documentation tree and link checks |
+| [2026-10-16-setup2.md](2026-10-16-setup2.md) | Workspace scaffold: install, build, typecheck, tests, live smoke |
