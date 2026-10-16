@@ -1,0 +1,12 @@
+digraph G {
+  graph [rankdir=TB, bgcolor="white", pad="0.25", nodesep="0.30", ranksep="0.42", splines=ortho, fontname="Arial", label="LIGHTWEIGHT GIT FLOW", labelloc=t, fontsize=18];
+  node [shape=box, style="rounded,filled", fillcolor="#f5f5f5", color="#555555", fontname="Arial", fontsize=10, margin="0.14,0.08"];
+  edge [color="#555555", arrowsize=0.7, fontname="Arial", fontsize=9];
+  main [label="main\nStable, reviewed branch"];
+  work [label="feature/* or fix/* or docs/*\nOne focused change"];
+  verify [label="Run relevant checks + inspect diff"];
+  commit [label="Normal commit\nfeat/fix/docs/test/refactor/chore: message"];
+  merge [label="Review then merge to main"];
+  main -> work [label="branch from current main"];
+  work -> verify -> commit -> merge -> main;
+}

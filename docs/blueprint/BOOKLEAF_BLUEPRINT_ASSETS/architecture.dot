@@ -1,0 +1,27 @@
+digraph G {
+  graph [rankdir=TB, bgcolor="white", pad="0.25", nodesep="0.35", ranksep="0.45", splines=ortho, fontname="Arial", label="BOOKLEAF RUNTIME ARCHITECTURE", labelloc=t, fontsize=18];
+  node [shape=box, style="rounded,filled", fillcolor="#f5f5f5", color="#555555", fontname="Arial", fontsize=10, margin="0.16,0.10"];
+  edge [color="#555555", arrowsize=0.7, fontname="Arial", fontsize=9];
+  admin [label="ADMIN FRONTEND\nTicket queue, triage, reply approval"];
+  author [label="AUTHOR FRONTEND\nBooks, royalties, support tickets"];
+  api [label="ONE BACKEND REST API\nAuth checks, validation, rate limits, audit"];
+  orchestrator [label="AI ORCHESTRATOR\nPolicy + context + provider router + output validation"];
+  supabase [label="SUPABASE\nPostgres + Auth + RLS policies"];
+  primary [label="PRIMARY LLM PROVIDER\nServer-side secret only"];
+  fallback [label="APPROVED FALLBACK LLM\nOptional, budget-limited"];
+  kb [label="BOOKLEAF KNOWLEDGE BASE\nPolicy facts and response guidance"];
+  manual [label="MANUAL MODE\nTicket saved; admin replies without AI"];
+  {rank=same; admin; author}
+  {rank=same; supabase; orchestrator}
+  {rank=same; primary; fallback; manual}
+  admin -> api [label="HTTPS + session/JWT"];
+  author -> api [label="HTTPS + session/JWT"];
+  api -> supabase [label="Business data; backend authz"];
+  api -> orchestrator [label="Bounded AI request"];
+  orchestrator -> primary [label="Call if policy allows"];
+  orchestrator -> fallback [label="Only on approved failover"];
+  orchestrator -> manual [label="If AI unavailable/invalid"];
+  kb -> orchestrator [label="Relevant snippets only"];
+  supabase -> api [style=dashed, label="Persist ticket, reply, audit state"];
+  {rank=same; kb; supabase}
+}

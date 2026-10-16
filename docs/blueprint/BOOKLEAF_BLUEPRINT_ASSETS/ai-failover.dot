@@ -1,0 +1,27 @@
+digraph G {
+  graph [rankdir=TB, bgcolor="white", pad="0.22", nodesep="0.28", ranksep="0.34", splines=ortho, fontname="Arial", label="AI REQUEST AND FAILOVER FLOW", labelloc=t, fontsize=18];
+  node [shape=box, style="rounded,filled", fillcolor="#f5f5f5", color="#555555", fontname="Arial", fontsize=10, margin="0.14,0.08"];
+  edge [color="#555555", arrowsize=0.7, fontname="Arial", fontsize=9];
+  a [label="Ticket submitted"];
+  b [label="Authenticate, validate, rate-limit"];
+  c [label="SAVE ticket to Supabase first"];
+  d [label="Build minimal context + check budget"];
+  e [label="Call primary provider"];
+  f [shape=diamond, label="Healthy and valid output?", fillcolor="#eeeeee"];
+  g [label="Bounded retry only when appropriate"];
+  h [label="Try approved, budget-limited fallback"];
+  i [shape=diamond, label="Fallback valid?", fillcolor="#eeeeee"];
+  j [label="Persist category/priority or draft"];
+  k [label="Mark manual review; keep ticket usable"];
+  l [label="Admin reviews/edits; explicitly sends reply"];
+  a -> b -> c -> d -> e -> f;
+  f -> j [label="Yes"];
+  f -> g [label="Transient failure"];
+  g -> h [label="Still failed / exhausted"];
+  f -> h [label="Quota/config/provider failure"];
+  h -> i;
+  i -> j [label="Yes"];
+  i -> k [label="No"];
+  k -> l;
+  j -> l;
+}

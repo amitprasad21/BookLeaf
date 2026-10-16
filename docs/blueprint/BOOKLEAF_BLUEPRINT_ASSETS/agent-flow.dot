@@ -1,0 +1,23 @@
+digraph G {
+  graph [rankdir=LR, bgcolor="white", pad="0.25", nodesep="0.30", ranksep="0.42", splines=ortho, fontname="Arial", label="CLAUDE CODE + CODEX SHARED WORKFLOW", labelloc=t, fontsize=18];
+  node [shape=box, style="rounded,filled", fillcolor="#f5f5f5", color="#555555", fontname="Arial", fontsize=10, margin="0.13,0.08"];
+  edge [color="#555555", arrowsize=0.7, fontname="Arial", fontsize=9];
+  a [label="Read entry instructions + handover"];
+  b [label="Inspect state, source docs, Git diff"];
+  c [label="Plan scope, risks, alternatives, tests"];
+  d [shape=diamond, label="Approval required?", fillcolor="#eeeeee"];
+  e [label="Implement one small change"];
+  f [label="Run tests; inspect diff and security"];
+  g [shape=diamond, label="Evidence passes?", fillcolor="#eeeeee"];
+  h [label="Fix or document blocker"];
+  i [label="Update tasks, decisions, handover"];
+  j [label="Report truthfully; propose normal commit"];
+  a -> b -> c -> d;
+  d -> e [label="No"];
+  d -> e [label="Yes, after approval"];
+  e -> f -> g;
+  g -> h [label="No"];
+  h -> f;
+  g -> i [label="Yes"];
+  i -> j;
+}
