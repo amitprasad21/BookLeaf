@@ -89,6 +89,8 @@ Error (every non-2xx response):
 | 403 | `FORBIDDEN` | Authenticated but wrong role for the namespace |
 | 404 | `NOT_FOUND` | Resource doesn't exist **or isn't owned by the caller** (never reveal which) |
 | 409 | `VERSION_CONFLICT` | `PATCH` with a stale `version` |
+| 413 | `VALIDATION_FAILED` | JSON body larger than 32 KB |
+| 415 | `VALIDATION_FAILED` | Unsupported request body encoding/charset |
 | 422 | `INVALID_STATUS_TRANSITION` | Transition not allowed by the lifecycle |
 | 422 | `INVALID_ASSIGNMENT` | Assigning a ticket to someone other than yourself |
 | 429 | `RATE_LIMITED` | Per-user limit hit; `Retry-After` header set |

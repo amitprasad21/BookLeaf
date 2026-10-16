@@ -14,17 +14,17 @@
 | 4 | Rate limiting | Required | Ticket creation, draft, triage per user; Supabase Auth limits for login | SEC-1 | not run |
 | 5 | Sanitize/validate input | Required | zod (length, enums, unknown keys rejected); plain-text rendering; ticket text delimited as untrusted prompt data | SEC-1, AI-6 | not run |
 | 6 | Parameterized queries | Required | Supabase client query builder only; no string-built SQL; any SQL function reviewed | SEC-2 review | not run |
-| 7 | Locked-down CORS | Required (deploy) | Allowlist from `CORS_ALLOWED_ORIGINS`; no wildcard; no credentials mode needed (bearer tokens) | SEC-2 preflight test | not run |
+| 7 | Locked-down CORS | Required (deploy) | Allowlist from `CORS_ALLOWED_ORIGINS`; no wildcard; no credentials mode needed (bearer tokens); production refuses to start without an explicit allowlist | `backend/test/cors.test.ts`, `env.test.ts` (API-1); deployed-origin check pending (SEC-2) | verified locally |
 | 8 | HTTPS everywhere | Required (deploy) | Vercel/Render/Supabase HTTPS endpoints; HSTS via helmet | DEP-3 | not run |
 | 9 | Stop IDOR bugs | Required | Not-owned → 404; composite FK for ticket→book ownership; UUIDs | SEC-1 | not run |
-| 10 | Debug mode off in production | Required (deploy) | `NODE_ENV=production`; generic 500s; no provider error bodies; Swagger UI allowed (no secrets) | SEC-1 forced-error test | not run |
+| 10 | Debug mode off in production | Required (deploy) | `NODE_ENV=production`; generic 500s; no provider error bodies; Swagger UI allowed (no secrets) | `backend/test/errors.test.ts`: unexpected error → generic 500, no message/stack leak (API-1); production-mode check pending (SEC-1) | verified locally |
 | 11 | CAPTCHA on public forms | Conditional: **N/A** | No public/unauthenticated forms (signups disabled; login protected by Supabase Auth rate limits). Revisit if a public form is added | n/a | n/a |
 | 12 | Log admin actions | Recommended | `audit_events` for status, overrides, assignment, replies, notes, draft regeneration; old/new values only, no bodies | API-6 tests | not run |
 | 13 | Private storage buckets | Conditional | Only if X-1 (real uploads) is built: private bucket, type/size limits, short-lived signed URLs, owner checks | X-1 | n/a until built |
 | 14 | Hide admin pages properly | Required | Admin UI is a separate app; backend enforces `role=admin` on `/admin/*` regardless | SEC-1 | not run |
 | 15 | Update vulnerable packages | Required (pre-demo) | Minimal deps; lockfile committed; `npm audit` reviewed | SEC-2 | not run |
 | 16 | Claude security review | Required workflow | Run a focused security review on the actual diff before deploy; findings reviewed by a human and recorded below | SEC-2 | not run |
-| 17 | Security headers | Required | helmet on API; Next.js headers config on frontends (CSP compatible with Supabase auth endpoints) | SEC-2 | not run |
+| 17 | Security headers | Required | helmet on API; Next.js headers config on frontends (CSP compatible with Supabase auth endpoints) | API: `health.test.ts` + live header capture (API-1); frontends: baseline headers live-checked (SETUP-2), CSP pending (FE-A1/FE-M1) | partially verified |
 | 18 | Verify webhook signatures | Conditional: **N/A** | No webhooks in scope. If added: signature, timestamp/replay, idempotency | n/a | n/a |
 
 ## Review scenarios (from the blueprint)
@@ -46,4 +46,4 @@
 
 | Date | Finding | Severity | Evidence | Owner | Remediation | Retest |
 |---|---|---|---|---|---|---|
-| (none yet) | | | | | | |
+| 2026-10-16 | Default pino-http request logs recorded every request header, client IP and user agent (auth headers were redacted, but this is more personal data than the minimise-logging rule allows) | Low | Live server log during API-1 smoke test | Claude Code | Custom serializers: log only id, method, URL, status, timing | `logging.test.ts` asserts the exact `req`/`res` shape; live log re-checked: PASS |

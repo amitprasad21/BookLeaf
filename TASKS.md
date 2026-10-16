@@ -26,7 +26,7 @@ Still to add, each with approval: `@anthropic-ai/sdk` (AI-2) and `@testing-libra
 | DB-2 | Migrations: enums, tables, constraints, indexes, `updated_at`/`version` triggers ([.back/DATA_MODEL.md](.back/DATA_MODEL.md)) | DB-1 | todo | NFR-01 |
 | DB-3 | RLS helper functions + policies + isolation tests ([.back/SUPABASE_RLS.md](.back/SUPABASE_RLS.md)) | DB-2 | todo | AUTH-03 |
 | DB-4 | Seed script: exact JSON load, auth users for 10 authors + 2 admins, profiles, field-by-field verification | DB-2 | todo | NFR-01, AUTH-01 |
-| API-1 | Express skeleton: env validation, request id, logger with redaction, helmet, CORS allowlist, error envelope, `/health`, `/api/docs` | SETUP-3 | todo | API-05, API-06 |
+| API-1 | Express skeleton: env validation, request id, logger with redaction, helmet, CORS allowlist, error envelope, `/health`, `/api/docs` | SETUP-3 | done ([.agent/verification/2026-10-16-api1.md](.agent/verification/2026-10-16-api1.md)) | API-05, API-06 |
 | API-2 | Auth middleware (verify JWT, load profile), role guards, `/me` | API-1, DB-3 | todo | AUTH-02..05 |
 
 ## Phase 2: Core ticket slice (no AI)

@@ -3,7 +3,7 @@
 **Owns:** the current milestone, verified facts, blockers and open questions. Update at the end of every session.
 
 **Last updated:** 2026-10-16
-**Milestone:** Phase 0, SETUP-2 (workspace scaffold, merged to `main`) and SETUP-3 (tooling, on `feature/tooling`) complete. No features implemented yet.
+**Milestone:** Phase 0, SETUP-2 and SETUP-3 are merged to `main`. API-1 (backend skeleton) is complete and committed on `feature/api-skeleton`, not yet merged. No product features yet (no auth, data, tickets or AI).
 
 ## Verified facts (with evidence)
 
@@ -21,6 +21,8 @@
 | The global npm 10.2.5 on PATH crashes on this workspace (npm bug); Node's bundled npm 11.6.2 works | Same file |
 | `main` fast-forwarded to the scaffold (`81446bf`) with the user's approval | `git branch -v` |
 | `npm run check` (format, lint, OpenAPI lint, typecheck, tests, build) exits 0; `openapi.yaml` is valid OpenAPI 3.1 with 18 operationIds; fresh `npm ci` rebuilds shared packages via `prepare` | [.agent/verification/2026-10-16-setup3.md](.agent/verification/2026-10-16-setup3.md) |
+| `main` fast-forwarded to SETUP-3 (`6898131`) with the user's approval | `git branch -v` |
+| API-1 backend skeleton: 28 backend tests pass (env, request id, error envelope, CORS, docs, logging, redaction); live server checks pass for both `npm start` (dist) and `npm run dev` (tsx); Swagger UI renders under helmet CSP | [.agent/verification/2026-10-16-api1.md](.agent/verification/2026-10-16-api1.md) |
 
 ## Not done / not verified
 
@@ -51,4 +53,4 @@
 
 ## Next step
 
-Merge `feature/tooling` into `main` (needs approval), then API-1: the backend skeleton (request id, pino logging, CORS allowlist, error handler, Swagger UI). API-1 needs no credentials.
+Merge `feature/api-skeleton` into `main` (needs approval). Then **DB-1: the first credential stop.** API-2 (auth) depends on the database, so a Supabase project is needed next. I'll guide that just in time ([.agent/CREDENTIALS_GUIDE.md](.agent/CREDENTIALS_GUIDE.md)); FE-1 (UI primitives) can proceed without credentials meanwhile.

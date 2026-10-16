@@ -5,7 +5,7 @@ A web application for BookLeaf Publishing with two experiences, both backed by o
 - **Author portal**: authors sign in, review their books and royalties, raise support tickets and follow replies in near real time.
 - **Admin portal**: the operations team works a prioritised ticket queue. AI-suggested categories, priorities and reply drafts are always reviewed by a human before anything reaches an author.
 
-> **Current status: workspace scaffold.** The five workspaces build, typecheck and pass their tests, and the API serves `/api/v1/health`. There is no database, authentication, ticket feature, AI integration or deployment yet. [PROJECT_STATE.md](PROJECT_STATE.md) is the source of truth for what is actually done and verified.
+> **Current status: backend skeleton.** The five workspaces build, typecheck, lint and pass their tests. The API has its middleware chain (request ids, minimal logging, security headers, CORS allowlist, error envelope) and serves `/api/v1/health` plus Swagger UI at `/api/docs`. There is no database, authentication, ticket feature, AI integration or deployment yet. [PROJECT_STATE.md](PROJECT_STATE.md) is the source of truth for what is actually done and verified.
 
 ## Planned architecture (summary)
 
@@ -77,6 +77,7 @@ npm run dev:admin
 | Part | URL |
 |---|---|
 | API health | http://localhost:4000/api/v1/health |
+| API docs (Swagger UI) | http://localhost:4000/api/docs |
 | Author portal | http://localhost:3000 |
 | Admin portal | http://localhost:3001 |
 

@@ -14,13 +14,15 @@ backend/src/
 │   ├── logger.ts             pino with redaction
 │   ├── clock.ts              injectable clock (tests pin dates; Asia/Kolkata business date)
 │   └── payout-calendar.ts    quarter / due-date / threshold maths (pure, unit-tested)
+├── types/express.d.ts        adds req.requestId
 ├── middleware/
-│   ├── request-id.ts  authenticate.ts  require-role.ts
-│   ├── validate.ts    rate-limit.ts    error-handler.ts  not-found.ts
+│   ├── request-id.ts  http-logger.ts  cors.ts  error-handler.ts  not-found.ts   (API-1, built)
+│   ├── authenticate.ts  require-role.ts  validate.ts  rate-limit.ts            (API-2 / API-4)
 ├── db/
 │   ├── user-client.ts        per-request Supabase client carrying the caller's JWT (RLS applies)
 │   └── system-writer.ts      secret-key client; narrow typed functions only (see AUTH_SECURITY §5)
 ├── modules/
+│   ├── health/               router.ts (public liveness)
 │   ├── me/                   router.ts · service.ts
 │   ├── books/                router · service · repository · serializers
 │   ├── tickets/              author.router · admin.router · service · repository · lifecycle.ts · serializers/{author,admin}.ts
@@ -37,7 +39,7 @@ backend/src/
 | # | Middleware | Applies to | Notes |
 |---|---|---|---|
 | 1 | `requestId` | all | Accept a safe incoming `X-Request-Id` or generate one; echo it in the response header |
-| 2 | `pino-http` | all | Redacts `req.headers.authorization`, `cookie`, any `*key*`/`*token*` fields; no bodies logged |
+| 2 | `pino-http` | all | Logs only request id, method, URL, status and timing: no headers, IPs, user agents or bodies. Health checks are skipped. pino redaction masks credential-like fields (`authorization`, `cookie`, `*.password`, `*.token`, `*.apiKey`, `*.secret`) as a backstop for other log calls |
 | 3 | `helmet` | all | HSTS, no-sniff, frameguard, minimal CSP for Swagger UI |
 | 4 | `cors` | all | Exact-match allowlist from `CORS_ALLOWED_ORIGINS`; methods GET/POST/PATCH; headers Authorization, Content-Type, X-Request-Id |
 | 5 | `express.json({ limit: '32kb' })` | all | Oversized → 413 envelope |
@@ -47,7 +49,7 @@ backend/src/
 | 9 | Route-level `rateLimit`, `validate({ params, query, body })` | per route | zod `strict()` schemas from `packages/shared` |
 | 10 | Handler | | Calls service; returns `{ data }` |
 | 11 | `notFound` | unmatched | `404 NOT_FOUND` envelope |
-| 12 | `errorHandler` | all | Maps `AppError` → status/code; zod → 400; DB `rate_limited` → 429; FK/check violations → 400/404 as appropriate; anything else → 500 `INTERNAL_ERROR` with requestId (stack only in logs) |
+| 12 | `errorHandler` | all | Maps `AppError` → status/code; zod → 400 with field details; malformed JSON → 400; body > 32 KB → 413; bad encoding → 415; anything else → 500 `INTERNAL_ERROR` with requestId (stack only in logs). Planned with DB work: DB `rate_limited` → 429; FK/check violations → 400/404 |
 
 ## 3. Error classes
 

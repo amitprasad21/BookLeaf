@@ -1,45 +1,51 @@
 # Handover
 
 **Session:** 2026-10-16 (Claude Code)
-**Branch:** `feature/tooling` (branched from `main` at `81446bf`; three SETUP-3 commits; not merged, not pushed)
+**Branch:** `feature/api-skeleton` (branched from `main` at `6898131`; two API-1 commits; not merged, not pushed)
 
 ## Done
 
-- Phase 0: sources read, repository initialised, full documentation tree (commits on `docs/initial-setup`, now in `main`).
-- SETUP-2: npm workspace scaffold (commits `ff9822c`, `81446bf`). With the user's approval, `main` was fast-forwarded to `81446bf`.
-- SETUP-3 ([verification/2026-10-16-setup3.md](verification/2026-10-16-setup3.md)):
-  - Root dev tools installed from the user-approved pinned list (D-018/D-019).
-  - `eslint.config.mjs`: typescript-eslint everywhere; Next.js rules scoped to both apps and `packages/ui`; `react/no-danger` is an error.
-  - Prettier (`.prettierrc.json`, `.prettierignore`) formats code only; docs, `openapi.yaml`, lockfile and seed are excluded. Applied once: 5 files reformatted (cosmetic).
-  - `openapi.yaml`: added 18 `operationId`s and 5 tag descriptions; Redocly `recommended` passes with `info-license` off and 2 justified ignores (`.redocly.lint-ignore.yaml`).
-  - Root scripts: `prepare` (builds shared packages on install), `lint`, `lint:api`, `format`, `format:check`, `check`.
-  - Lockfile resynced (optional `@emnapi/*` entries) so `npm ci` works.
+- Phase 0, SETUP-2 (scaffold) and SETUP-3 (tooling) are merged to `main` (`6898131`) with the user's approval.
+- API-1, backend skeleton ([verification/2026-10-16-api1.md](verification/2026-10-16-api1.md)):
+  - `packages/shared/src/errors.ts`: `ERROR_CODES`, `AI_UNAVAILABLE_REASONS` and `ErrorBody` types (contract shared with the frontends).
+  - `backend/src/config/env.ts`: adds `LOG_LEVEL` (silent in tests) and `CORS_ALLOWED_ORIGINS` (exact origins; required in production; dev default is localhost:3000/3001).
+  - `lib/errors.ts`: typed `AppError` family (400/401/403/404/409/422/429/503).
+  - `lib/logger.ts`: pino with credential redaction.
+  - `middleware/`:
+    - `request-id` (accepts safe incoming ids)
+    - `http-logger` (id, method, URL, status only; health skipped)
+    - `cors` (allowlist, no wildcard)
+    - `not-found` and `error-handler` (envelope; zod → 400 details; bad JSON 400; >32 KB 413; unknown errors → generic 500, logged with request id)
+  - `modules/health/router.ts`, `openapi/docs.ts` (raw spec at `/api/openapi.yaml`, Swagger UI at `/api/docs`, read from the repo-root `openapi.yaml`).
+  - `server.ts`: exits cleanly on bad env (names the variable only) and shuts down gracefully on SIGINT/SIGTERM. `dev`/`start` load `backend/.env` if present (`--env-file-if-exists`).
+  - Tests: 7 files, 28 tests. Redaction tests were mutation-checked (they fail when redaction is removed).
+- Security finding found and fixed during smoke testing: request logs included all headers, IP and user agent. Now logged minimally (recorded in SECURITY_REVIEW_CHECKLIST).
 
 ## In progress
 
-- Nothing half-done. SETUP-3 is committed on `feature/tooling`. Merging into `main` needs approval.
+- Nothing half-done. API-1 is committed on `feature/api-skeleton`. Merging into `main` needs approval.
 
 ## Broken / risky
 
 - **npm 10.2.5 on PATH** crashes on this workspace. Use Node's bundled npm 11.6.2 (`"C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js"`) or upgrade the global npm (user's call).
-- **ESLint 9.39.5 is marked unsupported by npm.** It's dev-only and needed until `eslint-config-next` supports ESLint 10 (D-019).
-- Four blueprint-cited sources are still missing (S-07..S-10); design tokens are provisional. Model choice (D-010) is still a proposal.
+- `.claude/launch.json` (git-ignored) now also has a `backend-dev` config.
+- `VersionConflictError` doesn't yet carry the current ticket representation the contract mentions. Add it in API-6.
+- Still open: four missing sources (S-07..S-10); D-010 model choice is still a proposal; ESLint 9 is unsupported upstream (D-019).
 
 ## Next
 
-1. Merge `feature/tooling` into `main` (fast-forward) after approval.
-2. API-1: backend skeleton (request id, pino with redaction, CORS allowlist, error handler + envelope, Swagger UI at `/api/docs`). No credentials needed.
-3. DB-1: guided Supabase setup when reached (just in time).
+1. Merge `feature/api-skeleton` into `main` (fast-forward) after approval.
+2. **DB-1: first credential stop.** A Supabase project is needed before API-2 (auth) and DB-2..4. Guide the user step by step from the official docs; never take keys in chat.
+3. Without credentials meanwhile: FE-1 (`packages/ui` primitives from `.front/COMPONENTS.md`).
 
 ## Do not touch
 
-- `supabase/seed/bookleaf_sample_data.json` (byte-identical to the provided file; excluded from Prettier).
+- `supabase/seed/bookleaf_sample_data.json` (byte-identical to the provided file).
 - `docs/blueprint/` (source material).
 
 ## Commits (approved by the user 2026-10-16)
 
-On `feature/tooling` (hashes: `git log --oneline main..`):
+On `feature/api-skeleton` (hashes: `git log --oneline main..`):
 
-1. `chore: add ESLint, Prettier and OpenAPI lint tooling`
-2. `docs(api): add operationIds and tag descriptions to openapi.yaml`
-3. `docs: record tooling decisions and verification`
+1. `feat(api): add backend skeleton with request ids, logging, CORS, error envelope and API docs`
+2. `docs: record API-1 skeleton, error codes and verification`
