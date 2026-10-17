@@ -11,6 +11,7 @@
     "start": "node --env-file-if-exists=.env dist/server.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "check:env": "tsx --env-file-if-exists=.env scripts/check-env.ts",
+    "check:db": "tsx --env-file-if-exists=.env scripts/check-db.ts",
     "test": "vitest run"
   },
   "dependencies": {
