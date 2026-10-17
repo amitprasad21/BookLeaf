@@ -22,7 +22,7 @@ Still to add, each with approval: `@anthropic-ai/sdk` (AI-2) and `@testing-libra
 
 | ID | Task | Depends on | Status | Req. IDs |
 |---|---|---|---|---|
-| DB-1 | Create Supabase project; disable signups; configure env (just-in-time credential step) | SETUP-2 | todo | AUTH-06 |
+| DB-1 | Create Supabase project; disable signups; configure env (just-in-time credential step) | SETUP-2 | done ([.agent/verification/2026-10-17-db1.md](.agent/verification/2026-10-17-db1.md)) | AUTH-06 |
 | DB-2 | Migrations: enums, tables, constraints, indexes, `updated_at`/`version` triggers ([.back/DATA_MODEL.md](.back/DATA_MODEL.md)) | DB-1 | todo | NFR-01 |
 | DB-3 | RLS helper functions + policies + isolation tests ([.back/SUPABASE_RLS.md](.back/SUPABASE_RLS.md)) | DB-2 | todo | AUTH-03 |
 | DB-4 | Seed script: exact JSON load, auth users for 10 authors + 2 admins, profiles, field-by-field verification | DB-2 | todo | NFR-01, AUTH-01 |

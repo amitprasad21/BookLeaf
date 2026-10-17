@@ -30,7 +30,7 @@
 | AI-1 (optional) | Fallback LLM key (only if approved) | `AI_FALLBACK_PROVIDER`, `AI_FALLBACK_MODEL`, `AI_FALLBACK_BASE_URL`, `AI_FALLBACK_API_KEY` | `backend/.env` | **Server-only** |
 | DEP-1/2 | Hosting accounts (Render, Vercel) | Same names as above in each host's environment settings | Render (backend) · Vercel ×2 (frontends) | Per variable as above |
 
-Supabase key naming has changed over time ("anon"/"service_role" vs "publishable"/"secret"). At DB-1, confirm current naming in the official Supabase docs and update this table if needed.
+**Confirmed at DB-1 (2026-10-17, official Supabase docs):** use **publishable** (`sb_publishable_…`) and **secret** (`sb_secret_…`) keys from **Settings → API Keys** (the **Connect** dialog also shows the URL and publishable key). Legacy `anon`/`service_role` keys are deprecated and slated for removal by the end of 2026. Supabase rejects secret keys sent from a browser (401), but that's no reason to relax the rule.
 
 ## Step outlines (expanded live, from official docs, when the task arrives)
 
@@ -40,7 +40,7 @@ Supabase key naming has changed over time ("anon"/"service_role" vs "publishable
 3. User copies the secret key into `backend/.env` **only**.
 4. Agent explains: the publishable key is safe in browsers because RLS guards the data; the secret key bypasses RLS and must never leave the backend.
 5. User disables email signups in the Auth settings (accounts come from the seed script).
-6. Agent runs `npm run check:env` (planned) → prints `SUPABASE_URL: configured`, etc., and a connection pass/fail.
+6. Agent runs `npm run check:env`, which prints each variable as configured/missing/placeholder, the key kind, frontend↔backend matches, a "no server secrets in frontend files" check, and connection pass/fail plus "sign-ups disabled". **Completed 2026-10-17: Result OK** ([verification/2026-10-17-db1.md](verification/2026-10-17-db1.md)).
 
 ### LLM provider (AI-1)
 1. Agent confirms the provider/model decision (Q-04) and that the mock provider covers all tests.

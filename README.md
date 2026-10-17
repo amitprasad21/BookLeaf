@@ -89,6 +89,12 @@ npm run check
 
 Or one at a time: `npm run format:check`, `npm run lint`, `npm run lint:api`, `npm run typecheck`, `npm test`, `npm run build`. `npm run format` rewrites code formatting (Markdown docs and `openapi.yaml` are excluded).
 
+Verify credentials without revealing them (prints configured/missing and pass/fail only):
+
+```bash
+npm run check:env
+```
+
 Each runtime reads its own environment file. Variable names (never values) are listed in [.env.example](.env.example), and how to obtain each one is in [.agent/CREDENTIALS_GUIDE.md](.agent/CREDENTIALS_GUIDE.md).
 
 ## Test login credentials

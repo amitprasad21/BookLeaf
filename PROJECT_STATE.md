@@ -2,8 +2,8 @@
 
 **Owns:** the current milestone, verified facts, blockers and open questions. Update at the end of every session.
 
-**Last updated:** 2026-10-16
-**Milestone:** Phase 0, SETUP-2 and SETUP-3 are merged to `main`. API-1 (backend skeleton) is complete and committed on `feature/api-skeleton`, not yet merged. No product features yet (no auth, data, tickets or AI).
+**Last updated:** 2026-10-17
+**Milestone:** Phase 0, SETUP-2, SETUP-3 and API-1 are merged to `main`. DB-1 (Supabase project + credentials) is done and committed on `feature/db-supabase`, not yet merged. No product features yet (no schema, auth, tickets or AI).
 
 ## Verified facts (with evidence)
 
@@ -22,6 +22,8 @@
 | `main` fast-forwarded to the scaffold (`81446bf`) with the user's approval | `git branch -v` |
 | `npm run check` (format, lint, OpenAPI lint, typecheck, tests, build) exits 0; `openapi.yaml` is valid OpenAPI 3.1 with 18 operationIds; fresh `npm ci` rebuilds shared packages via `prepare` | [.agent/verification/2026-10-16-setup3.md](.agent/verification/2026-10-16-setup3.md) |
 | `main` fast-forwarded to SETUP-3 (`6898131`) with the user's approval | `git branch -v` |
+| `main` fast-forwarded to API-1 (`af9fc08`) with the user's approval | `git branch -v` |
+| Supabase project exists (created by the user). Backend and both frontends have the URL + **publishable** key; the **secret** key is in `backend/.env` only; publishable key reaches the project; secret key accepted (read-only admin call); new-user sign-ups disabled; no secret in any frontend env file | `npm run check:env` → Result: OK ([.agent/verification/2026-10-17-db1.md](.agent/verification/2026-10-17-db1.md)) |
 | API-1 backend skeleton: 28 backend tests pass (env, request id, error envelope, CORS, docs, logging, redaction); live server checks pass for both `npm start` (dist) and `npm run dev` (tsx); Swagger UI renders under helmet CSP | [.agent/verification/2026-10-16-api1.md](.agent/verification/2026-10-16-api1.md) |
 
 ## Not done / not verified
@@ -36,7 +38,8 @@
 | ID | Blocker | Blocks | Next action |
 |---|---|---|---|
 | B-01 | ~~Approval to install dependencies~~ | Resolved 2026-10-16 (approved pinned list) | n/a |
-| B-02 | Supabase project credentials (just in time) | DB-1 | Guided setup when DB-1 starts ([.agent/CREDENTIALS_GUIDE.md](.agent/CREDENTIALS_GUIDE.md)) |
+| B-02 | ~~Supabase project credentials~~ | Resolved 2026-10-17 (DB-1) | n/a |
+| B-04 | Way to apply migrations to the hosted database (just in time, at DB-2) | DB-2 onwards | Choose: Supabase CLI via `npx supabase` (install approval + access token/DB password) or pasting SQL into the dashboard SQL editor |
 | B-03 | LLM provider confirmation + key (just in time) | AI-1 live smoke test only; mock provider unblocks everything else | Decide at AI-1 |
 
 ## Open questions
@@ -53,4 +56,4 @@
 
 ## Next step
 
-Merge `feature/api-skeleton` into `main` (needs approval). Then **DB-1: the first credential stop.** API-2 (auth) depends on the database, so a Supabase project is needed next. I'll guide that just in time ([.agent/CREDENTIALS_GUIDE.md](.agent/CREDENTIALS_GUIDE.md)); FE-1 (UI primitives) can proceed without credentials meanwhile.
+Merge `feature/db-supabase` into `main` (needs approval). Then **DB-2: schema migrations**. The SQL can be written and reviewed first. Applying it to the hosted database needs a decision on the migration route (B-04), explained just in time.

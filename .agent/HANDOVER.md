@@ -1,51 +1,42 @@
 # Handover
 
-**Session:** 2026-10-16 (Claude Code)
-**Branch:** `feature/api-skeleton` (branched from `main` at `6898131`; two API-1 commits; not merged, not pushed)
+**Session:** 2026-10-16 → 2026-10-17 (Claude Code)
+**Branch:** `feature/db-supabase` (branched from `main` at `af9fc08`; two DB-1 commits; not merged, not pushed)
 
 ## Done
 
-- Phase 0, SETUP-2 (scaffold) and SETUP-3 (tooling) are merged to `main` (`6898131`) with the user's approval.
-- API-1, backend skeleton ([verification/2026-10-16-api1.md](verification/2026-10-16-api1.md)):
-  - `packages/shared/src/errors.ts`: `ERROR_CODES`, `AI_UNAVAILABLE_REASONS` and `ErrorBody` types (contract shared with the frontends).
-  - `backend/src/config/env.ts`: adds `LOG_LEVEL` (silent in tests) and `CORS_ALLOWED_ORIGINS` (exact origins; required in production; dev default is localhost:3000/3001).
-  - `lib/errors.ts`: typed `AppError` family (400/401/403/404/409/422/429/503).
-  - `lib/logger.ts`: pino with credential redaction.
-  - `middleware/`:
-    - `request-id` (accepts safe incoming ids)
-    - `http-logger` (id, method, URL, status only; health skipped)
-    - `cors` (allowlist, no wildcard)
-    - `not-found` and `error-handler` (envelope; zod → 400 details; bad JSON 400; >32 KB 413; unknown errors → generic 500, logged with request id)
-  - `modules/health/router.ts`, `openapi/docs.ts` (raw spec at `/api/openapi.yaml`, Swagger UI at `/api/docs`, read from the repo-root `openapi.yaml`).
-  - `server.ts`: exits cleanly on bad env (names the variable only) and shuts down gracefully on SIGINT/SIGTERM. `dev`/`start` load `backend/.env` if present (`--env-file-if-exists`).
-  - Tests: 7 files, 28 tests. Redaction tests were mutation-checked (they fail when redaction is removed).
-- Security finding found and fixed during smoke testing: request logs included all headers, IP and user agent. Now logged minimally (recorded in SECURITY_REVIEW_CHECKLIST).
+- Phase 0, SETUP-2, SETUP-3 and API-1 merged to `main` (`af9fc08`) with the user's approval.
+- DB-1, Supabase project + credentials ([verification/2026-10-17-db1.md](verification/2026-10-17-db1.md)):
+  - Official Supabase docs checked for current key types, dashboard locations and the sign-up setting (D-020).
+  - `backend/scripts/check-env.ts` + `credential-checks.ts` (`npm run check:env`): names-only presence, key-kind, frontend↔backend match, secret-leak and connection checks. 5 unit tests.
+  - Git-ignored env files created with placeholders. The **user** filled in the real values; the agent never read or printed them.
+  - Final check: **Result OK**. Both keys are valid and correctly placed, there are no secrets in frontend files, and sign-ups are disabled. (The first run caught the sign-up toggle not yet saved.)
+  - The user re-confirmed **no self sign-up**: accounts come from the seed only.
 
 ## In progress
 
-- Nothing half-done. API-1 is committed on `feature/api-skeleton`. Merging into `main` needs approval.
+- Nothing half-done. DB-1 is committed on `feature/db-supabase`. Merging into `main` needs approval. **The env files are git-ignored and must never be committed.**
 
 ## Broken / risky
 
-- **npm 10.2.5 on PATH** crashes on this workspace. Use Node's bundled npm 11.6.2 (`"C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js"`) or upgrade the global npm (user's call).
-- `.claude/launch.json` (git-ignored) now also has a `backend-dev` config.
-- `VersionConflictError` doesn't yet carry the current ticket representation the contract mentions. Add it in API-6.
-- Still open: four missing sources (S-07..S-10); D-010 model choice is still a proposal; ESLint 9 is unsupported upstream (D-019).
+- **npm 10.2.5 on PATH** crashes on this workspace. Use Node's bundled npm 11.6.2 (`"C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js"`).
+- Admin-API user creation with sign-ups disabled is expected to work but unproven until DB-4.
+- `VersionConflictError` lacks the current representation (API-6). Still open: S-07..S-10, D-010, ESLint 9 support (D-019).
 
 ## Next
 
-1. Merge `feature/api-skeleton` into `main` (fast-forward) after approval.
-2. **DB-1: first credential stop.** A Supabase project is needed before API-2 (auth) and DB-2..4. Guide the user step by step from the official docs; never take keys in chat.
-3. Without credentials meanwhile: FE-1 (`packages/ui` primitives from `.front/COMPONENTS.md`).
+1. Merge `feature/db-supabase` into `main` (fast-forward) after approval.
+2. DB-2: write the migration SQL (enums, tables, constraints, indexes, triggers per `.back/DATA_MODEL.md`) for review. **Before applying it,** explain the migration route just in time (B-04): Supabase CLI via `npx supabase` (install approval + access token / database password) or pasting into the dashboard SQL editor.
+3. DB-3 RLS policies + tests, then DB-4 seed.
 
 ## Do not touch
 
-- `supabase/seed/bookleaf_sample_data.json` (byte-identical to the provided file).
-- `docs/blueprint/` (source material).
+- `backend/.env`, `author-frontend/.env.local`, `admin-frontend/.env.local`: real credentials, git-ignored, never read into chat.
+- `supabase/seed/bookleaf_sample_data.json` (byte-identical to the provided file). `docs/blueprint/` (source material).
 
-## Commits (approved by the user 2026-10-16)
+## Commits (approved by the user 2026-10-17)
 
-On `feature/api-skeleton` (hashes: `git log --oneline main..`):
+On `feature/db-supabase` (hashes: `git log --oneline main..`):
 
-1. `feat(api): add backend skeleton with request ids, logging, CORS, error envelope and API docs`
-2. `docs: record API-1 skeleton, error codes and verification`
+1. `feat(backend): add safe Supabase credential check (npm run check:env)`
+2. `docs: record Supabase setup (DB-1) and credential verification`

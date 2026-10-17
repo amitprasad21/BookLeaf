@@ -24,6 +24,7 @@
 | D-017 | Hosting: Vercel ×2 + Render + Supabase cloud | proposed | 2026-10-16 |
 | D-018 | Dependency policy: exact pins, newest stable ≥ 14 days old; TypeScript 6.0.3; npm ≥ 11 | accepted | 2026-10-16 |
 | D-019 | Tooling: ESLint 9 flat config (Next rules scoped to React workspaces), Prettier for code only, Redocly OpenAPI lint, `prepare` builds shared packages | accepted | 2026-10-16 |
+| D-020 | Supabase: new publishable/secret API keys (not legacy anon/service_role); self sign-up off, accounts from seed only | accepted | 2026-10-17 |
 
 ---
 
@@ -119,3 +120,9 @@
 - **ESLint 9, not 10:** `eslint-plugin-react` (inside `eslint-config-next`) supports ESLint `≤ ^9.7`. npm marks 9.39.5 as no longer supported. Accepted because ESLint is a dev-only tool that never ships to users.
 - **Approved by:** user, 2026-10-16.
 - **Revisit:** When `eslint-config-next` supports ESLint 10; add type-aware lint rules once real code exists.
+
+### D-020: Supabase keys and account provisioning
+- **Context:** DB-1. Official Supabase docs (checked 2026-10-17) describe publishable (`sb_publishable_…`, browser-safe) and secret (`sb_secret_…`, backend-only, bypasses RLS) keys under **Settings → API Keys**. Legacy `anon`/`service_role` JWT keys are deprecated, with removal planned by the end of 2026. The user re-confirmed that self sign-up is not wanted.
+- **Choice:** Use the new publishable/secret keys (variable names unchanged from `.env.example`). "Allow new users to sign up" is **off**; the 10 dataset authors and 2 admins are created by the seed script through the server-side admin API (DB-4).
+- **Evidence:** `npm run check:env` confirms key kinds, placement, connectivity and `disable_signup = true` without printing values.
+- **Open:** that admin-API user creation works with sign-ups disabled is expected but not yet verified. DB-4 will prove it.
