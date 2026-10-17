@@ -7,7 +7,7 @@
 1. **Defense in depth for the backend:** user-initiated queries run with the caller's JWT ([AUTH_SECURITY.md](AUTH_SECURITY.md)), so a missing ownership check in code is still blocked.
 2. **The publishable key is public.** Anyone holding it plus their own valid JWT can call the Supabase Data API directly, bypassing our backend. RLS and table constraints are the only guard on that path.
 
-RLS is **enabled on every table in `public`**. With RLS on and no matching policy, access is denied.
+RLS is **enabled on every table in `public`**. With RLS on and no matching policy, access is denied. The DB-2 migration already enables RLS (with no policies) and revokes everything from `anon`, so the schema is locked down from the moment it exists. DB-3 adds the policies below in a separate migration.
 
 ## 2. Helper functions
 

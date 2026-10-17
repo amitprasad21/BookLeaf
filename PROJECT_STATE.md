@@ -3,7 +3,7 @@
 **Owns:** the current milestone, verified facts, blockers and open questions. Update at the end of every session.
 
 **Last updated:** 2026-10-17
-**Milestone:** Phase 0, SETUP-2, SETUP-3 and API-1 are merged to `main`. DB-1 (Supabase project + credentials) is done and committed on `feature/db-supabase`, not yet merged. No product features yet (no schema, auth, tickets or AI).
+**Milestone:** Phase 0, SETUP-2, SETUP-3 and API-1 are merged to `main`. DB-1 (Supabase project + credentials) is merged to `main`. DB-2: the initial schema is **applied to Supabase** (by the user, via the SQL Editor) and verified. The work is committed on `feature/db-schema`, not yet merged. No product features yet (no schema, auth, tickets or AI).
 
 ## Verified facts (with evidence)
 
@@ -23,6 +23,7 @@
 | `npm run check` (format, lint, OpenAPI lint, typecheck, tests, build) exits 0; `openapi.yaml` is valid OpenAPI 3.1 with 18 operationIds; fresh `npm ci` rebuilds shared packages via `prepare` | [.agent/verification/2026-10-16-setup3.md](.agent/verification/2026-10-16-setup3.md) |
 | `main` fast-forwarded to SETUP-3 (`6898131`) with the user's approval | `git branch -v` |
 | `main` fast-forwarded to API-1 (`af9fc08`) with the user's approval | `git branch -v` |
+| Initial schema applied: 9 tables exist (0 rows), anon access denied, royalty balance constraint enforced | `npm run check:db` → OK ([.agent/verification/2026-10-17-db2.md](.agent/verification/2026-10-17-db2.md)) |
 | Supabase project exists (created by the user). Backend and both frontends have the URL + **publishable** key; the **secret** key is in `backend/.env` only; publishable key reaches the project; secret key accepted (read-only admin call); new-user sign-ups disabled; no secret in any frontend env file | `npm run check:env` → Result: OK ([.agent/verification/2026-10-17-db1.md](.agent/verification/2026-10-17-db1.md)) |
 | API-1 backend skeleton: 28 backend tests pass (env, request id, error envelope, CORS, docs, logging, redaction); live server checks pass for both `npm start` (dist) and `npm run dev` (tsx); Swagger UI renders under helmet CSP | [.agent/verification/2026-10-16-api1.md](.agent/verification/2026-10-16-api1.md) |
 
@@ -39,7 +40,7 @@
 |---|---|---|---|
 | B-01 | ~~Approval to install dependencies~~ | Resolved 2026-10-16 (approved pinned list) | n/a |
 | B-02 | ~~Supabase project credentials~~ | Resolved 2026-10-17 (DB-1) | n/a |
-| B-04 | Way to apply migrations to the hosted database (just in time, at DB-2) | DB-2 onwards | Choose: Supabase CLI via `npx supabase` (install approval + access token/DB password) or pasting SQL into the dashboard SQL editor |
+| B-04 | ~~Migration route~~ | Resolved 2026-10-17: SQL Editor by the user, verified with `npm run check:db` (D-021) | n/a |
 | B-03 | LLM provider confirmation + key (just in time) | AI-1 live smoke test only; mock provider unblocks everything else | Decide at AI-1 |
 
 ## Open questions
@@ -56,4 +57,4 @@
 
 ## Next step
 
-Merge `feature/db-supabase` into `main` (needs approval). Then **DB-2: schema migrations**. The SQL can be written and reviewed first. Applying it to the hosted database needs a decision on the migration route (B-04), explained just in time.
+Merge `feature/db-schema` into `main` (needs approval). Then DB-3: RLS helper functions and policies as a second migration for review, plus policy tests with real sign-ins. The tests need seeded users, so DB-4 (seed) goes alongside.

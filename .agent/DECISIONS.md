@@ -25,6 +25,7 @@
 | D-018 | Dependency policy: exact pins, newest stable ≥ 14 days old; TypeScript 6.0.3; npm ≥ 11 | accepted | 2026-10-16 |
 | D-019 | Tooling: ESLint 9 flat config (Next rules scoped to React workspaces), Prettier for code only, Redocly OpenAPI lint, `prepare` builds shared packages | accepted | 2026-10-16 |
 | D-020 | Supabase: new publishable/secret API keys (not legacy anon/service_role); self sign-up off, accounts from seed only | accepted | 2026-10-17 |
+| D-021 | Migrations applied by the user via the dashboard SQL Editor; repo files are canonical; manual migration log in `.back/DATA_MODEL.md` | accepted | 2026-10-17 |
 
 ---
 
@@ -126,3 +127,9 @@
 - **Choice:** Use the new publishable/secret keys (variable names unchanged from `.env.example`). "Allow new users to sign up" is **off**; the 10 dataset authors and 2 admins are created by the seed script through the server-side admin API (DB-4).
 - **Evidence:** `npm run check:env` confirms key kinds, placement, connectivity and `disable_signup = true` without printing values.
 - **Open:** that admin-API user creation works with sign-ups disabled is expected but not yet verified. DB-4 will prove it.
+
+### D-021: Migration route
+- **Context:** DB-2. The options were the dashboard SQL Editor (no install, no new credentials) or the Supabase CLI (tracked history, but needs an install, a personal access token and the database password).
+- **Choice:** The user applies each reviewed migration file in the SQL Editor, wrapped in `begin; … commit;`, and the agent verifies with `npm run check:db` (read-only, names/counts/pass-fail only). Applied migrations are logged in `.back/DATA_MODEL.md`.
+- **Cost:** No automatic migration history; production deploys repeat the manual step. Rollback scripts live in `supabase/rollback/`, outside the migrations folder.
+- **Revisit:** If migrations become frequent or a CI deploy pipeline is added, adopt the Supabase CLI (`db push`) with the same files.

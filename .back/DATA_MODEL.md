@@ -1,6 +1,8 @@
 # Data Model
 
-**Owns:** tables, columns, enums, constraints, indexes and triggers (Supabase Postgres). Access policies are in [SUPABASE_RLS.md](SUPABASE_RLS.md); reasoning about sensitivity is in [.agent/DATA.md](../.agent/DATA.md). **Status: design; migrations are task DB-2.**
+**Owns:** tables, columns, enums, constraints, indexes and triggers (Supabase Postgres). Access policies are in [SUPABASE_RLS.md](SUPABASE_RLS.md); reasoning about sensitivity is in [.agent/DATA.md](../.agent/DATA.md).
+
+**Status:** applied to the Supabase project on 2026-10-17 (see the migration log below): [supabase/migrations/20261017090000_initial_schema.sql](../supabase/migrations/20261017090000_initial_schema.sql). Rollback (destructive): [supabase/rollback/20261017090000_initial_schema_down.sql](../supabase/rollback/20261017090000_initial_schema_down.sql). Enum values are kept in step with `packages/shared` and `openapi.yaml` by `backend/test/schema-contract.test.ts`.
 
 ## ER overview
 
@@ -163,11 +165,14 @@ The original description lives on `tickets`, not as a message.
 | Table | Index | Serves |
 |---|---|---|
 | tickets | `(author_id, updated_at desc)` | Author's ticket list |
+| tickets | `(author_id, created_at desc)` | Rate-limit trigger |
+| tickets | `(book_id)` | Composite FK lookups |
 | tickets | `(status, priority, created_at)` | Queue urgency sort |
 | tickets | `(assigned_admin_id)` | "Assigned to me" |
 | tickets | partial `(created_at) where ai_status in ('pending','failed')` | Sweeper |
 | ticket_messages | `(ticket_id, created_at)` | Thread |
 | internal_notes | `(ticket_id, created_at)` | Notes |
+| ai_drafts | `(ticket_id, created_at desc)` | Latest draft per ticket |
 | ai_drafts | partial `(ticket_id, context_hash) where status = 'ready'` | Draft reuse |
 | audit_events | `(ticket_id, created_at)` | Timeline |
 | ai_usage_events | `(created_at)` | Daily budget sum |
@@ -179,8 +184,22 @@ The original description lives on `tickets`, not as a message.
 |---|---|---|
 | `set_updated_at_and_version` | tickets | `before update`: `updated_at = now()`, `version = old.version + 1` |
 | `tickets_immutable_fields` | tickets | `before update`: reject changes to `author_id`, `book_id`, `subject`, `description`, `attachment_name`, `created_at`, `reference_no` |
-| `tickets_author_rate_limit` | tickets | `before insert`: if the author has ≥ 5 tickets in the last 10 minutes or ≥ 20 today, raise `P0001 'rate_limited'` (backstop for direct API calls; see SUPABASE_RLS §4) |
-| `messages_touch_ticket` | ticket_messages | `after insert`: bump the parent ticket's `updated_at` |
+| `tickets_author_rate_limit` | tickets | `before insert`: if the author has ≥ 5 tickets in the last 10 minutes or ≥ 20 in the last 24 hours, raise `P0001 'rate_limited'` (backstop for direct API calls; see SUPABASE_RLS §4). Runs as the inserting user, so under RLS it counts only that author's tickets |
+| `ticket_messages_touch_ticket` | ticket_messages | `after insert`: bump the parent ticket's `updated_at` (and so its `version`). `security definer` with `search_path = ''`, because authors may add follow-ups but cannot update tickets under RLS |
+
+All trigger functions set `search_path = ''` and schema-qualify every name.
+
+## Lock-down at creation
+
+The migration enables RLS on **every** table with **no** policies, and revokes all table, sequence and function grants from `anon`. Until the DB-3 policies exist, client roles see nothing. Only the backend's secret key (system writer, seed) can read or write.
+
+## Migration log
+
+Migrations are applied by the user through the Supabase dashboard **SQL Editor** (D-021), so Supabase keeps no migration history of its own. This table is the record. The files in `supabase/migrations/` are the source of truth and are applied in filename order, each exactly once.
+
+| Migration | Applied | Method | Verified by |
+|---|---|---|---|
+| `20261017090000_initial_schema.sql` | 2026-10-17 | SQL Editor (user) | `npm run check:db`: 9/9 tables, anon denied, royalty check enforced ([verification](../.agent/verification/2026-10-17-db2.md)) |
 
 ## Money and dates
 

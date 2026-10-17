@@ -1,7 +1,16 @@
 # Handover
 
 **Session:** 2026-10-16 → 2026-10-17 (Claude Code)
-**Branch:** `feature/db-supabase` (branched from `main` at `af9fc08`; two DB-1 commits; not merged, not pushed)
+**Branch:** `feature/db-schema` (branched from `main` at `c4dae51`, which includes DB-1; three DB-2 commits; not merged, not pushed)
+
+**DB-2 status: applied and verified.** `supabase/migrations/20261017090000_initial_schema.sql` (8 enums, 9 tables, constraints, indexes, 4 triggers, RLS on everywhere with no policies, anon revoked) was run by the user in the SQL Editor (D-021). `npm run check:db` → OK: 9/9 tables, anon denied, constraint enforced. No rollback needed. Also: rollback script in `supabase/rollback/`, `backend/test/schema-contract.test.ts`, new `backend/scripts/check-db.ts`, and the migration log in `.back/DATA_MODEL.md`.
+
+**Commits (approved by the user 2026-10-17)** on `feature/db-schema` (hashes: `git log --oneline main..`):
+1. `feat(db): add initial schema migration with RLS lockdown and rollback`
+2. `feat(backend): add read-only schema check (npm run check:db)`
+3. `docs: record DB-2 schema, migration route and verification`
+
+**Next:** merge `feature/db-schema` into `main` (needs approval), then DB-3 (RLS helpers + policies migration for review) together with DB-4 (seed), since the policy tests need seeded sign-ins.
 
 ## Done
 

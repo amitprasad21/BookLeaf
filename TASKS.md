@@ -23,7 +23,7 @@ Still to add, each with approval: `@anthropic-ai/sdk` (AI-2) and `@testing-libra
 | ID | Task | Depends on | Status | Req. IDs |
 |---|---|---|---|---|
 | DB-1 | Create Supabase project; disable signups; configure env (just-in-time credential step) | SETUP-2 | done ([.agent/verification/2026-10-17-db1.md](.agent/verification/2026-10-17-db1.md)) | AUTH-06 |
-| DB-2 | Migrations: enums, tables, constraints, indexes, `updated_at`/`version` triggers ([.back/DATA_MODEL.md](.back/DATA_MODEL.md)) | DB-1 | todo | NFR-01 |
+| DB-2 | Migrations: enums, tables, constraints, indexes, `updated_at`/`version` triggers ([.back/DATA_MODEL.md](.back/DATA_MODEL.md)) | DB-1 | done: applied 2026-10-17 via the dashboard SQL editor; `npm run check:db` OK ([.agent/verification/2026-10-17-db2.md](.agent/verification/2026-10-17-db2.md)) | NFR-01 |
 | DB-3 | RLS helper functions + policies + isolation tests ([.back/SUPABASE_RLS.md](.back/SUPABASE_RLS.md)) | DB-2 | todo | AUTH-03 |
 | DB-4 | Seed script: exact JSON load, auth users for 10 authors + 2 admins, profiles, field-by-field verification | DB-2 | todo | NFR-01, AUTH-01 |
 | API-1 | Express skeleton: env validation, request id, logger with redaction, helmet, CORS allowlist, error envelope, `/health`, `/api/docs` | SETUP-3 | done ([.agent/verification/2026-10-16-api1.md](.agent/verification/2026-10-16-api1.md)) | API-05, API-06 |

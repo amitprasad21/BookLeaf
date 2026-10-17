@@ -95,6 +95,12 @@ Verify credentials without revealing them (prints configured/missing and pass/fa
 npm run check:env
 ```
 
+Verify the database schema after applying a migration (tables, client lockdown, a constraint probe; prints counts and pass/fail only):
+
+```bash
+npm run check:db
+```
+
 Each runtime reads its own environment file. Variable names (never values) are listed in [.env.example](.env.example), and how to obtain each one is in [.agent/CREDENTIALS_GUIDE.md](.agent/CREDENTIALS_GUIDE.md).
 
 ## Test login credentials

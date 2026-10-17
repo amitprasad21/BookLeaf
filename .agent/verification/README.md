@@ -16,3 +16,4 @@ Each entry records:
 | [2026-10-16-setup3.md](2026-10-16-setup3.md) | Tooling: ESLint, Prettier, OpenAPI lint, full `check`, fresh-clone install |
 | [2026-10-16-api1.md](2026-10-16-api1.md) | Backend skeleton: 28 tests, mutation checks, live smoke incl. Swagger UI |
 | [2026-10-17-db1.md](2026-10-17-db1.md) | Supabase project + credentials: safe `check:env`, sign-ups disabled |
+| [2026-10-17-db2.md](2026-10-17-db2.md) | Initial schema: contract test, applied via SQL Editor, `check:db` OK |
