@@ -10,6 +10,7 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node --env-file-if-exists=.env dist/server.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "check:env": "tsx --env-file-if-exists=.env scripts/check-env.ts",
     "test": "vitest run"
   },
   "dependencies": {
