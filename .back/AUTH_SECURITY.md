@@ -55,12 +55,12 @@ The secret key bypasses RLS, so its use is deliberately narrow.
 | `saveTriageResult(ticketId, result)` | Update AI columns; set effective category/priority **only where `*_source` is null** (single conditional `update … where`) |
 | `markTriageFailure(ticketId, reason, final)` | Update `ai_status`, `ai_failure_reason`, increment `ai_attempts` |
 | `listTicketsForSweep()` | IDs of tickets eligible for retry |
-| `appendAuditEvent(event)` | Insert into `audit_events` |
+| `appendAuditEvent(event)` | Insert into `audit_events` **(built, API-4)** |
 | `appendUsageEvent(event)` | Insert into `ai_usage_events` |
 | `sumTokensToday()` | Budget check |
 
 **Guardrails:**
-- Only `backend/src/ai/**` and `backend/src/modules/audit/**` may import `system-writer`, enforced by an ESLint `no-restricted-imports` rule and checked in review (SEC-2).
+- Only `backend/src/ai/**` and `backend/src/modules/audit/**` may import `system-writer`, plus the bootstrap (`server.ts` creates it; `app.ts` passes it to the audit recorder). Enforced by an ESLint `no-restricted-imports` rule in `eslint.config.mjs` (API-4; a probe import from `modules/tickets` fails lint) and checked in review (SEC-2).
 - Inputs are IDs and already-validated values. Never request bodies.
 - The seed script uses its own secret-key client and runs only locally/manually.
 

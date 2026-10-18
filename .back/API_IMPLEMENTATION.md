@@ -1,6 +1,6 @@
 # API Implementation
 
-**Owns:** backend code structure, middleware order and coding conventions. The contract (paths, schemas, errors) is [openapi.yaml](../openapi.yaml) + [INTEGRATION_CONTRACT.md](../INTEGRATION_CONTRACT.md). Status: planned (API-1..API-8).
+**Owns:** backend code structure, middleware order and coding conventions. The contract (paths, schemas, errors) is [openapi.yaml](../openapi.yaml) + [INTEGRATION_CONTRACT.md](../INTEGRATION_CONTRACT.md). Status: API-1..API-4 built; API-5..API-8 planned.
 
 ## 1. Layout
 
@@ -18,18 +18,19 @@ backend/src/
 ├── middleware/
 │   ├── request-id.ts  http-logger.ts  cors.ts  error-handler.ts  not-found.ts   (API-1, built)
 │   ├── authenticate.ts  require-role.ts                                        (API-2, built)
-│   ├── validate.ts  rate-limit.ts                                              (API-4)
+│   ├── rate-limit.ts         perUserLimit() (API-4, built); validation happens in handlers (D-024)
 ├── db/
 │   ├── user-client.ts        per-request Supabase client carrying the caller's JWT (RLS applies)
-│   └── system-writer.ts      secret-key client; narrow typed functions only (see AUTH_SECURITY §5)
+│   └── system-writer.ts      secret-key client; narrow typed functions only (see AUTH_SECURITY §5); appendAuditEvent built (API-4)
 ├── modules/
 │   ├── health/               router.ts (public liveness)
 │   ├── me/                   router.ts (API-2)
-│   ├── author/               router.ts: createAuthorRouter({ clock }), mounts /books (API-3) and tickets (API-4)
+│   ├── author/               router.ts: createAuthorRouter({ clock, audit, ticketsRepository }): /books (API-3), /tickets (API-4)
 │   ├── admin/                router.ts (API-5 onwards)
 │   ├── books/                repository · service (royalty summary) · serializers (API-3)
-│   ├── tickets/              author.router · admin.router · service · repository · lifecycle.ts · serializers/{author,admin}.ts
-│   ├── messages/  notes/  audit/
+│   ├── tickets/              repository.ts · serializers/author.ts (API-4); admin side, service, lifecycle.ts (API-5+)
+│   ├── audit/                service.ts: createAuditRecorder (logs and swallows failures) (API-4)
+│   ├── messages/  notes/
 │   └── events/               hub.ts (in-process pub/sub) · router.ts (SSE)
 ├── ai/                       see .back/AI_PROVIDER_ORCHESTRATION.md
 │
@@ -52,10 +53,11 @@ packages/shared/src/payout-calendar.ts   quarter / 45-day due date / ₹1,000 th
 | 6 | Public routes | `/api/v1/health`, `/api/docs`, `/api/openapi.yaml` | No auth |
 | 7 | `authenticate` | everything else under `/api/v1` | Verifies JWT, loads profile → `req.auth = { userId, role, authorId, displayName }` |
 | 8 | `requireRole('author')` / `requireRole('admin')` | `/author/*`, `/admin/*` routers | 403 on mismatch |
-| 9 | Route-level `rateLimit`, `validate({ params, query, body })` | per route | zod `strict()` schemas from `packages/shared` |
+| 9 | Route-level `perUserLimit(...)` | per route | In-memory, keyed by user id; failed requests don't count |
+| 9a | `Schema.parse(req.body / req.query / req.params)` in the handler | per route | Strict zod schemas from `packages/shared`; a `ZodError` becomes a 400 with field details (D-024) |
 | 10 | Handler | | Calls service; returns `{ data }` |
 | 11 | `notFound` | unmatched | `404 NOT_FOUND` envelope |
-| 12 | `errorHandler` | all | Maps `AppError` → status/code; zod → 400 with field details; malformed JSON → 400; body > 32 KB → 413; bad encoding → 415; anything else → 500 `INTERNAL_ERROR` with requestId (stack only in logs). Planned with DB work: DB `rate_limited` → 429; FK/check violations → 400/404 |
+| 12 | `errorHandler` | all | Maps `AppError` → status/code; zod → 400 with field details; malformed JSON → 400; body > 32 KB → 413; bad encoding → 415; anything else → 500 `INTERNAL_ERROR` with requestId (stack only in logs). Database errors are mapped in repositories (`mapPostgrestError`): DB `rate_limited` → 429, FK/check violations → 400, RLS refusal → 403 (API-4) |
 
 ## 3. Error classes
 
@@ -75,7 +77,7 @@ packages/shared/src/payout-calendar.ts   quarter / 45-day due date / ₹1,000 th
 
 | Route | Key | Limit |
 |---|---|---|
-| `POST /author/tickets` | user | 5 / 10 min, 20 / day (DB trigger backstop) |
+| `POST /author/tickets` | user | 5 / 10 min, 20 / day (DB trigger backstop) **(built, API-4)** |
 | `POST /author/tickets/{id}/messages` | user | 10 / 10 min |
 | `POST /admin/tickets/{id}/draft` (regenerate) | user | 10 / min; plus 5 regenerations / ticket / day (DB count) |
 | `POST /admin/tickets/{id}/triage` | user | 5 / min; plus 3 manual retries / ticket / day |

@@ -34,7 +34,7 @@ Still to add, each with approval: `@anthropic-ai/sdk` (AI-2) and `@testing-libra
 | ID | Task | Depends on | Status | Req. IDs |
 |---|---|---|---|---|
 | API-3 | `GET /author/books` + royalty summary; shared payout-calendar library | API-2 | done ([.agent/verification/2026-10-18-api3.md](.agent/verification/2026-10-18-api3.md)) | AUTHOR-01..03 |
-| API-4 | Author tickets: create (save-first, `ai_status=pending`), list, detail; author DTO serializer; rate limit | API-2 | todo | AUTHOR-04..07 |
+| API-4 | Author tickets: create (save-first, `ai_status=pending`), list, detail; author DTO serializer; rate limit | API-2 | done ([.agent/verification/2026-10-18-api4.md](.agent/verification/2026-10-18-api4.md)) | AUTHOR-04..07 |
 | API-5 | Admin queue: filters, urgency sort, paging, summary counts, SLA state | API-4 | todo | ADMIN-01..03, ADMIN-14 |
 | API-6 | Admin detail + `PATCH`: transitions, overrides, self-assign, optimistic lock, audit events | API-5 | todo | ADMIN-05/07/11/13/15/16/17 |
 | API-7 | Admin replies (`/messages`) and internal notes; first-response tracking | API-6 | todo | ADMIN-09/10/12 |

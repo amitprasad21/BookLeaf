@@ -5,7 +5,7 @@ A web application for BookLeaf Publishing with two experiences, both backed by o
 - **Author portal**: authors sign in, review their books and royalties, raise support tickets and follow replies in near real time.
 - **Admin portal**: the operations team works a prioritised ticket queue. AI-suggested categories, priorities and reply drafts are always reviewed by a human before anything reaches an author.
 
-> **Current status: data layer ready.** The Supabase database has the schema and row-level security policies, verified by 15 live access-rule tests, and is seeded with the exact assessment dataset (10 authors, 18 books) plus 12 demo logins. The API verifies Supabase sign-ins on every `/api/v1` route (except health), enforces author/admin role guards, and serves `GET /api/v1/me` and `GET /api/v1/author/books` (books + royalty summary with the next payout deadline), plus Swagger UI at `/api/docs`. Ticket endpoints come next. No ticket features, AI or deployment yet. [PROJECT_STATE.md](PROJECT_STATE.md) is the source of truth for what is actually done and verified.
+> **Current status: data layer ready.** The Supabase database has the schema and row-level security policies, verified by 15 live access-rule tests, and is seeded with the exact assessment dataset (10 authors, 18 books) plus 12 demo logins. The API verifies Supabase sign-ins on every `/api/v1` route (except health), enforces author/admin role guards, and serves `GET /api/v1/me`, `GET /api/v1/author/books` (books + royalty summary with the next payout deadline) and the author ticket endpoints (create, list, detail; saved before any AI, rate-limited and audited), plus Swagger UI at `/api/docs`. Admin endpoints come next. No admin features, AI, portal screens or deployment yet. [PROJECT_STATE.md](PROJECT_STATE.md) is the source of truth for what is actually done and verified.
 
 ## Planned architecture (summary)
 
@@ -111,7 +111,7 @@ npm run seed
 npm run seed:apply
 ```
 
-Run the live integration suites against Supabase: access rules plus authentication with real sign-ins. They need both migrations applied and the seed done. `npm run test:rls` runs the access-rule part alone.
+Run the live integration suites against Supabase: access rules, authentication, books and author tickets, all with real sign-ins. They need both migrations applied and the seed done. The access-rule and ticket suites create their own tickets and delete them afterwards with the secret key. `npm run test:rls` runs the access-rule part alone.
 
 ```bash
 npm run test:live

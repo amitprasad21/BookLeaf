@@ -10,16 +10,16 @@
 |---|---|---|---|---|---|
 | 1 | Row Level Security | Required | RLS enabled on every application table; policies per [.back/SUPABASE_RLS.md](../.back/SUPABASE_RLS.md); tested with author A, author B, admin | `npm run test:rls` 15/15 + `check:db` access probes ([verification](verification/2026-10-18-db3-db4.md)) | verified (database layer) |
 | 2 | Auth on every API route | Required | Global auth middleware; explicit public allowlist (`/health`, docs); route inventory test | `authenticate` on all of `/api/v1` except health; `auth.test.ts` (no token → 401 even on unknown paths; malformed/forged/tampered/expired → 401); live `test-integration/auth.test.ts` with real tokens (API-2) | verified (API-2 routes) |
-| 3 | Never trust the frontend | Required | Identity/role from token + DB; strict zod schemas; ownership in every query; transitions validated server-side | Identity from verified token + `profiles` only; query `?role=admin` ignored (test). Schemas/ownership/transitions: API-3+ | partially verified |
-| 4 | Rate limiting | Required | Ticket creation, draft, triage per user; Supabase Auth limits for login | SEC-1 | not run |
-| 5 | Sanitize/validate input | Required | zod (length, enums, unknown keys rejected); plain-text rendering; ticket text delimited as untrusted prompt data | SEC-1, AI-6 | not run |
+| 3 | Never trust the frontend | Required | Identity/role from token + DB; strict zod schemas; ownership in every query; transitions validated server-side | Identity from verified token + `profiles` only; query `?role=admin` ignored (test). API-4: strict ticket schemas reject `authorId`, `status`, `priority` (`tickets.test.ts`); every author query filters by the caller's author id. Transitions: API-5+ | partially verified |
+| 4 | Rate limiting | Required | Ticket creation, draft, triage per user; Supabase Auth limits for login | Ticket creation: 5 / 10 min per author → 429 with `Retry-After`, failed requests not counted (`tickets.test.ts`); DB trigger backstop live (RLS-09). Draft/triage: AI-4/AI-5 | partially verified |
+| 5 | Sanitize/validate input | Required | zod (length, enums, unknown keys rejected); plain-text rendering; ticket text delimited as untrusted prompt data | Ticket create/list/detail: lengths, trimming, attachment type, status/paging enums, UUID ids, unknown keys (`tickets.test.ts`). Rendering: FE-A3/A4; prompts: AI-6 | partially verified |
 | 6 | Parameterized queries | Required | Supabase client query builder only; no string-built SQL; any SQL function reviewed | SEC-2 review | not run |
 | 7 | Locked-down CORS | Required (deploy) | Allowlist from `CORS_ALLOWED_ORIGINS`; no wildcard; no credentials mode needed (bearer tokens); production refuses to start without an explicit allowlist | `backend/test/cors.test.ts`, `env.test.ts` (API-1); deployed-origin check pending (SEC-2) | verified locally |
 | 8 | HTTPS everywhere | Required (deploy) | Vercel/Render/Supabase HTTPS endpoints; HSTS via helmet | DEP-3 | not run |
-| 9 | Stop IDOR bugs | Required | Not-owned → 404; composite FK for ticket→book ownership; UUIDs | Database layer: RLS-03/04/05 pass (live). API layer: `/author/books` filters by the caller's author id even when the data source returns all 18 books (`books.test.ts`), and live authors see disjoint book sets. Ticket endpoints: API-4+ | partially verified |
+| 9 | Stop IDOR bugs | Required | Not-owned → 404; composite FK for ticket→book ownership; UUIDs | Database layer: RLS-03/04/05 pass (live). API layer: `/author/books` filters by the caller's author id even when the data source returns all 18 books (`books.test.ts`), and live authors see disjoint book sets. Author tickets (API-4): another author's ticket → 404 and absent from lists; another author's `bookId` → the same 400 as an unknown book, nothing stored (offline + live `test-integration/tickets.test.ts`). Messages and admin endpoints: API-5+ | partially verified |
 | 10 | Debug mode off in production | Required (deploy) | `NODE_ENV=production`; generic 500s; no provider error bodies; Swagger UI allowed (no secrets) | `backend/test/errors.test.ts`: unexpected error → generic 500, no message/stack leak (API-1); production-mode check pending (SEC-1) | verified locally |
 | 11 | CAPTCHA on public forms | Conditional: **N/A** | No public/unauthenticated forms (signups disabled; login protected by Supabase Auth rate limits). Revisit if a public form is added | n/a | n/a |
-| 12 | Log admin actions | Recommended | `audit_events` for status, overrides, assignment, replies, notes, draft regeneration; old/new values only, no bodies | API-6 tests | not run |
+| 12 | Log admin actions | Recommended | `audit_events` for status, overrides, assignment, replies, notes, draft regeneration; old/new values only, no bodies | Pipeline built: `ticket.created` written by the system writer with `{ bookId }` only, live-checked (API-4). Admin actions: API-6 | not run (admin actions) |
 | 13 | Private storage buckets | Conditional | Only if X-1 (real uploads) is built: private bucket, type/size limits, short-lived signed URLs, owner checks | X-1 | n/a until built |
 | 14 | Hide admin pages properly | Required | Admin UI is a separate app; backend enforces `role=admin` on `/admin/*` regardless | `requireRole` guards; author → `/admin/*` 403 and admin → `/author/*` 403 (offline + live with real tokens) | verified (backend) |
 | 15 | Update vulnerable packages | Required (pre-demo) | Minimal deps; lockfile committed; `npm audit` reviewed | SEC-2 | not run |
@@ -32,12 +32,12 @@
 | # | Scenario | Expected result | Status |
 |---|---|---|---|
 | R-01 | Anonymous user calls an admin API route | 401 | not run |
-| R-02 | Author A substitutes Author B's ticket/book ID in path, query or body | 404 / 400, no data | not run |
-| R-03 | Author requests internal notes or admin-only fields | Not present in any author response; `/admin/*` → 403 | not run |
-| R-04 | Author spams ticket creation or an admin spams draft regeneration | 429 after limit; budget unaffected beyond caps | not run |
+| R-02 | Author A substitutes Author B's ticket/book ID in path, query or body | 404 / 400, no data | partially run: author ticket detail and create pass offline + live (API-4); messages pending |
+| R-03 | Author requests internal notes or admin-only fields | Not present in any author response; `/admin/*` → 403 | partially run: author ticket DTO keys equal `openapi.yaml` exactly, no priority/category/AI/assignee/note fields (API-4) |
+| R-04 | Author spams ticket creation or an admin spams draft regeneration | 429 after limit; budget unaffected beyond caps | partially run: ticket creation → 429 on the 6th in 10 min (offline, API-4); drafts pending |
 | R-05 | Ticket prompt-injects for secrets or other authors' data | Normal triage; draft contains nothing outside the author's own facts | not run |
 | R-06 | Malformed model output sets an invalid category/priority | Rejected; ticket → manual review | not run |
-| R-07 | RLS misconfigured or secret key used outside the system writer | RLS tests fail loudly; grep check for the key's import sites | not run |
+| R-07 | RLS misconfigured or secret key used outside the system writer | RLS tests fail loudly; grep check for the key's import sites | partially run: ESLint rule blocks `db/system-writer` imports outside the allowlist (probe, API-4); SEC-2 grep pending |
 | R-08 | Private attachment URL reused after expiry | n/a unless X-1 | n/a |
 | R-09 | Provider key missing, invalid, over quota or logged | Manual mode; config error logged without the key | not run |
 | R-10 | Production returns a stack trace or accepts an unapproved origin | Neither happens | not run |

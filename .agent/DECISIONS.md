@@ -28,6 +28,7 @@
 | D-021 | Migrations applied by the user via the dashboard SQL Editor; repo files are canonical; manual migration log in `.back/DATA_MODEL.md` | accepted | 2026-10-17 |
 | D-022 | Token verification via `supabase.auth.getClaims()` (ES256/JWKS, local); profile + author loaded per request through the caller's RLS client | accepted | 2026-10-18 |
 | D-023 | Payout calendar in `packages/shared`; ₹1,000 threshold on the author's total pending; `nextPayoutDueBy` = earliest deadline not yet passed | accepted | 2026-10-18 |
+| D-024 | Author ticket API: zod parse in handlers (no `validate` middleware), same 400 for unknown and not-owned books, per-user limits + DB backstop, audit via the system writer | accepted | 2026-10-18 |
 
 ---
 
@@ -150,3 +151,15 @@
 - **Choice:** One pure module, `packages/shared/src/payout-calendar.ts`, holding the business date (Asia/Kolkata), calendar quarters, `quarterEnd + 45` deadlines, the threshold and the overdue heuristic. Unit-tested against the AI spec's worked examples.
 - **Rules:** The threshold is applied to the **author's total** pending royalties, not per book, because "accumulated royalties" is about the author's payout. `nextPayoutDueBy` is the last closed quarter's deadline while it hasn't passed (inclusive of the day itself), otherwise the current quarter's. Money totals are summed in paise to avoid floating-point drift.
 - **Revisit:** If finance confirms different quarter boundaries or a business-day window (assumptions A-02/A-03), only this module changes.
+
+### D-024: Author ticket API (API-4)
+- **Context:** API-4: `POST/GET /author/tickets` and `GET /author/tickets/{id}`. The plan named a `middleware/validate.ts`, a per-author limit and mapping database errors.
+- **Validation:** handlers call the shared zod schemas directly (`CreateTicketRequestSchema.parse(req.body)` and the query/params schemas from `packages/shared/src/schemas.ts`). The error handler already turns a `ZodError` into a 400 with field details, so a `validate()` middleware would add a layer without changing behaviour, and parsing in the handler keeps the parsed values typed. Bodies are strict (unknown keys such as `authorId`, `status`, `priority` → 400) and text is trimmed before length checks.
+- **Book ownership:** checked before the insert. An unknown book and another author's book get the **same** 400 on `bookId`, so book ids can't be probed. The composite FK is the backstop (23503 → the same 400).
+- **Database errors:** mapped in the tickets repository (`mapPostgrestError`): trigger `rate_limited` → 429 (`Retry-After: 600`), 23503/23514 → 400, 42501 → 403, anything else → generic 500.
+- **Rate limit:** `express-rate-limit`, keyed by user id, 5 per 10 min and 20 per day; failed requests don't count. In-memory per instance (A-15); the DB trigger enforces the same caps across instances.
+- **Audit:** `ticket.created` is appended through the system writer after the insert, with `{ bookId }` only (no ticket text). A failed audit write is logged and never fails the request.
+- **Author view:** `hasAdminReply` comes from `first_response_at`; replies are signed "BookLeaf Support" (A-07). Lists sort by `updated_at`, then `created_at`, both descending.
+- **System writer confinement:** an ESLint `no-restricted-imports` rule allows `db/system-writer` only in `src/ai/**`, `src/modules/audit/**` and the bootstrap (`server.ts` creates it, `app.ts` hands it to the audit recorder).
+- **Cost:** creating a ticket takes four sequential Supabase round trips (profile, book check, insert, audit): about 0.8–1.5 s, up to 5 s on a cold connection in the smoke test.
+- **Revisit:** if latency matters, run the book check alongside the profile load, or append the audit event after sending the response.

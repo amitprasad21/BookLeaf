@@ -10,7 +10,7 @@ Each assumption is something we are acting on without confirmation. Confirm or c
 | A-04 | Business date and time zone: `Asia/Kolkata` | India-first operations | Facts, SLA display | Assumed |
 | A-05 | Accounts are provisioned by BookLeaf (seed), not self-registered; one demo password per role, published in the README for the live demo only | Assignment: "Include test login credentials in your README" | Auth, seed | Assumed |
 | A-06 | Admin users are not in the dataset; two admin accounts are created: `admin@bookleaf.test` and `support.lead@bookleaf.test` (`.test` is a reserved TLD) | Dataset has authors only | Seed, demo | Assumed |
-| A-07 | Admin replies are shown to authors with the admin's display name and "BookLeaf Support" | Personal yet branded | Author thread UI | Assumed |
+| A-07 | Admin replies are signed "BookLeaf Support" in the author view; admins see the sending admin's display name | Authors can't read admin profiles under RLS, and a team signature stays consistent when several admins reply | Author thread DTO and UI | Assumed (changed at API-4; was "admin's name + BookLeaf Support") |
 | A-08 | Internal first-response targets: Critical 4 h, High 24 h, Medium 48 h, Low 72 h (wall-clock) | Not in KB; needed to make "urgent and oldest" visible | Queue SLA state | Assumed (internal targets, not promises to authors) |
 | A-09 | Legal, rights or copyright concerns are Critical | Business risk | Priority floor | Assumed |
 | A-10 | Tickets are written in English | Dataset/KB in English | Prompts, eval | Assumed |

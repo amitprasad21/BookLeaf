@@ -20,3 +20,4 @@ Each entry records:
 | [2026-10-18-db3-db4.md](2026-10-18-db3-db4.md) | Access rules + seed: seed OK, wrong-project apply caught, 15/15 live RLS tests |
 | [2026-10-18-api2.md](2026-10-18-api2.md) | Auth middleware, role guards, `/me`: 69 offline + 21 live tests, live server smoke |
 | [2026-10-18-api3.md](2026-10-18-api3.md) | `/author/books` + royalty summary + payout calendar: 88 offline + 27 live tests |
+| [2026-10-18-api4.md](2026-10-18-api4.md) | Author tickets (create, list, detail), rate limit, audit: 106 offline + 32 live tests, server smoke |
