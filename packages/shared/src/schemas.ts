@@ -133,3 +133,24 @@ export const UpdateTicketRequestSchema = z
     message: `include at least one of ${UPDATE_FIELDS.join(", ")}`,
   });
 export type UpdateTicketRequest = z.infer<typeof UpdateTicketRequestSchema>;
+
+const MessageBodySchema = z
+  .string()
+  .trim()
+  .min(TICKET_LIMITS.messageBody.min)
+  .max(TICKET_LIMITS.messageBody.max);
+
+/** Statuses an admin reply may leave the ticket in. */
+export const REPLY_STATUSES_AFTER = ["in_progress", "resolved"] as const;
+
+/** POST /admin/tickets/{ticketId}/messages. */
+export const AdminReplyRequestSchema = z.strictObject({
+  body: MessageBodySchema,
+  draftId: z.uuid().nullable().optional(),
+  statusAfter: z.enum(REPLY_STATUSES_AFTER).default("in_progress"),
+});
+export type AdminReplyRequest = z.infer<typeof AdminReplyRequestSchema>;
+
+/** POST /admin/tickets/{ticketId}/notes (and later author follow-ups). */
+export const MessageBodyRequestSchema = z.strictObject({ body: MessageBodySchema });
+export type MessageBodyRequest = z.infer<typeof MessageBodyRequestSchema>;
