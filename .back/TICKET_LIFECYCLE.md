@@ -54,9 +54,11 @@ Every admin mutation of the ticket row checks `version` (optimistic locking) and
 | `breached` | No first response and now > `created_at` + target, or first response after target |
 | `due_soon` | No first response and remaining time < 25% of target |
 | `on_track` | Otherwise, with no first response yet |
-| `not_applicable` | Closed without any response (spam/duplicates) |
+| `not_applicable` | Resolved or closed without any response (spam, duplicates, resolved without a reply; D-025) |
 
-These are internal operational targets, never promised to authors.
+**Overdue** (the summary's `slaBreached` and the queue's `overdue=true`) is the actionable part of `breached`: unresolved, no first response, past the target. A ticket whose first reply came late still shows `breached`, but is no longer overdue.
+
+The rules live in `packages/shared/src/sla.ts` (D-025). These are internal operational targets, never promised to authors.
 
 ## 4. Queue urgency ordering (`sort=urgency`)
 
@@ -64,4 +66,4 @@ These are internal operational targets, never promised to authors.
 2. Priority rank: critical (0), high (1), untriaged (2), medium (3), low (4).
 3. `created_at` ascending (oldest first).
 
-Implemented in SQL with a `case` expression on priority so pagination stays stable.
+Implemented as the generated column `tickets.urgency_rank` (migration `20261018090000_queue_urgency_rank.sql`, D-025), because the Data API can only order by columns. The queue orders by `urgency_rank`, `created_at`, then `id`, so pagination stays stable.

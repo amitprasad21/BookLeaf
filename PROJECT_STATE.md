@@ -3,7 +3,7 @@
 **Owns:** the current milestone, verified facts, blockers and open questions. Update at the end of every session.
 
 **Last updated:** 2026-10-18
-**Milestone:** Phase 0, SETUP-2, SETUP-3 and API-1 are merged to `main`. DB-1 (Supabase project + credentials) is merged to `main`. DB-2 (initial schema, applied and verified) is merged to `main`. DB-3 (RLS policies) and DB-4 (seed) are **applied, seeded, verified and merged** (project `jhszxq…`). API-2 (auth, role guards, `GET /me`) and API-3 (`GET /author/books` + royalty summary + shared payout calendar) are merged. API-4 (author tickets: create, list, detail) is done, verified and committed on `feature/api-author-tickets`, not yet merged. No admin endpoints, AI, portal screens or deployment yet.
+**Milestone:** Phase 0, SETUP-2, SETUP-3 and API-1 are merged to `main`. DB-1 (Supabase project + credentials) is merged to `main`. DB-2 (initial schema, applied and verified) is merged to `main`. DB-3 (RLS policies) and DB-4 (seed) are **applied, seeded, verified and merged** (project `jhszxq…`). API-2 (auth, role guards, `GET /me`), API-3 (`GET /author/books` + royalty summary + shared payout calendar) and API-4 (author tickets) are merged. API-5 (admin queue + summary; migration `20261018090000_queue_urgency_rank.sql` applied by the user) is done, verified and committed on `feature/api-admin-queue`, not yet merged. No AI, portal screens or deployment yet.
 
 ## Verified facts (with evidence)
 
@@ -23,6 +23,8 @@
 | `npm run check` (format, lint, OpenAPI lint, typecheck, tests, build) exits 0; `openapi.yaml` is valid OpenAPI 3.1 with 18 operationIds; fresh `npm ci` rebuilds shared packages via `prepare` | [.agent/verification/2026-10-16-setup3.md](.agent/verification/2026-10-16-setup3.md) |
 | `main` fast-forwarded to SETUP-3 (`6898131`) with the user's approval | `git branch -v` |
 | `main` fast-forwarded to API-1 (`af9fc08`) with the user's approval | `git branch -v` |
+| API-5: admin queue sorts by urgency in the database (generated `urgency_rank`), filters by status, category, priority incl. untriaged, assignee, AI status, overdue, India business dates and search; `slaState` and summary counts follow the shared SLA rules; 138 offline tests, 39 live tests, live server smoke, search text redacted from logs | [.agent/verification/2026-10-18-api5.md](.agent/verification/2026-10-18-api5.md) |
+| `main` fast-forwarded to API-4 (`551e0f9`) with the user's approval | `git branch -v` |
 | API-4: author tickets save first (`ai_status=pending`), are audited (`ticket.created`) and rate-limited (5 / 10 min per author); another author's ticket → 404 and their `bookId` → 400; 106 offline tests, 32 live tests, live server smoke, no test tickets left behind | [.agent/verification/2026-10-18-api4.md](.agent/verification/2026-10-18-api4.md) |
 | `main` fast-forwarded to API-3 (`12c49ba`) with the user's approval | `git branch -v` |
 | API-3: `GET /author/books` returns each author's exact dataset books + royalty summary (paise-safe totals, ₹1,000 rollover, next payout deadline from the shared calendar); 88 offline tests, 27 live tests | [.agent/verification/2026-10-18-api3.md](.agent/verification/2026-10-18-api3.md) |
@@ -35,7 +37,7 @@
 
 ## Not done / not verified
 
-- No LLM key, no deployment. Not built yet: admin endpoints (API-5..API-7), SSE (API-8), AI (AI-1..AI-6) and the portal screens. Author follow-up messages are deferred (X-2).
+- No LLM key, no deployment. Not built yet: admin ticket detail and updates (API-6), replies and notes (API-7), SSE (API-8), AI (AI-1..AI-6) and the portal screens. Author follow-up messages are deferred (X-2).
 - Rate limits are in-memory per instance (A-15); the database trigger is the cross-instance cap.
 - Mermaid diagrams in the docs have not been rendered locally (no renderer installed); they target GitHub's renderer.
 - The blueprint PDF was not regenerated (pandoc/XeLaTeX not installed, and not required for this phase).
@@ -63,4 +65,4 @@
 
 ## Next step
 
-Fast-forward `main` to `feature/api-author-tickets` (needs approval). Then **API-5**: the admin queue (filters, urgency sort, paging, summary counts, SLA state). No new credentials are needed.
+Fast-forward `main` to `feature/api-admin-queue` (needs approval). Then **API-6**: admin ticket detail and `PATCH` (transitions, overrides, self-assign, optimistic lock, audit events). No new credentials are needed.

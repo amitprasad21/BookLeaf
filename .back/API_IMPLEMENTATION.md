@@ -1,6 +1,6 @@
 # API Implementation
 
-**Owns:** backend code structure, middleware order and coding conventions. The contract (paths, schemas, errors) is [openapi.yaml](../openapi.yaml) + [INTEGRATION_CONTRACT.md](../INTEGRATION_CONTRACT.md). Status: API-1..API-4 built; API-5..API-8 planned.
+**Owns:** backend code structure, middleware order and coding conventions. The contract (paths, schemas, errors) is [openapi.yaml](../openapi.yaml) + [INTEGRATION_CONTRACT.md](../INTEGRATION_CONTRACT.md). Status: API-1..API-5 built; API-6..API-8 planned.
 
 ## 1. Layout
 
@@ -26,9 +26,9 @@ backend/src/
 │   ├── health/               router.ts (public liveness)
 │   ├── me/                   router.ts (API-2)
 │   ├── author/               router.ts: createAuthorRouter({ clock, audit, ticketsRepository }): /books (API-3), /tickets (API-4)
-│   ├── admin/                router.ts (API-5 onwards)
+│   ├── admin/                router.ts: createAdminRouter({ clock, adminTicketsRepository }): /tickets, /tickets/summary (API-5)
 │   ├── books/                repository · service (royalty summary) · serializers (API-3)
-│   ├── tickets/              repository.ts · serializers/author.ts (API-4); admin side, service, lifecycle.ts (API-5+)
+│   ├── tickets/              repository.ts · serializers/author.ts (API-4); admin-repository.ts · serializers/admin.ts (API-5); service, lifecycle.ts (API-6+)
 │   ├── audit/                service.ts: createAuditRecorder (logs and swallows failures) (API-4)
 │   ├── messages/  notes/
 │   └── events/               hub.ts (in-process pub/sub) · router.ts (SSE)
@@ -36,6 +36,8 @@ backend/src/
 │
 packages/shared/src/payout-calendar.ts   quarter / 45-day due date / ₹1,000 threshold / overdue heuristic
                                          (pure; shared by the API, AI facts and frontends; tested in backend/test)
+packages/shared/src/sla.ts               first-response targets, slaState, overdue cut-offs (API-5)
+packages/shared/src/schemas.ts           request schemas: author tickets (API-4), admin queue query (API-5)
 └── openapi/                  serves ../../openapi.yaml + Swagger UI
 ```
 
@@ -46,7 +48,7 @@ packages/shared/src/payout-calendar.ts   quarter / 45-day due date / ₹1,000 th
 | # | Middleware | Applies to | Notes |
 |---|---|---|---|
 | 1 | `requestId` | all | Accept a safe incoming `X-Request-Id` or generate one; echo it in the response header |
-| 2 | `pino-http` | all | Logs only request id, method, URL, status and timing: no headers, IPs, user agents or bodies. Health checks are skipped. pino redaction masks credential-like fields (`authorization`, `cookie`, `*.password`, `*.token`, `*.apiKey`, `*.secret`) as a backstop for other log calls |
+| 2 | `pino-http` | all | Logs only request id, method, URL, status and timing: no headers, IPs, user agents or bodies. The value of the `q` search parameter is logged as `redacted` (D-025). Health checks are skipped. pino redaction masks credential-like fields (`authorization`, `cookie`, `*.password`, `*.token`, `*.apiKey`, `*.secret`) as a backstop for other log calls |
 | 3 | `helmet` | all | HSTS, no-sniff, frameguard, minimal CSP for Swagger UI |
 | 4 | `cors` | all | Exact-match allowlist from `CORS_ALLOWED_ORIGINS`; methods GET/POST/PATCH; headers Authorization, Content-Type, X-Request-Id |
 | 5 | `express.json({ limit: '32kb' })` | all | Oversized → 413 envelope |

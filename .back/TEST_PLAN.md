@@ -28,7 +28,7 @@ Integration tests use a dedicated test author and test admin plus tickets they c
 | U-08 | placeholder-guard | Detects `[insert date]`, `{{name}}` |
 | U-09 | fact-guard | `₹3,570` matches BK001 pending; `₹4,000` flagged; dates normalised across formats |
 | U-10 | serializers | Author DTO keys = exact allowlist (snapshot) |
-| U-11 | sla | met / breached / due_soon / on_track / not_applicable boundaries |
+| U-11 | sla | met / breached / due_soon / on_track / not_applicable boundaries (**implemented**: `backend/test/sla.test.ts`) |
 | U-12 | facts | Never includes email, phone, city; `authorBooks` only for General tickets in royalty/general categories |
 | U-13 | KB selection | Each category maps to the expected section IDs |
 | U-14 | router | Failover order, breaker transitions, no failover on refusal/bad_request |
@@ -46,7 +46,7 @@ Integration tests use a dedicated test author and test admin plus tickets they c
 | I-07 | `POST /author/tickets` | Extra field `priority` / `authorId` | 400 |
 | I-08 | `GET /author/tickets/{id}` | Other author's ticket | 404 |
 | I-09 | `GET /author/tickets/{id}` | Own ticket with notes + draft | Response has no internal fields |
-| I-10 | `GET /admin/tickets` | Filters combined + urgency sort | Correct set and order |
+| I-10 | `GET /admin/tickets` | Filters combined + urgency sort | Correct set and order (**implemented**: offline `admin-queue.test.ts` (recorded queries), live `test-integration/admin-queue.test.ts`) |
 | I-11 | `PATCH /admin/tickets/{id}` | Stale version | 409 with current ticket |
 | I-12 | `PATCH` | Invalid transition | 422 |
 | I-13 | `PATCH` | `assignedAdminId` = other admin | 422 INVALID_ASSIGNMENT |

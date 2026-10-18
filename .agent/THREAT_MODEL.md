@@ -38,7 +38,7 @@
 | T-11 | RLS misconfiguration | RLS tests with author A, author B, admin; backend checks too | Medium until tested | DB-3 |
 | T-12 | Secret key misuse (bypasses RLS) | Only imported by the system writer module (lint rule / grep check); never in frontend envs | Low | SEC-2 grep |
 | T-13 | LLM/secret key leaked to browser | No `NEXT_PUBLIC_` secrets; build output grep; keys only in backend env | Low | SEC-2 bundle grep |
-| T-14 | Keys or ticket text in logs | pino redaction of `authorization`, `apiKey`, body fields; usage logs store counts only | Low | Log review in SEC-2 |
+| T-14 | Keys or ticket text in logs | pino redaction of `authorization`, `apiKey`, body fields; request logs carry no headers or bodies and redact the `q` search value; usage logs store counts only | Low | Log review in SEC-2 |
 | T-15 | Stack traces / provider errors exposed | Central error handler; generic 500 with requestId; `NODE_ENV=production` | Low | SEC-1 forced error |
 | T-16 | Cross-origin abuse | CORS allowlist of the two frontend origins; bearer tokens (no cookies) avoid CSRF | Low | SEC-2 |
 | T-17 | XSS via ticket content or AI draft | React escaping; no `dangerouslySetInnerHTML`; plain-text rendering with preserved line breaks | Low | Manual + lint rule |

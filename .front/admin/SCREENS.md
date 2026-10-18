@@ -10,6 +10,7 @@ Same pattern as the author sign-in, titled "BookLeaf Support Console". Non-admin
 
 **Summary bar** (`GET /admin/tickets/summary`); each count is a button that applies its filter:
 Open · In progress · Unassigned · Critical · Overdue · Needs manual triage.
+(Filters: `status=open` · `status=in_progress` · `assignee=unassigned` · `priority=critical` · `overdue=true` · `aiStatus=manual_review_required`, each with `status=open,in_progress` where the count is unresolved-only; see `QueueSummary` in openapi.yaml.)
 
 **Filter bar** (state mirrored in the URL query string):
 - Status (multi, default Open + In progress)

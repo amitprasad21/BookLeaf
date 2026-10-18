@@ -115,6 +115,7 @@ Table constraints: `unique (book_id, author_id)` (target of the tickets composit
 | `version` | integer | not null default 1 |
 | `created_at` / `updated_at` | timestamptz | not null default `now()` |
 | `first_response_at` / `resolved_at` / `closed_at` | timestamptz | null |
+| `urgency_rank` | smallint | not null, `generated always as (…) stored`: unresolved 0–4 / resolved+closed 10–14 by priority (critical, high, untriaged, medium, low). Queue sort key (D-025) |
 
 ### `ticket_messages` (author-visible thread, append-only)
 
@@ -167,7 +168,8 @@ The original description lives on `tickets`, not as a message.
 | tickets | `(author_id, updated_at desc)` | Author's ticket list |
 | tickets | `(author_id, created_at desc)` | Rate-limit trigger |
 | tickets | `(book_id)` | Composite FK lookups |
-| tickets | `(status, priority, created_at)` | Queue urgency sort |
+| tickets | `(status, priority, created_at)` | Status / priority filters |
+| tickets | `(urgency_rank, created_at)` | Queue urgency sort (API-5) |
 | tickets | `(assigned_admin_id)` | "Assigned to me" |
 | tickets | partial `(created_at) where ai_status in ('pending','failed')` | Sweeper |
 | ticket_messages | `(ticket_id, created_at)` | Thread |
@@ -201,6 +203,7 @@ Migrations are applied by the user through the Supabase dashboard **SQL Editor**
 |---|---|---|---|
 | `20261017090000_initial_schema.sql` | 2026-10-17 | SQL Editor (user) | `npm run check:db`: 9/9 tables, anon denied, royalty check enforced ([verification](../.agent/verification/2026-10-17-db2.md)) |
 | `20261017120000_rls_policies.sql` | 2026-10-18 | SQL Editor (user), third attempt (see verification) | `check:db` access probes yes/yes; `npm run test:rls` 15/15 ([verification](../.agent/verification/2026-10-18-db3-db4.md)) |
+| `20261018090000_queue_urgency_rank.sql` | 2026-10-18 | SQL Editor (user) | Fingerprint `10 · 12 · 16 · false · 1`; `check:db` `urgency_rank` present; live queue suite 7/7 ([verification](../.agent/verification/2026-10-18-api5.md)) |
 
 **Before and after every migration**, run this fingerprint query in the SQL Editor tab you're using. It confirms the tab is the app's database (`authors 10 · logins 12` once seeded) and shows the policy state:
 

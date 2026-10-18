@@ -29,6 +29,7 @@
 | D-022 | Token verification via `supabase.auth.getClaims()` (ES256/JWKS, local); profile + author loaded per request through the caller's RLS client | accepted | 2026-10-18 |
 | D-023 | Payout calendar in `packages/shared`; ₹1,000 threshold on the author's total pending; `nextPayoutDueBy` = earliest deadline not yet passed | accepted | 2026-10-18 |
 | D-024 | Author ticket API: zod parse in handlers (no `validate` middleware), same 400 for unknown and not-owned books, per-user limits + DB backstop, audit via the system writer | accepted | 2026-10-18 |
+| D-025 | Admin queue: urgency as a generated `urgency_rank` column (sorted and paged in the database); SLA rules in `packages/shared`; overdue = unresolved, unanswered, past target; `overdue=true` filter; normalised search; search text redacted from logs | accepted | 2026-10-18 |
 
 ---
 
@@ -163,3 +164,16 @@
 - **System writer confinement:** an ESLint `no-restricted-imports` rule allows `db/system-writer` only in `src/ai/**`, `src/modules/audit/**` and the bootstrap (`server.ts` creates it, `app.ts` hands it to the audit recorder).
 - **Cost:** creating a ticket takes four sequential Supabase round trips (profile, book check, insert, audit): about 0.8–1.5 s, up to 5 s on a cold connection in the smoke test.
 - **Revisit:** if latency matters, run the book check alongside the profile load, or append the audit event after sending the response.
+
+### D-025: Admin queue (API-5)
+- **Context:** API-5: `GET /admin/tickets` (filters, urgency sort, paging, `slaState`) and `GET /admin/tickets/summary`. TICKET_LIFECYCLE §4 asks for the urgency order in SQL so pages stay stable, but the Data API (PostgREST) can only order by columns.
+- **Urgency sort:** migration `20261018090000_queue_urgency_rank.sql` adds a generated `urgency_rank` column (unresolved 0–4, resolved/closed 10–14; critical, high, untriaged, medium, low) and an index `(urgency_rank, created_at)`. The queue orders by `urgency_rank`, `created_at`, then `id`, and pages with `range`. The alternative, sorting in the API after fetching every match, was rejected because its cost grows with the queue. **Approved by:** user, 2026-10-18; applied by the user in the SQL Editor.
+- **SLA rules:** `packages/shared/src/sla.ts` holds the targets (A-08), `slaState()` and the overdue cut-offs, so the API, the summary's SQL filters and the admin portal agree. Two refinements to TICKET_LIFECYCLE §3:
+  - A resolved or closed ticket **without** a reply is `not_applicable`; the spec named only closed ones, and a ticking timer on finished work misleads.
+  - "Overdue" (`slaBreached`, `overdue=true`) is the actionable subset of `breached`: unresolved, no first reply, past the target. A late first reply still shows `breached` on the row.
+- **Filters:** comma lists (deduplicated), `priority=untriaged` for "no priority yet", `assignee=me|unassigned|any`, `aiStatus`, `overdue=true` (new, for the summary's Overdue button), `createdFrom`/`createdTo` as inclusive India business dates, and `q` over reference, subject and author name.
+- **Search safety:** the shared schema replaces anything other than letters, digits, spaces and `- ' . & / #` with spaces before the text reaches a filter, and the repository quotes it again. Author-name matches resolve to author ids first.
+- **Summary:** status counts cover every ticket; unassigned, critical, high, overdue and needs-manual-triage cover unresolved tickets only, to match what the queue's buttons filter to. These are nine head-only counts run in parallel.
+- **Logging:** the request log redacts the `q` value (`q=redacted`), because search text can contain author names (T-14). Found in the API-5 server smoke test.
+- **Cost:** the queue takes about 0.6 s and 0.8 s with a search (one extra lookup); the summary takes about 1.0–1.3 s (nine parallel counts).
+- **Revisit:** a single SQL function for the summary if latency matters; a trigram index on subject and name if search gets slow.
