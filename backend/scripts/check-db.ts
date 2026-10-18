@@ -98,6 +98,56 @@ if (probeError?.code === "23514") {
   problems.push("probe row was inserted: delete book_id PROBE-CHECK-DB");
 }
 
+// ---------------------------------------------------- access rules (DB-3)
+// Only once seeded: sign in as the first dataset author (publishable key) and
+// confirm the DB-3 policies and grants are live. Changes nothing: the probe
+// update targets the author's own book and is refused by grants or matches 0 rows.
+console.log("\nAccess rules (signed in as a seeded author)");
+const authorPassword = process.env.SEED_AUTHOR_PASSWORD;
+const { data: firstProfile } = await system
+  .from("profiles")
+  .select("author_id")
+  .eq("role", "author")
+  .order("author_id")
+  .limit(1)
+  .maybeSingle();
+if (!firstProfile || classifyValue(authorPassword) !== "configured") {
+  line("policies active", "skipped (not seeded yet)");
+} else {
+  const { data: authorRow } = await system
+    .from("authors")
+    .select("email")
+    .eq("author_id", firstProfile.author_id)
+    .single();
+  const author = createClient(url!, publishable!, noSession);
+  const signIn = await author.auth.signInWithPassword({ email: authorRow!.email, password: authorPassword! });
+  if (signIn.error) {
+    line("seeded author can sign in", `NO (${signIn.error.code ?? "error"})`);
+    problems.push("seeded author cannot sign in: re-run npm run seed:apply");
+  } else {
+    line("seeded author can sign in", "yes");
+    const own = await author.from("profiles").select("author_id");
+    if (own.data?.length === 1 && own.data[0]?.author_id === firstProfile.author_id) {
+      line("author sees own profile (policies active)", "yes");
+    } else {
+      line("author sees own profile (policies active)", "NO");
+      problems.push("RLS policies are not active: apply supabase/migrations/20261017120000_rls_policies.sql");
+    }
+    const edit = await author
+      .from("books")
+      .update({ genre: "probe" })
+      .eq("author_id", firstProfile.author_id);
+    if (edit.error?.code === "42501") {
+      line("catalogue edit refused (grants applied)", "yes");
+    } else {
+      line("catalogue edit refused (grants applied)", "NO");
+      problems.push(
+        "DB-3 grant changes are not active: apply supabase/migrations/20261017120000_rls_policies.sql",
+      );
+    }
+  }
+}
+
 console.log(`\nResult: ${problems.length === 0 ? "OK" : `${problems.length} problem(s)`}`);
 for (const problem of problems) console.log(`  - ${problem}`);
 process.exitCode = problems.length === 0 ? 0 : 1;
