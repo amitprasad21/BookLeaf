@@ -1,5 +1,7 @@
 import {
+  AdminReplyRequestSchema,
   AdminTicketQueueQuerySchema,
+  MessageBodyRequestSchema,
   TicketIdParamsSchema,
   UpdateTicketRequestSchema,
 } from "@bookleaf/shared";
@@ -11,7 +13,7 @@ import { authOf, dbOf } from "../../middleware/authenticate.js";
 import type { AuditRecorder } from "../audit/service.js";
 import type { AdminTicketsRepository } from "../tickets/admin-repository.js";
 import { planTicketUpdate } from "../tickets/admin-service.js";
-import { toAdminQueueItem, toAdminTicketDetail } from "../tickets/serializers/admin.js";
+import { toAdminQueueItem, toAdminTicketDetail, toInternalNote } from "../tickets/serializers/admin.js";
 
 export interface AdminRouterDeps {
   clock: Clock;
@@ -82,6 +84,75 @@ export function createAdminRouter({ clock, audit, adminTicketsRepository }: Admi
     const detail = await repository.findDetail(ticketId);
     if (!detail) throw new NotFoundError(TICKET_NOT_FOUND);
     res.json({ data: toAdminTicketDetail(detail, now) });
+  });
+
+  // operationId: createAdminReply. Reply, first response and status change
+  // happen in one database transaction; audit follows.
+  router.post("/tickets/:ticketId/messages", async (req, res) => {
+    const { ticketId } = TicketIdParamsSchema.parse(req.params);
+    const input = AdminReplyRequestSchema.parse(req.body);
+    const auth = authOf(req);
+    const sent = await adminTicketsRepository(dbOf(req)).sendReply(ticketId, {
+      body: input.body,
+      statusAfter: input.statusAfter,
+      draftId: input.draftId ?? null,
+    });
+
+    await audit([
+      {
+        ticketId,
+        actorProfileId: auth.userId,
+        action: "ticket.reply_sent",
+        metadata: {
+          messageId: sent.messageId,
+          draftId: input.draftId ?? null,
+          firstResponse: sent.firstResponse,
+        },
+      },
+      ...(sent.previousStatus !== sent.newStatus
+        ? [
+            {
+              ticketId,
+              actorProfileId: auth.userId,
+              action: "ticket.status_changed",
+              metadata: { from: sent.previousStatus, to: sent.newStatus, via: "reply" },
+            },
+          ]
+        : []),
+    ]);
+
+    res.status(201).json({
+      data: {
+        id: sent.messageId,
+        senderRole: "admin",
+        senderName: auth.displayName,
+        body: input.body,
+        createdAt: sent.createdAt,
+      },
+    });
+  });
+
+  // operationId: listInternalNotes
+  router.get("/tickets/:ticketId/notes", async (req, res) => {
+    const { ticketId } = TicketIdParamsSchema.parse(req.params);
+    const notes = await adminTicketsRepository(dbOf(req)).listNotes(ticketId);
+    if (!notes) throw new NotFoundError(TICKET_NOT_FOUND);
+    res.json({ data: notes.map(toInternalNote) });
+  });
+
+  // operationId: createInternalNote. The audit event never carries the note text.
+  router.post("/tickets/:ticketId/notes", async (req, res) => {
+    const { ticketId } = TicketIdParamsSchema.parse(req.params);
+    const { body } = MessageBodyRequestSchema.parse(req.body);
+    const auth = authOf(req);
+    const note = await adminTicketsRepository(dbOf(req)).addNote(ticketId, auth.userId, body);
+    await audit({
+      ticketId,
+      actorProfileId: auth.userId,
+      action: "ticket.note_added",
+      metadata: { noteId: note.id },
+    });
+    res.status(201).json({ data: toInternalNote(note) });
   });
 
   return router;

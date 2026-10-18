@@ -1,6 +1,6 @@
 import { slaState } from "@bookleaf/shared";
 import { toBookDto } from "../../books/serializers.js";
-import type { AdminQueueRow, AdminTicketDetailRows } from "../admin-repository.js";
+import type { AdminQueueRow, AdminTicketDetailRows, NoteRow } from "../admin-repository.js";
 
 /** AdminQueueItem (openapi.yaml). `slaState` is computed at `now`, never stored. */
 export function toAdminQueueItem(row: AdminQueueRow, now: Date) {
@@ -38,6 +38,11 @@ export function toAdminQueueItem(row: AdminQueueRow, now: Date) {
 const adminRef = (profile: { id: string; display_name: string } | null) =>
   profile ? { userId: profile.id, displayName: profile.display_name } : null;
 
+/** InternalNote (openapi.yaml). Admin-only: no author endpoint reads notes. */
+export function toInternalNote(note: NoteRow) {
+  return { id: note.id, author: adminRef(note.admin), body: note.body, createdAt: note.created_at };
+}
+
 /**
  * AdminTicketDetail (openapi.yaml): the queue item plus the description, the
  * author's profile and books (with royalty figures), the thread with real
@@ -70,12 +75,7 @@ export function toAdminTicketDetail(detail: AdminTicketDetailRows, now: Date) {
       body: message.body,
       createdAt: message.created_at,
     })),
-    notes: detail.notes.map((note) => ({
-      id: note.id,
-      author: adminRef(note.admin),
-      body: note.body,
-      createdAt: note.created_at,
-    })),
+    notes: detail.notes.map(toInternalNote),
     ai: {
       status: ticket.ai_status,
       suggestedCategory: ticket.ai_category,

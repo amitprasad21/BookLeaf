@@ -2,6 +2,7 @@
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AuditEventInput, SystemWriter } from "../src/db/system-writer.js";
+import type { AdminTicketsRepository } from "../src/modules/tickets/admin-repository.js";
 import type {
   AuthorTicketRow,
   NewTicket,
@@ -98,36 +99,60 @@ export type BuilderCall = [method: string, ...args: unknown[]];
  * resolves with the canned result for that table. Lets offline tests check the
  * exact filters a repository sends without a database.
  */
-type CannedResult = { data?: unknown; count?: number };
+type CannedResult = { data?: unknown; count?: number; error?: { code: string; message: string } | null };
 
 export function recordingSupabase(
   results: Record<string, CannedResult | ((calls: BuilderCall[], index: number) => CannedResult)> = {},
 ) {
   const queries: { table: string; calls: BuilderCall[] }[] = [];
-  const db = {
-    from(table: string) {
-      const query = { table, calls: [] as BuilderCall[] };
-      queries.push(query);
-      const builder: object = new Proxy(
-        {},
-        {
-          get(_target, method: string) {
-            if (method === "then") {
-              const canned = results[table];
-              const value =
-                typeof canned === "function" ? canned(query.calls, queries.indexOf(query)) : canned;
-              const result = { data: value?.data ?? [], count: value?.count ?? 0, error: null };
-              return (resolve: (value: unknown) => unknown) => Promise.resolve(result).then(resolve);
-            }
-            return (...args: unknown[]) => {
-              query.calls.push([method, ...args]);
-              return builder;
+  /** `table` is the from() table, or "rpc:<function>" for rpc() calls. */
+  const start = (table: string, firstCall?: BuilderCall) => {
+    const query = { table, calls: firstCall ? [firstCall] : ([] as BuilderCall[]) };
+    queries.push(query);
+    const builder: object = new Proxy(
+      {},
+      {
+        get(_target, method: string) {
+          if (method === "then") {
+            const canned = results[table];
+            const value = typeof canned === "function" ? canned(query.calls, queries.indexOf(query)) : canned;
+            const result = {
+              data: value?.error ? null : value && "data" in value ? value.data : [],
+              count: value?.count ?? 0,
+              error: value?.error ?? null,
             };
-          },
+            return (resolve: (value: unknown) => unknown) => Promise.resolve(result).then(resolve);
+          }
+          return (...args: unknown[]) => {
+            query.calls.push([method, ...args]);
+            return builder;
+          };
         },
-      );
-      return builder;
-    },
+      },
+    );
+    return builder;
+  };
+  const db = {
+    from: (table: string) => start(table),
+    rpc: (fn: string, args: unknown) => start(`rpc:${fn}`, ["rpc", fn, args]),
   } as unknown as SupabaseClient;
   return { db, queries };
+}
+
+/** An admin repository whose methods throw unless the test supplies them. */
+export function adminRepository(methods: Partial<AdminTicketsRepository>): AdminTicketsRepository {
+  const unused = (name: string) => async (): Promise<never> => {
+    throw new Error(`${name} isn't used by this test`);
+  };
+  return {
+    listQueue: unused("listQueue"),
+    summary: unused("summary"),
+    findTicket: unused("findTicket"),
+    findDetail: unused("findDetail"),
+    updateIfVersion: unused("updateIfVersion"),
+    sendReply: unused("sendReply"),
+    listNotes: unused("listNotes"),
+    addNote: unused("addNote"),
+    ...methods,
+  };
 }

@@ -10,6 +10,7 @@ import {
 } from "@bookleaf/shared";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { listBooksForAuthor, type BookRow } from "../books/repository.js";
+import { InvalidTransitionError, NotFoundError, ValidationError } from "../../lib/errors.js";
 import { mapPostgrestError } from "./repository.js";
 
 export interface AdminQueueRow {
@@ -124,6 +125,30 @@ export interface AdminTicketsRepository {
    * `version` (the DB trigger then bumps it). False when it moved on or is gone.
    */
   updateIfVersion(ticketId: string, version: number, changes: TicketChanges): Promise<boolean>;
+  /**
+   * Admin reply, first response and status in one transaction (the
+   * admin_send_reply function, migration 20261018120000). Throws NotFound,
+   * InvalidTransition (ticket resolved/closed) or Validation (unknown draft).
+   */
+  sendReply(ticketId: string, reply: NewReply): Promise<SentReply>;
+  /** Null when the ticket doesn't exist. */
+  listNotes(ticketId: string): Promise<NoteRow[] | null>;
+  addNote(ticketId: string, adminProfileId: string, body: string): Promise<NoteRow>;
+}
+
+export interface NewReply {
+  body: string;
+  statusAfter: "in_progress" | "resolved";
+  draftId: string | null;
+}
+
+export interface SentReply {
+  messageId: string;
+  createdAt: string;
+  previousStatus: TicketStatus;
+  newStatus: TicketStatus;
+  /** True when this reply was the ticket's first response. */
+  firstResponse: boolean;
 }
 
 // Both relationships are named: tickets reach profiles and authors through
@@ -148,6 +173,9 @@ const DETAIL_COLUMNS = [
 ].join(", ");
 
 const UNRESOLVED: TicketStatus[] = ["open", "in_progress"];
+const NOTE_COLUMNS =
+  "id, body, created_at, admin:profiles!internal_notes_admin_profile_id_fkey(id, display_name)";
+const TICKET_NOT_FOUND = "We couldn't find that ticket.";
 
 /** Business dates are Asia/Kolkata (A-04), which has no daylight saving. */
 const businessDayStart = (date: string) => new Date(`${date}T00:00:00+05:30`);
@@ -346,6 +374,70 @@ export function createAdminTicketsRepository(db: SupabaseClient): AdminTicketsRe
         .select("id");
       if (error) throw mapPostgrestError(error, "ticket update");
       return (data ?? []).length === 1;
+    },
+
+    async sendReply(ticketId, reply) {
+      const { data, error } = await db
+        .rpc("admin_send_reply", {
+          p_ticket_id: ticketId,
+          p_body: reply.body,
+          p_status_after: reply.statusAfter,
+          p_draft_id: reply.draftId,
+        })
+        .single();
+      if (error) {
+        if (error.code === "P0002") throw new NotFoundError(TICKET_NOT_FOUND);
+        if (error.message === "reply_requires_reopen") {
+          throw new InvalidTransitionError("Reopen this ticket (set it to In progress) before replying.");
+        }
+        if (error.message === "draft_not_found") {
+          throw new ValidationError(undefined, [
+            { path: "draftId", issue: "must be a draft of this ticket" },
+          ]);
+        }
+        throw mapPostgrestError(error, "admin reply");
+      }
+      const row = data as {
+        message_id: string;
+        message_created_at: string;
+        previous_status: TicketStatus;
+        new_status: TicketStatus;
+        first_response: boolean;
+      };
+      return {
+        messageId: row.message_id,
+        createdAt: row.message_created_at,
+        previousStatus: row.previous_status,
+        newStatus: row.new_status,
+        firstResponse: row.first_response,
+      };
+    },
+
+    async listNotes(ticketId) {
+      const [ticket, notes] = await Promise.all([
+        db.from("tickets").select("id").eq("id", ticketId).maybeSingle(),
+        db
+          .from("internal_notes")
+          .select(NOTE_COLUMNS)
+          .eq("ticket_id", ticketId)
+          .order("created_at")
+          .order("id"),
+      ]);
+      if (ticket.error) throw mapPostgrestError(ticket.error, "ticket lookup");
+      if (notes.error) throw mapPostgrestError(notes.error, "notes lookup");
+      return ticket.data ? ((notes.data ?? []) as unknown as NoteRow[]) : null;
+    },
+
+    async addNote(ticketId, adminProfileId, body) {
+      const { data, error } = await db
+        .from("internal_notes")
+        .insert({ ticket_id: ticketId, admin_profile_id: adminProfileId, body })
+        .select(NOTE_COLUMNS)
+        .single();
+      // The ticket FK is the existence check (one round trip).
+      if (error?.code === "23503") throw new NotFoundError(TICKET_NOT_FOUND);
+      if (error) throw mapPostgrestError(error, "note insert");
+      return data as unknown as NoteRow;
     },
   };
 }

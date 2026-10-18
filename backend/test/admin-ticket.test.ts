@@ -8,11 +8,10 @@ import { InvalidAssignmentError, InvalidTransitionError } from "../src/lib/error
 import type {
   AdminTicketDetailRows,
   AdminTicketRow,
-  AdminTicketsRepository,
   TicketChanges,
 } from "../src/modules/tickets/admin-repository.js";
 import { planTicketUpdate } from "../src/modules/tickets/admin-service.js";
-import { recordingSystemWriter } from "./fakes.js";
+import { adminRepository, recordingSystemWriter } from "./fakes.js";
 import {
   ADMIN_CONTEXT,
   TEST_TOKENS,
@@ -245,11 +244,7 @@ function fakeAdminTicketStore(options: { raceOnUpdate?: boolean } = {}) {
     ],
   });
   let raced = false;
-  const repository: AdminTicketsRepository = {
-    listQueue: async () => ({ rows: [], total: 0 }),
-    summary: async () => {
-      throw new Error("not used");
-    },
+  const repository = adminRepository({
     async findTicket(ticketId) {
       return ticketId === state.ticket.id ? structuredClone(state.ticket) : null;
     },
@@ -275,7 +270,7 @@ function fakeAdminTicketStore(options: { raceOnUpdate?: boolean } = {}) {
       state.ticket.updated_at = NOW.toISOString();
       return true;
     },
-  };
+  });
   return { factory: () => repository, state };
 }
 

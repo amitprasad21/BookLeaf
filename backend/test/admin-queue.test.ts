@@ -8,7 +8,7 @@ import {
   type AdminTicketsRepository,
   type QueueSummaryCounts,
 } from "../src/modules/tickets/admin-repository.js";
-import { recordingSupabase, type BuilderCall } from "./fakes.js";
+import { adminRepository, recordingSupabase, type BuilderCall } from "./fakes.js";
 import { ADMIN_CONTEXT, TEST_TOKENS, bearer, buildTestApp, fixedClock } from "./helpers.js";
 
 const spec = parse(readFileSync(new URL("../../openapi.yaml", import.meta.url), "utf8")) as {
@@ -52,15 +52,11 @@ const SUMMARY: QueueSummaryCounts = {
   needsManualTriage: 1,
 };
 
-const notUsed = async (): Promise<never> => {
-  throw new Error("not used by the queue routes");
-};
-
 /** Records what the routes ask the repository for and returns canned data. */
 function recordingAdminRepository(rows: AdminQueueRow[] = [row()], options: { fail?: boolean } = {}) {
   const listCalls: Parameters<AdminTicketsRepository["listQueue"]>[] = [];
   const summaryCalls: Date[] = [];
-  const repository: AdminTicketsRepository = {
+  const repository = adminRepository({
     async listQueue(query, context) {
       listCalls.push([query, context]);
       if (options.fail) throw new Error("ticket queue failed (XX000)");
@@ -71,11 +67,7 @@ function recordingAdminRepository(rows: AdminQueueRow[] = [row()], options: { fa
       if (options.fail) throw new Error("queue summary failed (XX000)");
       return SUMMARY;
     },
-    // Ticket detail and updates are covered in admin-ticket.test.ts.
-    findTicket: notUsed,
-    findDetail: notUsed,
-    updateIfVersion: notUsed,
-  };
+  });
   return { factory: () => repository, listCalls, summaryCalls };
 }
 

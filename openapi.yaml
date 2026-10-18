@@ -393,6 +393,13 @@ paths:
         response time. `draftId` links the reply to the AI draft it came from
         (for edit-distance analytics); the sent body is always what the admin
         submitted.
+
+        The ticket must be `open` or `in_progress`: resolved and closed
+        tickets must be reopened first (422). Message, first response and
+        status change are one database transaction (`admin_send_reply`); a
+        `draftId` that isn't a draft of this ticket is a 400. The audit trail
+        records `ticket.reply_sent` (and `ticket.status_changed`), never the
+        message text.
       parameters:
         - $ref: '#/components/parameters/TicketId'
       requestBody:
@@ -435,6 +442,7 @@ paths:
                   data:
                     type: array
                     items: { $ref: '#/components/schemas/InternalNote' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -442,6 +450,9 @@ paths:
       tags: [Admin]
       summary: Add an internal note
       operationId: createInternalNote
+      description: |
+        Written as the caller. Audited as `ticket.note_added` with the note id
+        only (never the text). No author endpoint ever returns notes.
       parameters:
         - $ref: '#/components/parameters/TicketId'
       requestBody:
