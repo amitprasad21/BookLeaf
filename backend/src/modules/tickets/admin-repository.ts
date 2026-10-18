@@ -2,12 +2,14 @@ import {
   overdueCreatedBefore,
   type AdminTicketQueueQuery,
   type AiStatus,
+  type AiUnavailableReason,
   type TicketCategory,
   type TicketPriority,
   type TicketStatus,
   type ValueSource,
 } from "@bookleaf/shared";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { listBooksForAuthor, type BookRow } from "../books/repository.js";
 import { mapPostgrestError } from "./repository.js";
 
 export interface AdminQueueRow {
@@ -41,19 +43,87 @@ export interface QueueSummaryCounts {
   needsManualTriage: number;
 }
 
+/** One ticket with everything the admin detail view shows. */
+export interface AdminTicketRow extends Omit<AdminQueueRow, "author"> {
+  description: string;
+  attachment_name: string | null;
+  resolved_at: string | null;
+  closed_at: string | null;
+  ai_category: TicketCategory | null;
+  ai_priority: TicketPriority | null;
+  ai_confidence: number | null;
+  ai_signals: string[];
+  ai_rationale: string | null;
+  ai_policy_floor: string | null;
+  ai_processed_at: string | null;
+  ai_failure_reason: AiUnavailableReason | null;
+  author: { author_id: string; name: string; city: string | null; joined_date: string };
+}
+
+export interface ThreadEntryRow {
+  id: string;
+  sender_role: "author" | "admin";
+  body: string;
+  created_at: string;
+  sender: { display_name: string } | null;
+}
+
+export interface NoteRow {
+  id: string;
+  body: string;
+  created_at: string;
+  admin: { id: string; display_name: string };
+}
+
+export interface AuditRow {
+  id: string;
+  action: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  actor: { id: string; display_name: string } | null;
+}
+
+export interface AdminTicketDetailRows {
+  ticket: AdminTicketRow;
+  books: BookRow[];
+  messages: ThreadEntryRow[];
+  notes: NoteRow[];
+  timeline: AuditRow[];
+}
+
+/** The only ticket columns an admin update may write (content and ownership are frozen). */
+export interface TicketChanges {
+  status?: TicketStatus;
+  category?: TicketCategory;
+  category_source?: ValueSource;
+  priority?: TicketPriority;
+  priority_source?: ValueSource;
+  assigned_admin_id?: string | null;
+  resolved_at?: string | null;
+  closed_at?: string | null;
+}
+
 /** Who is asking and when: `assignee=me` and the overdue cut-offs depend on it. */
 export interface QueueContext {
   adminUserId: string;
   now: Date;
 }
 
-/** Admin-side ticket reads. RLS lets admins see every ticket; nothing here writes. */
+/** Admin-side ticket access over the admin's RLS-scoped client (admins see and update every ticket). */
 export interface AdminTicketsRepository {
   listQueue(
     query: AdminTicketQueueQuery,
     context: QueueContext,
   ): Promise<{ rows: AdminQueueRow[]; total: number }>;
   summary(now: Date): Promise<QueueSummaryCounts>;
+  findTicket(ticketId: string): Promise<AdminTicketRow | null>;
+  /** The ticket plus the author's books, thread, internal notes and audit timeline. */
+  findDetail(ticketId: string): Promise<AdminTicketDetailRows | null>;
+  /**
+   * Optimistic lock: applies `changes` only while the ticket is still at
+   * `version` (the DB trigger then bumps it). False when it moved on or is gone.
+   */
+  updateIfVersion(ticketId: string, version: number, changes: TicketChanges): Promise<boolean>;
 }
 
 // Both relationships are named: tickets reach profiles and authors through
@@ -62,6 +132,17 @@ const QUEUE_COLUMNS = [
   "id, reference, subject, status, category, category_source, priority, priority_source",
   "ai_status, created_at, updated_at, first_response_at, version",
   "author:authors!tickets_author_id_fkey(author_id, name)",
+  "book:books(book_id, title)",
+  "assigned_admin:profiles!tickets_assigned_admin_id_fkey(id, display_name)",
+].join(", ");
+
+const DETAIL_COLUMNS = [
+  "id, reference, subject, description, attachment_name, status",
+  "category, category_source, priority, priority_source",
+  "ai_status, ai_category, ai_priority, ai_confidence, ai_signals, ai_rationale, ai_policy_floor",
+  "ai_processed_at, ai_failure_reason",
+  "created_at, updated_at, first_response_at, resolved_at, closed_at, version",
+  "author:authors!tickets_author_id_fkey(author_id, name, city, joined_date)",
   "book:books(book_id, title)",
   "assigned_admin:profiles!tickets_assigned_admin_id_fkey(id, display_name)",
 ].join(", ");
@@ -108,6 +189,12 @@ function onlyOverdue<Q extends Filterable<Q>>(builder: Q, now: Date): Q {
  * syntax characters), and is quoted again here.
  */
 export function createAdminTicketsRepository(db: SupabaseClient): AdminTicketsRepository {
+  async function findTicket(ticketId: string): Promise<AdminTicketRow | null> {
+    const { data, error } = await db.from("tickets").select(DETAIL_COLUMNS).eq("id", ticketId).maybeSingle();
+    if (error) throw mapPostgrestError(error, "ticket lookup");
+    return data as unknown as AdminTicketRow | null;
+  }
+
   return {
     async listQueue(query, { adminUserId, now }) {
       let request = db.from("tickets").select(QUEUE_COLUMNS, { count: "exact" });
@@ -200,6 +287,65 @@ export function createAdminTicketsRepository(db: SupabaseClient): AdminTicketsRe
         slaBreached,
         needsManualTriage,
       };
+    },
+
+    findTicket,
+
+    async findDetail(ticketId) {
+      const ticket = await findTicket(ticketId);
+      if (!ticket) return null;
+      const [books, messages, notes, timeline] = await Promise.all([
+        listBooksForAuthor(db, ticket.author.author_id),
+        db
+          .from("ticket_messages")
+          .select(
+            "id, sender_role, body, created_at, sender:profiles!ticket_messages_sender_profile_id_fkey(display_name)",
+          )
+          .eq("ticket_id", ticketId)
+          .order("created_at")
+          .order("id"),
+        db
+          .from("internal_notes")
+          .select(
+            "id, body, created_at, admin:profiles!internal_notes_admin_profile_id_fkey(id, display_name)",
+          )
+          .eq("ticket_id", ticketId)
+          .order("created_at")
+          .order("id"),
+        db
+          .from("audit_events")
+          .select(
+            "id, action, metadata, created_at, actor:profiles!audit_events_actor_profile_id_fkey(id, display_name)",
+          )
+          .eq("ticket_id", ticketId)
+          .order("created_at")
+          .order("id"),
+      ]);
+      for (const [result, operation] of [
+        [messages, "thread lookup"],
+        [notes, "notes lookup"],
+        [timeline, "timeline lookup"],
+      ] as const) {
+        if (result.error) throw mapPostgrestError(result.error, operation);
+      }
+      return {
+        ticket,
+        books,
+        messages: (messages.data ?? []) as unknown as ThreadEntryRow[],
+        notes: (notes.data ?? []) as unknown as NoteRow[],
+        timeline: (timeline.data ?? []) as unknown as AuditRow[],
+      };
+    },
+
+    async updateIfVersion(ticketId, version, changes) {
+      const { data, error } = await db
+        .from("tickets")
+        .update(changes)
+        .eq("id", ticketId)
+        .eq("version", version)
+        .select("id");
+      if (error) throw mapPostgrestError(error, "ticket update");
+      return (data ?? []).length === 1;
     },
   };
 }

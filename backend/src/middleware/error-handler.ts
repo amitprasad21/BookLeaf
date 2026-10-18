@@ -2,7 +2,7 @@ import type { ErrorBody } from "@bookleaf/shared";
 import type { ErrorRequestHandler } from "express";
 import type { Logger } from "pino";
 import { ZodError } from "zod";
-import { AppError, RateLimitedError, ValidationError } from "../lib/errors.js";
+import { AppError, RateLimitedError, ValidationError, VersionConflictError } from "../lib/errors.js";
 
 const GENERIC_MESSAGE = "Something went wrong on our side. Please try again.";
 
@@ -33,6 +33,9 @@ export function errorHandler(logger: Logger): ErrorRequestHandler {
         code: error.code,
         message: error.message,
         ...(error.details ? { details: error.details } : {}),
+        ...(error instanceof VersionConflictError && error.current !== undefined
+          ? { current: error.current }
+          : {}),
         requestId: req.requestId,
       },
     };

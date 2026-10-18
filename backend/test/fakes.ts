@@ -16,9 +16,9 @@ type StoredMessage = ThreadMessageRow & { ticket_id: string };
 export function recordingSystemWriter(options: { fail?: boolean } = {}) {
   const events: AuditEventInput[] = [];
   const writer: SystemWriter = {
-    async appendAuditEvent(event) {
+    async appendAuditEvents(batch) {
       if (options.fail) throw new Error("audit insert failed (simulated)");
-      events.push(event);
+      events.push(...batch);
     },
   };
   return { writer, events };

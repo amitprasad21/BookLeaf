@@ -335,6 +335,7 @@ paths:
                 required: [data]
                 properties:
                   data: { $ref: '#/components/schemas/AdminTicketDetail' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -342,6 +343,21 @@ paths:
       tags: [Admin]
       summary: Change status, override category/priority, or (un)assign yourself
       operationId: updateAdminTicket
+      description: |
+        One write at the given `version` (optimistic lock); the version then
+        increases by one. Several fields may change together; each change is
+        audited (`ticket.status_changed`, `ticket.category_overridden`,
+        `ticket.priority_overridden`, `ticket.assigned`, `ticket.unassigned`).
+
+        - Status follows the state machine in .back/TICKET_LIFECYCLE.md (422
+          otherwise). Resolving or closing sets `resolvedAt`/`closedAt`;
+          reopening clears both.
+        - Category/priority become admin-set (`*Source: admin`), even when the
+          value equals the AI's suggestion. The AI suggestion itself is kept.
+        - Assignment is self-service: take an unassigned ticket, or release
+          your own (422 `INVALID_ASSIGNMENT` otherwise).
+        - Values equal to the current ones are not changes. If nothing
+          changes, the ticket is returned as is (same version, no audit).
       parameters:
         - $ref: '#/components/parameters/TicketId'
       requestBody:
@@ -579,7 +595,10 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
     VersionConflict:
-      description: Stale version; details contain the current ticket
+      description: |
+        Stale `version`. `details` is `[{ path: version, issue: is out of date }]`
+        and `error.current` holds the ticket as it is now (AdminTicketDetail),
+        so the client can refresh without another request.
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -632,6 +651,8 @@ components:
                 properties:
                   path: { type: string }
                   issue: { type: string }
+            current:
+              description: VERSION_CONFLICT only; the current representation of the resource
             requestId: { type: string }
 
     PageMeta:
@@ -798,7 +819,9 @@ components:
         assignedAdminId:
           type: ['string', 'null']
           format: uuid
-          description: Must equal the caller's user id (self-assign) or null (unassign)
+          description: |
+            The caller's own user id (take an unassigned ticket) or null
+            (release a ticket assigned to the caller)
 
     ThreadMessage:
       type: object
@@ -811,7 +834,7 @@ components:
           description: |
             Author view: the author's own name on their messages; admin replies
             are signed "BookLeaf Support" (authors can't read admin profiles).
-            Admin view: the sending admin's display name.
+            Admin view: the sender's display name (author or admin).
         body: { type: string }
         createdAt: { type: string, format: date-time }
 

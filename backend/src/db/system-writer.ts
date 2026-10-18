@@ -15,7 +15,8 @@ export interface AuditEventInput {
 }
 
 export interface SystemWriter {
-  appendAuditEvent(event: AuditEventInput): Promise<void>;
+  /** One insert for all events (a PATCH can record several changes at once). */
+  appendAuditEvents(events: AuditEventInput[]): Promise<void>;
 }
 
 export function createSystemWriter(project: { url: string; secretKey: string }): SystemWriter {
@@ -23,13 +24,20 @@ export function createSystemWriter(project: { url: string; secretKey: string }):
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
   return {
-    async appendAuditEvent(event) {
-      const { error } = await db.from("audit_events").insert({
-        ticket_id: event.ticketId,
-        actor_profile_id: event.actorProfileId,
-        action: event.action,
-        metadata: event.metadata ?? {},
-      });
+    async appendAuditEvents(events) {
+      if (events.length === 0) return;
+      // One INSERT shares a single now(), so events would tie on created_at
+      // and the timeline could show them in any order. Stamp them 1 ms apart.
+      const start = Date.now();
+      const { error } = await db.from("audit_events").insert(
+        events.map((event, index) => ({
+          ticket_id: event.ticketId,
+          actor_profile_id: event.actorProfileId,
+          action: event.action,
+          metadata: event.metadata ?? {},
+          created_at: new Date(start + index).toISOString(),
+        })),
+      );
       if (error) throw new Error(`audit insert failed (${error.code})`);
     },
   };

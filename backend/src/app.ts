@@ -71,7 +71,7 @@ export function createApp({
   app.use("/api/v1", authenticate(verifier));
   app.use("/api/v1/me", meRouter);
   app.use("/api/v1/author", requireRole("author"), createAuthorRouter({ clock, audit, ticketsRepository }));
-  app.use("/api/v1/admin", requireRole("admin"), createAdminRouter({ clock, adminTicketsRepository }));
+  app.use("/api/v1/admin", requireRole("admin"), createAdminRouter({ clock, audit, adminTicketsRepository }));
 
   app.use(notFound);
   app.use(errorHandler(logger));

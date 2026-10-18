@@ -52,6 +52,10 @@ const SUMMARY: QueueSummaryCounts = {
   needsManualTriage: 1,
 };
 
+const notUsed = async (): Promise<never> => {
+  throw new Error("not used by the queue routes");
+};
+
 /** Records what the routes ask the repository for and returns canned data. */
 function recordingAdminRepository(rows: AdminQueueRow[] = [row()], options: { fail?: boolean } = {}) {
   const listCalls: Parameters<AdminTicketsRepository["listQueue"]>[] = [];
@@ -67,6 +71,10 @@ function recordingAdminRepository(rows: AdminQueueRow[] = [row()], options: { fa
       if (options.fail) throw new Error("queue summary failed (XX000)");
       return SUMMARY;
     },
+    // Ticket detail and updates are covered in admin-ticket.test.ts.
+    findTicket: notUsed,
+    findDetail: notUsed,
+    updateIfVersion: notUsed,
   };
   return { factory: () => repository, listCalls, summaryCalls };
 }

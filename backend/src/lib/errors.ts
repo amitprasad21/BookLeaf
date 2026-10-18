@@ -41,8 +41,15 @@ export class NotFoundError extends AppError {
 }
 
 export class VersionConflictError extends AppError {
-  constructor(message = "This was changed by someone else. Reload to see the latest version.") {
-    super(409, "VERSION_CONFLICT", message);
+  /** The resource as it is now; returned as `error.current`. */
+  readonly current: unknown;
+
+  constructor(
+    current?: unknown,
+    message = "Someone else changed this ticket. The latest version is shown; reapply your change if it's still needed.",
+  ) {
+    super(409, "VERSION_CONFLICT", message, [{ path: "version", issue: "is out of date" }]);
+    this.current = current;
   }
 }
 
