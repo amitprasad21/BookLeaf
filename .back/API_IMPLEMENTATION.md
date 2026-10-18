@@ -12,8 +12,7 @@ backend/src/
 ├── lib/
 │   ├── errors.ts             AppError subclasses → error codes
 │   ├── logger.ts             pino with redaction
-│   ├── clock.ts              injectable clock (tests pin dates; Asia/Kolkata business date)
-│   └── payout-calendar.ts    quarter / due-date / threshold maths (pure, unit-tested)
+│   └── clock.ts              injectable clock (tests pin dates); business date via @bookleaf/shared
 ├── types/express.d.ts        adds req.requestId, req.auth, req.db
 ├── auth/                     types.ts (AuthContext, AuthVerifier) · supabase-verifier.ts (API-2)
 ├── middleware/
@@ -25,12 +24,17 @@ backend/src/
 │   └── system-writer.ts      secret-key client; narrow typed functions only (see AUTH_SECURITY §5)
 ├── modules/
 │   ├── health/               router.ts (public liveness)
-│   ├── me/                   router.ts · service.ts
-│   ├── books/                router · service · repository · serializers
+│   ├── me/                   router.ts (API-2)
+│   ├── author/               router.ts: createAuthorRouter({ clock }), mounts /books (API-3) and tickets (API-4)
+│   ├── admin/                router.ts (API-5 onwards)
+│   ├── books/                repository · service (royalty summary) · serializers (API-3)
 │   ├── tickets/              author.router · admin.router · service · repository · lifecycle.ts · serializers/{author,admin}.ts
 │   ├── messages/  notes/  audit/
 │   └── events/               hub.ts (in-process pub/sub) · router.ts (SSE)
 ├── ai/                       see .back/AI_PROVIDER_ORCHESTRATION.md
+│
+packages/shared/src/payout-calendar.ts   quarter / 45-day due date / ₹1,000 threshold / overdue heuristic
+                                         (pure; shared by the API, AI facts and frontends; tested in backend/test)
 └── openapi/                  serves ../../openapi.yaml + Swagger UI
 ```
 

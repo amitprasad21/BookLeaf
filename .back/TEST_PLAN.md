@@ -18,10 +18,10 @@ Integration tests use a dedicated test author and test admin plus tickets they c
 
 | ID | Module | Case |
 |---|---|---|
-| U-01 | payout-calendar | 2026-10-16 → last closed quarter Jul–Sep 2026, due 2026-11-14; next due 2027-02-14 |
-| U-02 | payout-calendar | Quarter boundaries (Mar 31 → May 15; Jun 30 → Aug 14; Dec 31 → Feb 14) and leap years |
-| U-03 | payout-calendar | `pendingBelowThreshold` for 0, 850, 1000, 1001 |
-| U-04 | payout-calendar | `paymentPossiblyOverdue` for BK001 (true), BK016 (false: below threshold), BK002 (false: zero pending) |
+| U-01 | payout-calendar | 2026-10-16 → last closed quarter Jul–Sep 2026, due 2026-11-14; next due 2027-02-14 (**implemented**: `backend/test/payout-calendar.test.ts`) |
+| U-02 | payout-calendar | Quarter boundaries (Mar 31 → May 15; Jun 30 → Aug 14; Dec 31 → Feb 14) and leap years (**implemented**) |
+| U-03 | payout-calendar | `pendingBelowThreshold` for 0, 850, 1000, 1001 (**implemented**) |
+| U-04 | payout-calendar | `paymentPossiblyOverdue` for BK001 (true), BK016 (false: below threshold), BK002 (false: zero pending) (**implemented**, plus BK005 and published-/paid-after-quarter cases) |
 | U-05 | lifecycle | Every allowed transition passes; every other pair → InvalidTransition |
 | U-06 | lifecycle | Reply on `open` → `in_progress`; `statusAfter=resolved` → `resolved`; reply on `closed` rejected |
 | U-07 | floors | `isbn_error` + low → high; `legal_or_rights` → critical; floors never lower |

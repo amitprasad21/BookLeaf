@@ -27,6 +27,7 @@
 | D-020 | Supabase: new publishable/secret API keys (not legacy anon/service_role); self sign-up off, accounts from seed only | accepted | 2026-10-17 |
 | D-021 | Migrations applied by the user via the dashboard SQL Editor; repo files are canonical; manual migration log in `.back/DATA_MODEL.md` | accepted | 2026-10-17 |
 | D-022 | Token verification via `supabase.auth.getClaims()` (ES256/JWKS, local); profile + author loaded per request through the caller's RLS client | accepted | 2026-10-18 |
+| D-023 | Payout calendar in `packages/shared`; ₹1,000 threshold on the author's total pending; `nextPayoutDueBy` = earliest deadline not yet passed | accepted | 2026-10-18 |
 
 ---
 
@@ -143,3 +144,9 @@
 - **Testability:** `AuthVerifier` interface; offline tests inject a fake, and live tests use the real verifier with real tokens.
 - **Cost:** about 230 ms per request for the profile query (Supabase round trip); the first request is about 600 ms with the JWKS fetch.
 - **Revisit:** Add a short per-token profile cache (e.g. 30–60 s, keyed by token `jti`/hash) if latency matters. Role changes would then take effect after the cache window.
+
+### D-023: Payout calendar and royalty summary rules
+- **Context:** API-3. The Knowledge Base says royalties are quarterly, paid within 45 days, and that accumulated royalties under ₹1,000 roll over. The author UI, the API summary and the AI facts builder all need the same arithmetic.
+- **Choice:** One pure module, `packages/shared/src/payout-calendar.ts`, holding the business date (Asia/Kolkata), calendar quarters, `quarterEnd + 45` deadlines, the threshold and the overdue heuristic. Unit-tested against the AI spec's worked examples.
+- **Rules:** The threshold is applied to the **author's total** pending royalties, not per book, because "accumulated royalties" is about the author's payout. `nextPayoutDueBy` is the last closed quarter's deadline while it hasn't passed (inclusive of the day itself), otherwise the current quarter's. Money totals are summed in paise to avoid floating-point drift.
+- **Revisit:** If finance confirms different quarter boundaries or a business-day window (assumptions A-02/A-03), only this module changes.

@@ -19,7 +19,7 @@ backend/src/ai/
 │   └── mock.ts            deterministic provider for tests and local dev
 ├── prompts/               triage.ts, draft.ts (versioned prompt builders)
 ├── knowledge-base/        kb.*.md section files + index.ts (section registry)
-├── facts/                 build-facts.ts (uses lib/payout-calendar.ts)
+├── facts/                 build-facts.ts (uses payoutCalendar / paymentPossiblyOverdue from @bookleaf/shared)
 ├── validation/            schemas (from packages/shared), floors.ts, fact-guard.ts, placeholder-guard.ts
 └── eval/                  golden sets + runners
 ```
