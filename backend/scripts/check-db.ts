@@ -109,6 +109,24 @@ if (rank.error) {
   line("tickets.urgency_rank", "present");
 }
 
+// ------------------------------------------------- reply function (API-7)
+// Called with the secret key, the function exists but refuses (not an admin
+// session), so nothing is written. A missing function is PGRST202.
+console.log("\nAdmin reply function (API-7)");
+const reply = await system.rpc("admin_send_reply", {
+  p_ticket_id: "00000000-0000-0000-0000-000000000000",
+  p_body: "check-db probe",
+});
+if (reply.error?.code === "42501") {
+  line("admin_send_reply", "present (refuses non-admins)");
+} else if (reply.error?.code === "PGRST202") {
+  line("admin_send_reply", "MISSING");
+  problems.push("apply supabase/migrations/20261018120000_admin_reply_function.sql");
+} else {
+  line("admin_send_reply", `unexpected (${reply.error?.code ?? "no error"})`);
+  problems.push("admin_send_reply did not refuse a non-admin call");
+}
+
 // ---------------------------------------------------- access rules (DB-3)
 // Only once seeded: sign in as the first dataset author (publishable key) and
 // confirm the DB-3 policies and grants are live. Changes nothing: the probe

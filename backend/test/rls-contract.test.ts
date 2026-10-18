@@ -51,3 +51,28 @@ describe("RLS migration contract", () => {
     }
   });
 });
+
+describe("admin reply function (migration 20261018120000)", () => {
+  const fn = read("supabase/migrations/20261018120000_admin_reply_function.sql");
+
+  it("runs as the caller with a fixed search path, so RLS still decides", () => {
+    expect(fn).toMatch(/security invoker\s+set search_path = ''/);
+    expect(fn).not.toMatch(/security definer/);
+  });
+
+  it("checks for an admin, locks the ticket and only replies on open or in-progress tickets", () => {
+    expect(fn).toMatch(/if not \(select private\.is_admin\(\)\) then/);
+    expect(fn).toMatch(/for update;/);
+    expect(fn).toMatch(/if v_status not in \('open', 'in_progress'\) then/);
+    expect(fn).toMatch(/values \(p_ticket_id, 'admin', \(select auth\.uid\(\)\), p_body, p_draft_id\)/);
+  });
+
+  it("is callable by signed-in users only", () => {
+    expect(fn).toMatch(
+      /revoke all on function public\.admin_send_reply\(uuid, text, public\.ticket_status, uuid\) from public, anon;/,
+    );
+    expect(fn).toMatch(
+      /grant execute on function public\.admin_send_reply\(uuid, text, public\.ticket_status, uuid\) to authenticated;/,
+    );
+  });
+});
