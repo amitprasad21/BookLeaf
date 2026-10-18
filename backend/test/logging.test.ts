@@ -7,20 +7,20 @@ describe("request logging", () => {
     const { logger, lines } = captureLogger();
     const res = await request(buildTestApp({}, logger))
       .get("/api/v1/unknown")
-      .set("Authorization", "Bearer super-secret-token")
+      .set("Authorization", "Bearer supersecret.jwtshaped.token")
       .set("Cookie", "session=also-secret");
     await settle();
 
     const raw = JSON.stringify(lines());
-    expect(raw).not.toContain("super-secret-token");
+    expect(raw).not.toContain("supersecret.jwtshaped.token");
     expect(raw).not.toContain("also-secret");
 
     const entry = lines().find(
       (line) => (line.req as { id?: string } | undefined)?.id === res.headers["x-request-id"],
     );
-    expect(entry?.level).toBe(40); // warn for 4xx
+    expect(entry?.level).toBe(40); // warn for 4xx (401: unknown token)
     expect(entry?.req).toEqual({ id: res.headers["x-request-id"], method: "GET", url: "/api/v1/unknown" });
-    expect(entry?.res).toEqual({ statusCode: 404 });
+    expect(entry?.res).toEqual({ statusCode: 401 });
   });
 
   it("does not log health checks", async () => {

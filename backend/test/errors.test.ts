@@ -10,7 +10,7 @@ import {
 } from "../src/lib/errors.js";
 import { errorHandler } from "../src/middleware/error-handler.js";
 import { requestId } from "../src/middleware/request-id.js";
-import { buildTestApp, captureLogger, settle } from "./helpers.js";
+import { TEST_TOKENS, bearer, buildTestApp, captureLogger, settle } from "./helpers.js";
 
 /** Minimal app exercising the real error handler with routes that throw. */
 function throwingApp() {
@@ -40,8 +40,10 @@ function throwingApp() {
 }
 
 describe("error envelope", () => {
-  it("returns 404 NOT_FOUND for unknown routes with the response's request id", async () => {
-    const res = await request(buildTestApp()).get("/api/v1/does-not-exist");
+  it("returns 404 NOT_FOUND for unknown routes (signed in) with the response's request id", async () => {
+    const res = await request(buildTestApp())
+      .get("/api/v1/does-not-exist")
+      .set("Authorization", bearer(TEST_TOKENS.author));
 
     expect(res.status).toBe(404);
     expect(res.body).toEqual({

@@ -1,4 +1,5 @@
 import { createApp } from "./app.js";
+import { createSupabaseVerifier } from "./auth/supabase-verifier.js";
 import { loadEnv, type Env } from "./config/env.js";
 import { createLogger } from "./lib/logger.js";
 
@@ -14,8 +15,13 @@ function loadEnvOrExit(): Env {
 
 const env = loadEnvOrExit();
 const logger = createLogger(env);
+// loadEnv guarantees both values outside NODE_ENV=test.
+const verifier = createSupabaseVerifier({
+  url: env.SUPABASE_URL!,
+  publishableKey: env.SUPABASE_PUBLISHABLE_KEY!,
+});
 
-const server = createApp({ env, logger }).listen(env.PORT, () => {
+const server = createApp({ env, logger, verifier }).listen(env.PORT, () => {
   logger.info({ port: env.PORT, nodeEnv: env.NODE_ENV }, "BookLeaf API listening");
 });
 

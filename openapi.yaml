@@ -67,6 +67,11 @@ paths:
                 properties:
                   data: { $ref: '#/components/schemas/Me' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403':
+          description: Valid sign-in but the account has no BookLeaf profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /events:
     get:
@@ -670,7 +675,7 @@ components:
       properties:
         authorId: { type: string, example: AUTH001 }
         name: { type: string }
-        city: { type: string }
+        city: { type: ['string', 'null'] }
         joinedDate: { type: string, format: date }
 
     Book:
