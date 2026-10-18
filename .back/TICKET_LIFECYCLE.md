@@ -26,7 +26,7 @@ Authors never change status (A-17). Any transition not drawn returns `422 INVALI
 | Ticket created | `status=open`, `ai_status=pending`; audit `ticket.created`; event `ticket.created`; triage enqueued |
 | AI triage completes | AI columns set; effective `category`/`priority` set **only if their `*_source` is null**; audit `ticket.triaged` (actor null); event `ticket.triaged` |
 | Admin overrides category/priority | Effective value + `*_source='admin'`; AI columns untouched; audit `*_overridden` with old/new; event `ticket.internal_updated` |
-| Admin sends reply | Message inserted; `first_response_at` set if null; status → `statusAfter` (default `in_progress`; from `open` or `in_progress` only; `resolved`/`closed` must be reopened first); audit `ticket.reply_sent` (+ `status_changed`); event `ticket.updated` |
+| Admin sends reply | One transaction (`admin_send_reply`, D-027): message inserted; `first_response_at` set if null; status → `statusAfter` (default `in_progress`; from `open` or `in_progress` only; `resolved`/`closed` must be reopened first, else 422); `resolved_at` stamped when resolving. Then audit `ticket.reply_sent` (+ `ticket.status_changed` with `via: "reply"`); event `ticket.updated` (API-8) |
 | → resolved | `resolved_at = now()` |
 | → closed | `closed_at = now()` |
 | Reopen (→ in_progress from resolved/closed) | `resolved_at`, `closed_at` set null (history stays in audit) |

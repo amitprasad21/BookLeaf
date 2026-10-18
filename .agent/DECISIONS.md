@@ -29,6 +29,7 @@
 | D-022 | Token verification via `supabase.auth.getClaims()` (ES256/JWKS, local); profile + author loaded per request through the caller's RLS client | accepted | 2026-10-18 |
 | D-023 | Payout calendar in `packages/shared`; ₹1,000 threshold on the author's total pending; `nextPayoutDueBy` = earliest deadline not yet passed | accepted | 2026-10-18 |
 | D-024 | Author ticket API: zod parse in handlers (no `validate` middleware), same 400 for unknown and not-owned books, per-user limits + DB backstop, audit via the system writer | accepted | 2026-10-18 |
+| D-027 | Admin reply as one Postgres function (`admin_send_reply`, security invoker, locked row, open/in-progress only); notes via RLS insert; audit after commit without text | accepted | 2026-10-18 |
 | D-026 | Admin ticket PATCH: plan-then-conditional-update optimistic lock; 409 returns the ticket in `error.current`; same values are no-ops; strict self-assignment; batched audit stamped 1 ms apart | accepted | 2026-10-18 |
 | D-025 | Admin queue: urgency as a generated `urgency_rank` column (sorted and paged in the database); SLA rules in `packages/shared`; overdue = unresolved, unanswered, past target; `overdue=true` filter; normalised search; search text redacted from logs | accepted | 2026-10-18 |
 
@@ -196,3 +197,22 @@
   | Changing PATCH | about 5 | about 1.5–1.9 s |
 
 - **Revisit:** return the planned changes without re-reading everything; move the update and audit into one Postgres function if atomicity of the audit trail becomes a requirement.
+
+### D-027: Admin replies and internal notes (API-7)
+- **Context:** API-7: `POST /admin/tickets/{id}/messages` (reply, first-response tracking, `statusAfter`) and internal notes. A reply touches two tables (the message, then the ticket's `first_response_at`, status and `resolved_at`). API_IMPLEMENTATION §4 asked for multi-step writes like this to be atomic.
+- **Choice:** migration `20261018120000_admin_reply_function.sql` adds `public.admin_send_reply(ticket, body, status_after, draft)`. In one transaction it:
+  - locks the ticket row, so replies and PATCHes queue up;
+  - refuses resolved/closed tickets (reopen first) and unknown drafts;
+  - inserts the message as `auth.uid()`;
+  - sets `first_response_at` only if empty, moves the status to `in_progress` or `resolved`, and stamps `resolved_at`.
+
+  **Approved by:** user, 2026-10-18; applied by the user in the SQL Editor.
+- **Security:**
+  - `security invoker` with `search_path = ''`: it runs with the admin's own rights, so the existing RLS policies still decide; the `is_admin()` check only gives a clear error first.
+  - `EXECUTE` is revoked from `public`/`anon` and granted to `authenticated`.
+  - Verified live: an author calling the function directly gets 42501, and anon is refused too.
+- **Rejected alternative:** two API calls (insert, then update), which could leave a reply on record with the ticket still `open` and no first response time.
+- **Versions:** a reply bumps the ticket version (the message trigger, plus the status/first-response update when something changes), so a PATCH built on the pre-reply version gets 409 (verified live).
+- **Notes:** a plain RLS-scoped insert (`admin_profile_id` = caller, enforced by the policy). The ticket FK doubles as the existence check (23503 → 404). There is no version bump, since notes are append-only internal data.
+- **Audit:** after the commit through the system writer: `ticket.reply_sent` `{ messageId, draftId, firstResponse }`, `ticket.status_changed` `{ from, to, via: "reply" }` when the status moved, and `ticket.note_added` `{ noteId }`. Message and note text never enters the audit trail.
+- **Cost:** a reply, a note or a refusal (422) each takes about 0.5–0.7 s.

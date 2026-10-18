@@ -1,6 +1,6 @@
 # API Implementation
 
-**Owns:** backend code structure, middleware order and coding conventions. The contract (paths, schemas, errors) is [openapi.yaml](../openapi.yaml) + [INTEGRATION_CONTRACT.md](../INTEGRATION_CONTRACT.md). Status: API-1..API-6 built; API-7..API-8 planned.
+**Owns:** backend code structure, middleware order and coding conventions. The contract (paths, schemas, errors) is [openapi.yaml](../openapi.yaml) + [INTEGRATION_CONTRACT.md](../INTEGRATION_CONTRACT.md). Status: API-1..API-7 built; API-8 planned.
 
 ## 1. Layout
 
@@ -26,7 +26,7 @@ backend/src/
 │   ├── health/               router.ts (public liveness)
 │   ├── me/                   router.ts (API-2)
 │   ├── author/               router.ts: createAuthorRouter({ clock, audit, ticketsRepository }): /books (API-3), /tickets (API-4)
-│   ├── admin/                router.ts: createAdminRouter({ clock, audit, adminTicketsRepository }): /tickets, /tickets/summary (API-5), /tickets/:ticketId GET + PATCH (API-6)
+│   ├── admin/                router.ts: createAdminRouter({ clock, audit, adminTicketsRepository }): /tickets, /tickets/summary (API-5), /tickets/:ticketId GET + PATCH (API-6), /tickets/:ticketId/messages POST and /notes GET + POST (API-7)
 │   ├── books/                repository · service (royalty summary) · serializers (API-3)
 │   ├── tickets/              repository.ts · serializers/author.ts (API-4); admin-repository.ts · serializers/admin.ts (API-5); admin-service.ts (PATCH planner, API-6)
 │   ├── audit/                service.ts: createAuditRecorder (logs and swallows failures) (API-4)
@@ -70,7 +70,7 @@ packages/shared/src/schemas.ts           request schemas: author tickets (API-4)
 
 - **Ownership:** author services always filter by `req.auth.authorId` even though RLS would too. A missing row → `NotFoundError`.
 - **No client identity:** request schemas never contain `authorId`, `role` or `userId`. `strict()` rejects them.
-- **Transactions:** multi-step writes (reply + status + first_response) go through a single Postgres function (RPC) so they are atomic. Audit is appended after commit via the system writer, and a failure there is logged but doesn't fail the request.
+- **Transactions:** multi-step writes (reply + status + first_response) go through a single Postgres function (RPC) so they are atomic: `admin_send_reply` (API-7, D-027). Audit is appended after commit via the system writer, and a failure there is logged but doesn't fail the request.
 - **Events:** published only after a successful commit, with payload `{ type, ticketId, changes, at }`.
 - **Time:** all "now" comes from `clock.ts`.
 - **Config:** read once at startup from `config/env.ts`; no `process.env` elsewhere.

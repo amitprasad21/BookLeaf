@@ -3,7 +3,7 @@
 **Owns:** the current milestone, verified facts, blockers and open questions. Update at the end of every session.
 
 **Last updated:** 2026-10-18
-**Milestone:** Phase 0, SETUP-2, SETUP-3 and API-1 are merged to `main`. DB-1 (Supabase project + credentials) is merged to `main`. DB-2 (initial schema, applied and verified) is merged to `main`. DB-3 (RLS policies) and DB-4 (seed) are **applied, seeded, verified and merged** (project `jhszxq…`). API-2 (auth, role guards, `GET /me`), API-3 (`GET /author/books` + royalty summary + shared payout calendar), API-4 (author tickets) and API-5 (admin queue + summary; migration `20261018090000_queue_urgency_rank.sql` applied by the user) are merged. API-6 (admin ticket detail + PATCH) is done, verified and committed on `feature/api-admin-ticket`, not yet merged. No AI, portal screens or deployment yet.
+**Milestone:** Phase 0, SETUP-2, SETUP-3 and API-1 are merged to `main`. DB-1 (Supabase project + credentials) is merged to `main`. DB-2 (initial schema, applied and verified) is merged to `main`. DB-3 (RLS policies) and DB-4 (seed) are **applied, seeded, verified and merged** (project `jhszxq…`). API-2 (auth, role guards, `GET /me`), API-3 (`GET /author/books` + royalty summary + shared payout calendar), API-4 (author tickets), API-5 (admin queue + summary; migration `20261018090000_queue_urgency_rank.sql` applied by the user) and API-6 (admin ticket detail + PATCH) are merged. API-7 (admin replies + internal notes; migration `20261018120000_admin_reply_function.sql` applied by the user) is done, verified and committed on `feature/api-admin-replies`, not yet merged. No AI, portal screens or deployment yet.
 
 ## Verified facts (with evidence)
 
@@ -23,6 +23,8 @@
 | `npm run check` (format, lint, OpenAPI lint, typecheck, tests, build) exits 0; `openapi.yaml` is valid OpenAPI 3.1 with 18 operationIds; fresh `npm ci` rebuilds shared packages via `prepare` | [.agent/verification/2026-10-16-setup3.md](.agent/verification/2026-10-16-setup3.md) |
 | `main` fast-forwarded to SETUP-3 (`6898131`) with the user's approval | `git branch -v` |
 | `main` fast-forwarded to API-1 (`af9fc08`) with the user's approval | `git branch -v` |
+| API-7: admin replies are atomic (message, first response, status in one Postgres function, refused for authors even when called directly); replies on resolved/closed tickets need a reopen; internal notes never reach authors; replies and notes audited without text; 181 offline tests, 53 live tests, full support-loop server smoke | [.agent/verification/2026-10-18-api7.md](.agent/verification/2026-10-18-api7.md) |
+| `main` fast-forwarded to API-6 (`bd0f2f2`) with the user's approval | `git branch -v` |
 | API-6: admin ticket detail (author context with royalty figures, thread, notes, AI suggestion, timeline) and PATCH (status machine, overrides, self-assignment) with an optimistic lock that holds under a live two-admin race; every change audited in order; 159 offline tests, 46 live tests, live server smoke | [.agent/verification/2026-10-18-api6.md](.agent/verification/2026-10-18-api6.md) |
 | `main` fast-forwarded to API-5 (`abefb28`) with the user's approval | `git branch -v` |
 | API-5: admin queue sorts by urgency in the database (generated `urgency_rank`), filters by status, category, priority incl. untriaged, assignee, AI status, overdue, India business dates and search; `slaState` and summary counts follow the shared SLA rules; 138 offline tests, 39 live tests, live server smoke, search text redacted from logs | [.agent/verification/2026-10-18-api5.md](.agent/verification/2026-10-18-api5.md) |
@@ -39,7 +41,7 @@
 
 ## Not done / not verified
 
-- No LLM key, no deployment. Not built yet: admin replies and notes (API-7), SSE (API-8), AI (AI-1..AI-6) and the portal screens. Author follow-up messages are deferred (X-2).
+- No LLM key, no deployment. Not built yet: SSE (API-8), AI (AI-1..AI-6) and the portal screens. Author follow-up messages are deferred (X-2).
 - Rate limits are in-memory per instance (A-15); the database trigger is the cross-instance cap.
 - Mermaid diagrams in the docs have not been rendered locally (no renderer installed); they target GitHub's renderer.
 - The blueprint PDF was not regenerated (pandoc/XeLaTeX not installed, and not required for this phase).
@@ -67,4 +69,4 @@
 
 ## Next step
 
-Fast-forward `main` to `feature/api-admin-ticket` (needs approval). Then **API-7**: admin replies (`/messages`, first-response tracking, status after reply) and internal notes. No new credentials are needed.
+Fast-forward `main` to `feature/api-admin-replies` (needs approval). Then **API-8**: the SSE event hub and `GET /events` with scoped delivery (or start the AI track, AI-1/AI-2, which unblocks triage and drafts). No new credentials are needed for API-8.

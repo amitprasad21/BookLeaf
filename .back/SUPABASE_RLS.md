@@ -32,6 +32,7 @@ Ticket ownership in message policies is checked inline (`exists (select 1 from p
 | `UPDATE` on `ticket_messages`, `internal_notes` | Append-only |
 | `INSERT`, `UPDATE` on `audit_events`, `ai_usage_events` | Only the system writer (secret key) logs |
 | `UPDATE` on `ai_drafts`, re-granted for column `status` only | Admins may only mark drafts superseded |
+| `EXECUTE` on `admin_send_reply` from `public`/`anon` (granted to `authenticated` only) | The reply function runs as the caller (`security invoker`), so the RLS policies above still apply; it also rejects non-admins itself (D-027) |
 
 ## 3. Access matrix
 

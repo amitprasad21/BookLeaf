@@ -191,6 +191,12 @@ The original description lives on `tickets`, not as a message.
 
 All trigger functions set `search_path = ''` and schema-qualify every name.
 
+## Functions (called by the API)
+
+| Function | Behaviour |
+|---|---|
+| `admin_send_reply(p_ticket_id, p_body, p_status_after = 'in_progress', p_draft_id = null)` | Admin reply in one transaction: lock the ticket, refuse unless open/in progress, insert the message as `auth.uid()`, set `first_response_at` if null, set the status and `resolved_at`. Returns `message_id, message_created_at, previous_status, new_status, first_response`. `security invoker`, `search_path = ''`; `EXECUTE` for `authenticated` only (D-027) |
+
 ## Lock-down at creation
 
 The migration enables RLS on **every** table with **no** policies, and revokes all table, sequence and function grants from `anon`. Until the DB-3 policies exist, client roles see nothing. Only the backend's secret key (system writer, seed) can read or write.
@@ -204,6 +210,7 @@ Migrations are applied by the user through the Supabase dashboard **SQL Editor**
 | `20261017090000_initial_schema.sql` | 2026-10-17 | SQL Editor (user) | `npm run check:db`: 9/9 tables, anon denied, royalty check enforced ([verification](../.agent/verification/2026-10-17-db2.md)) |
 | `20261017120000_rls_policies.sql` | 2026-10-18 | SQL Editor (user), third attempt (see verification) | `check:db` access probes yes/yes; `npm run test:rls` 15/15 ([verification](../.agent/verification/2026-10-18-db3-db4.md)) |
 | `20261018090000_queue_urgency_rank.sql` | 2026-10-18 | SQL Editor (user) | Fingerprint `10 · 12 · 16 · false · 1`; `check:db` `urgency_rank` present; live queue suite 7/7 ([verification](../.agent/verification/2026-10-18-api5.md)) |
+| `20261018120000_admin_reply_function.sql` | 2026-10-18 | SQL Editor (user) | Fingerprint `10 · 12 · 16 · false · 1 · 1`; `check:db` `admin_send_reply` present and refuses non-admins; live reply suite 7/7 ([verification](../.agent/verification/2026-10-18-api7.md)) |
 
 **Before and after every migration**, run this fingerprint query in the SQL Editor tab you're using. It confirms the tab is the app's database (`authors 10 · logins 12` once seeded) and shows the policy state:
 

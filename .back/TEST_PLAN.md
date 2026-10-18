@@ -23,7 +23,7 @@ Integration tests use a dedicated test author and test admin plus tickets they c
 | U-03 | payout-calendar | `pendingBelowThreshold` for 0, 850, 1000, 1001 (**implemented**) |
 | U-04 | payout-calendar | `paymentPossiblyOverdue` for BK001 (true), BK016 (false: below threshold), BK002 (false: zero pending) (**implemented**, plus BK005 and published-/paid-after-quarter cases) |
 | U-05 | lifecycle | Every allowed transition passes; every other pair → InvalidTransition (**implemented**: `backend/test/admin-ticket.test.ts`) |
-| U-06 | lifecycle | Reply on `open` → `in_progress`; `statusAfter=resolved` → `resolved`; reply on `closed` rejected |
+| U-06 | lifecycle | Reply on `open` → `in_progress`; `statusAfter=resolved` → `resolved`; reply on `closed` rejected (**implemented** in the database function; live `test-integration/admin-replies.test.ts`) |
 | U-07 | floors | `isbn_error` + low → high; `legal_or_rights` → critical; floors never lower |
 | U-08 | placeholder-guard | Detects `[insert date]`, `{{name}}` |
 | U-09 | fact-guard | `₹3,570` matches BK001 pending; `₹4,000` flagged; dates normalised across formats |
@@ -51,8 +51,8 @@ Integration tests use a dedicated test author and test admin plus tickets they c
 | I-12 | `PATCH` | Invalid transition | 422 (**implemented**) |
 | I-13 | `PATCH` | `assignedAdminId` = other admin | 422 INVALID_ASSIGNMENT (**implemented**, plus taking or releasing a colleague's ticket) |
 | I-14 | `PATCH` | Category override | `category_source=admin`; audit row with old/new (**implemented**, offline + live) |
-| I-15 | `POST /admin/tickets/{id}/messages` | First reply | `first_response_at` set; status in_progress; author sees message |
-| I-16 | `POST /admin/tickets/{id}/notes` | Note | Visible to admin; absent from author view |
+| I-15 | `POST /admin/tickets/{id}/messages` | First reply | `first_response_at` set; status in_progress; author sees message (**implemented**, offline + live) |
+| I-16 | `POST /admin/tickets/{id}/notes` | Note | Visible to admin; absent from author view (**implemented**, offline + live) |
 | I-17 | `POST /admin/tickets/{id}/draft` | Twice, unchanged context | Second returns 200 cached, 1 usage event |
 | I-18 | `POST /admin/tickets/{id}/draft` | Mock invalid output | 503 `invalid_output` after one repair attempt |
 | I-19 | `POST /author/tickets` | 6 within 10 min | 6th → 429 with Retry-After |
