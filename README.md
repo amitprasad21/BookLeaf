@@ -5,7 +5,7 @@ A web application for BookLeaf Publishing with two experiences, both backed by o
 - **Author portal**: authors sign in, review their books and royalties, raise support tickets and follow replies in near real time.
 - **Admin portal**: the operations team works a prioritised ticket queue. AI-suggested categories, priorities and reply drafts are always reviewed by a human before anything reaches an author.
 
-> **Current status: backend skeleton.** The five workspaces build, typecheck, lint and pass their tests. The API has its middleware chain (request ids, minimal logging, security headers, CORS allowlist, error envelope) and serves `/api/v1/health` plus Swagger UI at `/api/docs`. There is no database, authentication, ticket feature, AI integration or deployment yet. [PROJECT_STATE.md](PROJECT_STATE.md) is the source of truth for what is actually done and verified.
+> **Current status: data layer ready.** The Supabase database has the schema and row-level security policies, verified by 15 live access-rule tests, and is seeded with the exact assessment dataset (10 authors, 18 books) plus 12 demo logins. The API has its middleware chain and serves `/api/v1/health` plus Swagger UI at `/api/docs`, but doesn't yet authenticate or serve data. No ticket features, AI or deployment yet. [PROJECT_STATE.md](PROJECT_STATE.md) is the source of truth for what is actually done and verified.
 
 ## Planned architecture (summary)
 
@@ -101,11 +101,35 @@ Verify the database schema after applying a migration (tables, client lockdown, 
 npm run check:db
 ```
 
+Load the assessment dataset and demo logins. The default is a dry run that writes nothing; writing needs the explicit `:apply` script:
+
+```bash
+npm run seed
+```
+
+```bash
+npm run seed:apply
+```
+
+Run the live row-level-security suite (needs both migrations applied and the seed done):
+
+```bash
+npm run test:rls
+```
+
 Each runtime reads its own environment file. Variable names (never values) are listed in [.env.example](.env.example), and how to obtain each one is in [.agent/CREDENTIALS_GUIDE.md](.agent/CREDENTIALS_GUIDE.md).
 
 ## Test login credentials
 
-*To be added after the seed script runs against the deployed demo (task DB-4).* Author logins will use the 10 author emails from the provided dataset, and admin logins use `@bookleaf.test` addresses.
+The seed (`npm run seed:apply`) creates 12 demo logins:
+
+| Who | Email | Password |
+|---|---|---|
+| 10 authors | The `email` of each author in [supabase/seed/bookleaf_sample_data.json](supabase/seed/bookleaf_sample_data.json), e.g. `priya.sharma@email.com` (AUTH001) | Shared author demo password |
+| Ops admin | `admin@bookleaf.test` | Admin demo password |
+| Support lead | `support.lead@bookleaf.test` | Admin demo password |
+
+*Demo passwords will be published here for evaluators once the live demo is deployed (task DOCS-2).* Locally they live in `backend/.env` (`SEED_AUTHOR_PASSWORD`, `SEED_ADMIN_PASSWORD`), which is git-ignored.
 
 ## Assessment deliverables
 

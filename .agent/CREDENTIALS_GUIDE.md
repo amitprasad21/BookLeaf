@@ -25,7 +25,7 @@
 | DB-1 | Supabase publishable key | `SUPABASE_PUBLISHABLE_KEY` · `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `backend/.env` · both `*-frontend/.env.local` | Public (protected by RLS) |
 | DB-1 | Supabase secret key (bypasses RLS) | `SUPABASE_SECRET_KEY` | `backend/.env` only | **Server-only** |
 | DB-2 | Database migration access (CLI login or connection string; decided at DB-2) | TBD at DB-2, explained before asking | Local shell / `backend/.env` only | **Server-only** |
-| DB-4 | Demo passwords for seeded accounts | `SEED_AUTHOR_PASSWORD`, `SEED_ADMIN_PASSWORD` | `backend/.env` (used by seed script only) | Demo-only; published in README for evaluators |
+| DB-4 | Demo passwords for seeded accounts (**user-chosen**, at least 12 characters, never a reused real password) | `SEED_AUTHOR_PASSWORD`, `SEED_ADMIN_PASSWORD` (placeholders added to `backend/.env` 2026-10-17; at the user's request the agent **generated** random 20-character values into the file without displaying them; the user reads them from `backend/.env` when needed) | `backend/.env` (used by `npm run seed:apply` and `npm run test:rls` only) | Demo-only; published in README for evaluators |
 | AI-1 | Primary LLM key (provider chosen at AI-1) | `ANTHROPIC_API_KEY` (if Anthropic) + `AI_PRIMARY_PROVIDER`, `AI_PRIMARY_MODEL` | `backend/.env` | **Server-only** |
 | AI-1 (optional) | Fallback LLM key (only if approved) | `AI_FALLBACK_PROVIDER`, `AI_FALLBACK_MODEL`, `AI_FALLBACK_BASE_URL`, `AI_FALLBACK_API_KEY` | `backend/.env` | **Server-only** |
 | DEP-1/2 | Hosting accounts (Render, Vercel) | Same names as above in each host's environment settings | Render (backend) · Vercel ×2 (frontends) | Per variable as above |

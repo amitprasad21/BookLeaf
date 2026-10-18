@@ -1,51 +1,48 @@
 # Handover
 
-**Session:** 2026-10-16 → 2026-10-17 (Claude Code)
-**Branch:** `feature/db-schema` (branched from `main` at `c4dae51`, which includes DB-1; three DB-2 commits; not merged, not pushed)
-
-**DB-2 status: applied and verified.** `supabase/migrations/20261017090000_initial_schema.sql` (8 enums, 9 tables, constraints, indexes, 4 triggers, RLS on everywhere with no policies, anon revoked) was run by the user in the SQL Editor (D-021). `npm run check:db` → OK: 9/9 tables, anon denied, constraint enforced. No rollback needed. Also: rollback script in `supabase/rollback/`, `backend/test/schema-contract.test.ts`, new `backend/scripts/check-db.ts`, and the migration log in `.back/DATA_MODEL.md`.
-
-**Commits (approved by the user 2026-10-17)** on `feature/db-schema` (hashes: `git log --oneline main..`):
-1. `feat(db): add initial schema migration with RLS lockdown and rollback`
-2. `feat(backend): add read-only schema check (npm run check:db)`
-3. `docs: record DB-2 schema, migration route and verification`
-
-**Next:** merge `feature/db-schema` into `main` (needs approval), then DB-3 (RLS helpers + policies migration for review) together with DB-4 (seed), since the policy tests need seeded sign-ins.
+**Session:** 2026-10-17 → 2026-10-18 (Claude Code)
+**Branch:** `feature/db-rls-seed` (branched from `main` at `a403fba`; four DB-3/DB-4 commits; not merged, not pushed)
 
 ## Done
 
-- Phase 0, SETUP-2, SETUP-3 and API-1 merged to `main` (`af9fc08`) with the user's approval.
-- DB-1, Supabase project + credentials ([verification/2026-10-17-db1.md](verification/2026-10-17-db1.md)):
-  - Official Supabase docs checked for current key types, dashboard locations and the sign-up setting (D-020).
-  - `backend/scripts/check-env.ts` + `credential-checks.ts` (`npm run check:env`): names-only presence, key-kind, frontend↔backend match, secret-leak and connection checks. 5 unit tests.
-  - Git-ignored env files created with placeholders. The **user** filled in the real values; the agent never read or printed them.
-  - Final check: **Result OK**. Both keys are valid and correctly placed, there are no secrets in frontend files, and sign-ups are disabled. (The first run caught the sign-up toggle not yet saved.)
-  - The user re-confirmed **no self sign-up**: accounts come from the seed only.
+- Merged to `main` earlier with approval: Phase 0, SETUP-2/3, API-1, DB-1, DB-2.
+- **DB-3, access rules: applied and verified** in project `jhszxq…` ([verification/2026-10-18-db3-db4.md](verification/2026-10-18-db3-db4.md)).
+  - Contents: `supabase/migrations/20261017120000_rls_policies.sql` (private helpers, 16 policies, tightened grants), the rollback, `test/rls-contract.test.ts`, and the live suite `test-integration/rls.test.ts`.
+  - Results: `npm run test:rls` 15/15 pass. `check:db` now also signs in as a seeded author and asserts that policies and grants are live.
+- **DB-4, seed: done.**
+  - Contents: `scripts/seed.ts` + `seed-data.ts`. Dry run is the default; `seed:apply` writes.
+  - Result: 10/10 authors and 18/18 books match exactly, 12 logins with profiles.
+  - Demo passwords were generated into `backend/.env` at the user's request and never displayed.
+- Incidents caught and fixed (recorded in SECURITY_REVIEW_CHECKLIST and D-021):
+  1. The seed `--dry-run` flag was dropped by npm, so the script took the write path. It stopped before any write; writing now needs `seed:apply`.
+  2. DB-3 "Success" twice without landing: once not persisted, once applied to another project. Caught by the live suite and `check:db`; the migration log now prescribes a fingerprint query before and after each migration.
+- The second Supabase project the user has holds DB-2 + DB-3 schema with no data. Unused; the user may delete it.
 
 ## In progress
 
-- Nothing half-done. DB-1 is committed on `feature/db-supabase`. Merging into `main` needs approval. **The env files are git-ignored and must never be committed.**
+- Nothing half-done. DB-3/DB-4 are committed on `feature/db-rls-seed`. Merging into `main` needs approval.
 
 ## Broken / risky
 
-- **npm 10.2.5 on PATH** crashes on this workspace. Use Node's bundled npm 11.6.2 (`"C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js"`).
-- Admin-API user creation with sign-ups disabled is expected to work but unproven until DB-4.
-- `VersionConflictError` lacks the current representation (API-6). Still open: S-07..S-10, D-010, ESLint 9 support (D-019).
+- **npm 10.2.5 on PATH** crashes on this workspace. Use Node's bundled npm 11.6.2 (`"C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js"`). Root scripts swallow extra flags (e.g. `-- --reporter=verbose`), so run them in `backend/` directly when you need flags.
+- `test:rls` writes and deletes tickets as AUTH001/AUTH002; an interrupted run could leave "RLS test ticket" rows.
+- Not yet exercised: the `ai_drafts` status-only update and the 24-hour rate limit.
 
 ## Next
 
-1. Merge `feature/db-supabase` into `main` (fast-forward) after approval.
-2. DB-2: write the migration SQL (enums, tables, constraints, indexes, triggers per `.back/DATA_MODEL.md`) for review. **Before applying it,** explain the migration route just in time (B-04): Supabase CLI via `npx supabase` (install approval + access token / database password) or pasting into the dashboard SQL editor.
-3. DB-3 RLS policies + tests, then DB-4 seed.
+1. Merge `feature/db-rls-seed` into `main` (fast-forward) after approval.
+2. API-2: auth middleware (verify JWT, load profile, role guards) + `GET /me`. Then API-3/API-4.
 
 ## Do not touch
 
 - `backend/.env`, `author-frontend/.env.local`, `admin-frontend/.env.local`: real credentials, git-ignored, never read into chat.
-- `supabase/seed/bookleaf_sample_data.json` (byte-identical to the provided file). `docs/blueprint/` (source material).
+- `supabase/seed/bookleaf_sample_data.json` (byte-identical). `docs/blueprint/`.
 
-## Commits (approved by the user 2026-10-17)
+## Commits (approved by the user 2026-10-18)
 
-On `feature/db-supabase` (hashes: `git log --oneline main..`):
+On `feature/db-rls-seed` (hashes: `git log --oneline main..`):
 
-1. `feat(backend): add safe Supabase credential check (npm run check:env)`
-2. `docs: record Supabase setup (DB-1) and credential verification`
+1. `feat(db): add row level security policies and grants migration`
+2. `feat(backend): add idempotent seed script with safe dry-run default` (carries all new npm scripts, including `test:rls`)
+3. `test(security): add live row level security suite and access probes`
+4. `docs: record DB-3/DB-4, migration lessons and verification`

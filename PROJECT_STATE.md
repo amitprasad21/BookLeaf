@@ -3,7 +3,7 @@
 **Owns:** the current milestone, verified facts, blockers and open questions. Update at the end of every session.
 
 **Last updated:** 2026-10-17
-**Milestone:** Phase 0, SETUP-2, SETUP-3 and API-1 are merged to `main`. DB-1 (Supabase project + credentials) is merged to `main`. DB-2: the initial schema is **applied to Supabase** (by the user, via the SQL Editor) and verified. The work is committed on `feature/db-schema`, not yet merged. No product features yet (no schema, auth, tickets or AI).
+**Milestone:** Phase 0, SETUP-2, SETUP-3 and API-1 are merged to `main`. DB-1 (Supabase project + credentials) is merged to `main`. DB-2 (initial schema, applied and verified) is merged to `main`. DB-3 (RLS policies) and DB-4 (seed) are **applied, seeded and verified** in Supabase project `jhszxq…`. The work is committed on `feature/db-rls-seed`, not yet merged. No product features yet (no schema, auth, tickets or AI).
 
 ## Verified facts (with evidence)
 
@@ -23,6 +23,8 @@
 | `npm run check` (format, lint, OpenAPI lint, typecheck, tests, build) exits 0; `openapi.yaml` is valid OpenAPI 3.1 with 18 operationIds; fresh `npm ci` rebuilds shared packages via `prepare` | [.agent/verification/2026-10-16-setup3.md](.agent/verification/2026-10-16-setup3.md) |
 | `main` fast-forwarded to SETUP-3 (`6898131`) with the user's approval | `git branch -v` |
 | `main` fast-forwarded to API-1 (`af9fc08`) with the user's approval | `git branch -v` |
+| Seed applied: 10/10 authors and 18/18 books match the dataset field by field; 12 logins (10 authors + 2 admins) with profiles; admin-API user creation works with sign-ups off | `npm run seed:apply` → Result OK ([.agent/verification/2026-10-18-db3-db4.md](.agent/verification/2026-10-18-db3-db4.md)) |
+| RLS policies + grants live in `jhszxq…`: 15/15 live access-rule tests pass; test data cleaned up (tickets/messages/notes 0) | `npm run test:rls`, `npm run check:db` → OK (same record) |
 | Initial schema applied: 9 tables exist (0 rows), anon access denied, royalty balance constraint enforced | `npm run check:db` → OK ([.agent/verification/2026-10-17-db2.md](.agent/verification/2026-10-17-db2.md)) |
 | Supabase project exists (created by the user). Backend and both frontends have the URL + **publishable** key; the **secret** key is in `backend/.env` only; publishable key reaches the project; secret key accepted (read-only admin call); new-user sign-ups disabled; no secret in any frontend env file | `npm run check:env` → Result: OK ([.agent/verification/2026-10-17-db1.md](.agent/verification/2026-10-17-db1.md)) |
 | API-1 backend skeleton: 28 backend tests pass (env, request id, error envelope, CORS, docs, logging, redaction); live server checks pass for both `npm start` (dist) and `npm run dev` (tsx); Swagger UI renders under helmet CSP | [.agent/verification/2026-10-16-api1.md](.agent/verification/2026-10-16-api1.md) |
@@ -57,4 +59,4 @@
 
 ## Next step
 
-Merge `feature/db-schema` into `main` (needs approval). Then DB-3: RLS helper functions and policies as a second migration for review, plus policy tests with real sign-ins. The tests need seeded users, so DB-4 (seed) goes alongside.
+Merge `feature/db-rls-seed` into `main` (needs approval). Then **API-2**: backend auth middleware (verify the Supabase JWT, load the profile, role guards) and `GET /me`, then the author and ticket endpoints (API-3, API-4). No new credentials are needed.

@@ -8,7 +8,7 @@
 
 | # | Control | Applicability | BookLeaf implementation plan | Evidence | Status |
 |---|---|---|---|---|---|
-| 1 | Row Level Security | Required | RLS enabled on every application table; policies per [.back/SUPABASE_RLS.md](../.back/SUPABASE_RLS.md); tested with author A, author B, admin | DB-3 tests | not run |
+| 1 | Row Level Security | Required | RLS enabled on every application table; policies per [.back/SUPABASE_RLS.md](../.back/SUPABASE_RLS.md); tested with author A, author B, admin | `npm run test:rls` 15/15 + `check:db` access probes ([verification](verification/2026-10-18-db3-db4.md)) | verified (database layer) |
 | 2 | Auth on every API route | Required | Global auth middleware; explicit public allowlist (`/health`, docs); route inventory test | SEC-1 | not run |
 | 3 | Never trust the frontend | Required | Identity/role from token + DB; strict zod schemas; ownership in every query; transitions validated server-side | SEC-1 | not run |
 | 4 | Rate limiting | Required | Ticket creation, draft, triage per user; Supabase Auth limits for login | SEC-1 | not run |
@@ -16,7 +16,7 @@
 | 6 | Parameterized queries | Required | Supabase client query builder only; no string-built SQL; any SQL function reviewed | SEC-2 review | not run |
 | 7 | Locked-down CORS | Required (deploy) | Allowlist from `CORS_ALLOWED_ORIGINS`; no wildcard; no credentials mode needed (bearer tokens); production refuses to start without an explicit allowlist | `backend/test/cors.test.ts`, `env.test.ts` (API-1); deployed-origin check pending (SEC-2) | verified locally |
 | 8 | HTTPS everywhere | Required (deploy) | Vercel/Render/Supabase HTTPS endpoints; HSTS via helmet | DEP-3 | not run |
-| 9 | Stop IDOR bugs | Required | Not-owned → 404; composite FK for ticket→book ownership; UUIDs | SEC-1 | not run |
+| 9 | Stop IDOR bugs | Required | Not-owned → 404; composite FK for ticket→book ownership; UUIDs | Database layer: RLS-03/04/05 pass (live); API layer: SEC-1 | partially verified |
 | 10 | Debug mode off in production | Required (deploy) | `NODE_ENV=production`; generic 500s; no provider error bodies; Swagger UI allowed (no secrets) | `backend/test/errors.test.ts`: unexpected error → generic 500, no message/stack leak (API-1); production-mode check pending (SEC-1) | verified locally |
 | 11 | CAPTCHA on public forms | Conditional: **N/A** | No public/unauthenticated forms (signups disabled; login protected by Supabase Auth rate limits). Revisit if a public form is added | n/a | n/a |
 | 12 | Log admin actions | Recommended | `audit_events` for status, overrides, assignment, replies, notes, draft regeneration; old/new values only, no bodies | API-6 tests | not run |
@@ -46,4 +46,6 @@
 
 | Date | Finding | Severity | Evidence | Owner | Remediation | Retest |
 |---|---|---|---|---|---|---|
+| 2026-10-17 | `npm run seed -- --dry-run` from the root lost the flag (npm consumed it) and the seed took its **write** path; it stopped only at the missing-password check | Medium (accidental writes to the hosted DB) | Dry-run output showed the config check instead of "Dry run" | Claude Code | Seed is dry-run by default; writing needs the separate `seed:apply` script (`--apply`) | Stray flags stay dry-run; `seed:apply` refuses without passwords; `check:db` showed 0 rows: PASS |
+| 2026-10-18 | DB-3 reported "Success" twice but wasn't live: once not persisted, once applied to a second Supabase project | Medium (the RLS policies everyone relied on were missing) | `test:rls` setup failure; `check:db` access probes; fingerprint query showed `0 · 0` | Claude Code + user | `check:db` now signs in and asserts that policies and grants are live; migration log documents a fingerprint query to run before and after each migration | Re-applied in the right project: `check:db` OK, `test:rls` 15/15 |
 | 2026-10-16 | Default pino-http request logs recorded every request header, client IP and user agent (auth headers were redacted, but this is more personal data than the minimise-logging rule allows) | Low | Live server log during API-1 smoke test | Claude Code | Custom serializers: log only id, method, URL, status, timing | `logging.test.ts` asserts the exact `req`/`res` shape; live log re-checked: PASS |

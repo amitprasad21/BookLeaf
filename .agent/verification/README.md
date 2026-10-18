@@ -17,3 +17,4 @@ Each entry records:
 | [2026-10-16-api1.md](2026-10-16-api1.md) | Backend skeleton: 28 tests, mutation checks, live smoke incl. Swagger UI |
 | [2026-10-17-db1.md](2026-10-17-db1.md) | Supabase project + credentials: safe `check:env`, sign-ups disabled |
 | [2026-10-17-db2.md](2026-10-17-db2.md) | Initial schema: contract test, applied via SQL Editor, `check:db` OK |
+| [2026-10-18-db3-db4.md](2026-10-18-db3-db4.md) | Access rules + seed: seed OK, wrong-project apply caught, 15/15 live RLS tests |

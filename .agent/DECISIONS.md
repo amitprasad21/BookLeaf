@@ -126,10 +126,11 @@
 - **Context:** DB-1. Official Supabase docs (checked 2026-10-17) describe publishable (`sb_publishable_…`, browser-safe) and secret (`sb_secret_…`, backend-only, bypasses RLS) keys under **Settings → API Keys**. Legacy `anon`/`service_role` JWT keys are deprecated, with removal planned by the end of 2026. The user re-confirmed that self sign-up is not wanted.
 - **Choice:** Use the new publishable/secret keys (variable names unchanged from `.env.example`). "Allow new users to sign up" is **off**; the 10 dataset authors and 2 admins are created by the seed script through the server-side admin API (DB-4).
 - **Evidence:** `npm run check:env` confirms key kinds, placement, connectivity and `disable_signup = true` without printing values.
-- **Open:** that admin-API user creation works with sign-ups disabled is expected but not yet verified. DB-4 will prove it.
+- **Verified 2026-10-18:** admin-API user creation works with sign-ups disabled (`seed:apply` created all 12 logins).
 
 ### D-021: Migration route
 - **Context:** DB-2. The options were the dashboard SQL Editor (no install, no new credentials) or the Supabase CLI (tracked history, but needs an install, a personal access token and the database password).
 - **Choice:** The user applies each reviewed migration file in the SQL Editor, wrapped in `begin; … commit;`, and the agent verifies with `npm run check:db` (read-only, names/counts/pass-fail only). Applied migrations are logged in `.back/DATA_MODEL.md`.
 - **Cost:** No automatic migration history; production deploys repeat the manual step. Rollback scripts live in `supabase/rollback/`, outside the migrations folder.
 - **Revisit:** If migrations become frequent or a CI deploy pipeline is added, adopt the Supabase CLI (`db push`) with the same files.
+- **Lesson (2026-10-18, DB-3):** "Success" in the editor doesn't prove the change landed in the app's database. Two attempts failed silently: one wasn't persisted, and one went to another project. The process now requires the fingerprint query (`.back/DATA_MODEL.md` migration log) before and after, plus `npm run check:db` (now with live access-rule probes). If manual application keeps failing, switch to a direct connection or the CLI so the agent can apply and verify in one step.

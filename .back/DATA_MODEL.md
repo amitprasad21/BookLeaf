@@ -200,6 +200,18 @@ Migrations are applied by the user through the Supabase dashboard **SQL Editor**
 | Migration | Applied | Method | Verified by |
 |---|---|---|---|
 | `20261017090000_initial_schema.sql` | 2026-10-17 | SQL Editor (user) | `npm run check:db`: 9/9 tables, anon denied, royalty check enforced ([verification](../.agent/verification/2026-10-17-db2.md)) |
+| `20261017120000_rls_policies.sql` | 2026-10-18 | SQL Editor (user), third attempt (see verification) | `check:db` access probes yes/yes; `npm run test:rls` 15/15 ([verification](../.agent/verification/2026-10-18-db3-db4.md)) |
+
+**Before and after every migration**, run this fingerprint query in the SQL Editor tab you're using. It confirms the tab is the app's database (`authors 10 · logins 12` once seeded) and shows the policy state:
+
+```sql
+select (select count(*) from public.authors) as authors,
+       (select count(*) from auth.users) as logins,
+       (select count(*) from pg_policies where schemaname = 'public') as policies,
+       has_table_privilege('authenticated', 'public.books', 'UPDATE') as clients_can_edit_books;
+```
+
+Then run `npm run check:db`, which signs in as a seeded author and confirms the rules are live from the app's side.
 
 ## Money and dates
 
