@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { buildTestApp } from "./helpers.js";
 
 const app = () =>
-  buildTestApp({ CORS_ALLOWED_ORIGINS: "https://author.example.com,https://admin.example.com" });
+  buildTestApp({ env: { CORS_ALLOWED_ORIGINS: "https://author.example.com,https://admin.example.com" } });
 
 describe("CORS allowlist", () => {
   it("allows a listed origin, including preflight for PATCH with auth headers", async () => {

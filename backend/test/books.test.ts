@@ -16,7 +16,7 @@ const spec = parse(readFileSync(new URL("../../openapi.yaml", import.meta.url), 
 };
 
 function app(today = "2026-10-16", db = fakeDb({ books: allBooks })) {
-  return buildTestApp({}, undefined, fakeVerifier(db), fixedClock(today));
+  return buildTestApp({ verifier: fakeVerifier(db), clock: fixedClock(today) });
 }
 
 const getBooks = (application = app()) =>

@@ -10,6 +10,7 @@ import { createApp } from "../src/app.js";
 import { createSupabaseVerifier } from "../src/auth/supabase-verifier.js";
 import { loadEnv } from "../src/config/env.js";
 import { createLogger } from "../src/lib/logger.js";
+import { recordingSystemWriter } from "../test/fakes.js";
 
 const env = {
   url: process.env.SUPABASE_URL ?? "",
@@ -61,6 +62,7 @@ describe.runIf(configured)("GET /author/books against live Supabase", () => {
     env: loadEnv({ NODE_ENV: "test", SUPABASE_URL: env.url, SUPABASE_PUBLISHABLE_KEY: env.publishable }),
     logger: createLogger({ LOG_LEVEL: "silent" }),
     verifier: createSupabaseVerifier({ url: env.url, publishableKey: env.publishable }),
+    systemWriter: recordingSystemWriter().writer, // read-only suite: nothing is audited
   });
   const tokens: Record<string, string> = {};
 

@@ -151,6 +151,11 @@ paths:
       description: |
         The ticket is persisted before any AI processing. The response is 201
         even when AI is unavailable; triage happens asynchronously.
+
+        Text fields are trimmed before validation. A `bookId` that is not one
+        of the caller's books gets the same 400 (field `bookId`) as an unknown
+        book. Each author may create at most 5 tickets per 10 minutes and 20
+        per 24 hours; rejected requests don't count.
       requestBody:
         required: true
         content:
@@ -191,6 +196,7 @@ paths:
                 required: [data]
                 properties:
                   data: { $ref: '#/components/schemas/AuthorTicketDetail' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -732,13 +738,15 @@ components:
       properties:
         bookId:
           type: ['string', 'null']
-          description: null means "General / Account Level"
+          pattern: '^BK\d{3,}$'
+          description: One of the caller's books, or null for "General / Account Level"
         subject: { type: string, minLength: 5, maxLength: 150 }
         description: { type: string, minLength: 20, maxLength: 5000 }
         attachmentName:
           type: ['string', 'null']
           maxLength: 255
-          description: UI-only attachment; filename metadata only
+          pattern: '\.([jJ][pP][eE]?[gG]|[pP][nN][gG]|[pP][dD][fF])$'
+          description: UI-only attachment; filename metadata only (.jpg, .jpeg, .png or .pdf, any case)
 
     MessageBodyRequest:
       type: object
@@ -782,7 +790,10 @@ components:
         senderRole: { type: string, enum: [author, admin] }
         senderName:
           type: string
-          description: Admin replies show the admin's display name followed by "BookLeaf Support"
+          description: |
+            Author view: the author's own name on their messages; admin replies
+            are signed "BookLeaf Support" (authors can't read admin profiles).
+            Admin view: the sending admin's display name.
         body: { type: string }
         createdAt: { type: string, format: date-time }
 
@@ -807,7 +818,7 @@ components:
       allOf:
         - $ref: '#/components/schemas/AuthorTicketSummary'
         - type: object
-          required: [description, messages]
+          required: [description, attachmentName, messages]
           properties:
             description: { type: string }
             attachmentName: { type: ['string', 'null'] }

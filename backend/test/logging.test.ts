@@ -5,7 +5,7 @@ import { buildTestApp, captureLogger, settle } from "./helpers.js";
 describe("request logging", () => {
   it("logs one minimal line per request: id, method, url, status; no headers or client data", async () => {
     const { logger, lines } = captureLogger();
-    const res = await request(buildTestApp({}, logger))
+    const res = await request(buildTestApp({ logger }))
       .get("/api/v1/unknown")
       .set("Authorization", "Bearer supersecret.jwtshaped.token")
       .set("Cookie", "session=also-secret");
@@ -25,7 +25,7 @@ describe("request logging", () => {
 
   it("does not log health checks", async () => {
     const { logger, lines } = captureLogger();
-    await request(buildTestApp({}, logger)).get("/api/v1/health");
+    await request(buildTestApp({ logger })).get("/api/v1/health");
     await settle();
 
     expect(lines()).toHaveLength(0);

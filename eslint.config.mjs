@@ -23,6 +23,31 @@ export default defineConfig([
     languageOptions: { globals: globals.node },
   },
   {
+    // The system writer holds the RLS-bypassing secret key (.back/AUTH_SECURITY.md section 5).
+    files: ["backend/src/**/*.ts"],
+    ignores: [
+      "backend/src/db/system-writer.ts",
+      "backend/src/server.ts",
+      "backend/src/app.ts",
+      "backend/src/ai/**",
+      "backend/src/modules/audit/**",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/db/system-writer*"],
+              message:
+                "The RLS-bypassing system writer may only be used by src/ai/**, src/modules/audit/** and the server bootstrap.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: reactFiles,
     extends: [nextVitals, nextTypescript],
     settings: { next: { rootDir: ["author-frontend/", "admin-frontend/"] } },

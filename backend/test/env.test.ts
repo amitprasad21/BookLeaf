@@ -5,6 +5,7 @@ import { loadEnv } from "../src/config/env.js";
 const SUPABASE = {
   SUPABASE_URL: "https://example-ref.supabase.co",
   SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test",
+  SUPABASE_SECRET_KEY: "sb_secret_x",
 };
 
 describe("loadEnv", () => {
@@ -24,7 +25,7 @@ describe("loadEnv", () => {
 
   it("requires the Supabase project values outside tests", () => {
     expect(() => loadEnv({})).toThrow(
-      /^Invalid environment configuration: SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY$/,
+      /^Invalid environment configuration: SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_SECRET_KEY$/,
     );
   });
 

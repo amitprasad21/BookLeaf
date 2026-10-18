@@ -1,12 +1,14 @@
 import { Writable } from "node:stream";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Logger } from "pino";
-import { createApp } from "../src/app.js";
+import { createApp, type AppDeps } from "../src/app.js";
 import type { AuthContext, AuthVerifier } from "../src/auth/types.js";
 import { loadEnv } from "../src/config/env.js";
+import type { SystemWriter } from "../src/db/system-writer.js";
 import type { Clock } from "../src/lib/clock.js";
 import { ForbiddenError } from "../src/lib/errors.js";
 import { createLogger } from "../src/lib/logger.js";
+import { recordingSystemWriter } from "./fakes.js";
 
 /** JWT-shaped tokens (three dot-separated segments) understood by fakeVerifier(). */
 export const TEST_TOKENS = {
@@ -90,19 +92,25 @@ export function fakeVerifier(db: SupabaseClient = fakeDb({})): AuthVerifier {
 
 export const bearer = (token: string) => `Bearer ${token}`;
 
-/** App with test env defaults (silent logs, dev CORS origins, fake verifier) plus overrides. */
-export function buildTestApp(
-  envOverrides: NodeJS.ProcessEnv = {},
-  logger?: Logger,
-  verifier?: AuthVerifier,
-  clock?: Clock,
-) {
-  const env = loadEnv({ NODE_ENV: "test", ...envOverrides });
+export interface TestAppOptions {
+  env?: NodeJS.ProcessEnv;
+  logger?: Logger;
+  verifier?: AuthVerifier;
+  clock?: Clock;
+  systemWriter?: SystemWriter;
+  ticketsRepository?: AppDeps["ticketsRepository"];
+}
+
+/** App with test defaults (silent logs, dev CORS origins, fake verifier, recording audit writer). */
+export function buildTestApp(options: TestAppOptions = {}) {
+  const env = loadEnv({ NODE_ENV: "test", ...options.env });
   return createApp({
     env,
-    logger: logger ?? createLogger(env),
-    verifier: verifier ?? fakeVerifier(),
-    ...(clock ? { clock } : {}),
+    logger: options.logger ?? createLogger(env),
+    verifier: options.verifier ?? fakeVerifier(),
+    systemWriter: options.systemWriter ?? recordingSystemWriter().writer,
+    ...(options.clock ? { clock: options.clock } : {}),
+    ...(options.ticketsRepository ? { ticketsRepository: options.ticketsRepository } : {}),
   });
 }
 

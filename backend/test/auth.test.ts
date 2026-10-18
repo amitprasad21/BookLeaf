@@ -49,7 +49,7 @@ describe("authentication on /api/v1", () => {
 
   it("hides verifier failures behind a generic 500", async () => {
     const { logger, lines } = captureLogger();
-    const res = await request(buildTestApp({}, logger))
+    const res = await request(buildTestApp({ logger }))
       .get("/api/v1/me")
       .set("Authorization", bearer(TEST_TOKENS.verifierDown));
     await settle();
