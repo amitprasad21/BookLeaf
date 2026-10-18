@@ -98,6 +98,17 @@ if (probeError?.code === "23514") {
   problems.push("probe row was inserted: delete book_id PROBE-CHECK-DB");
 }
 
+// --------------------------------------------------- queue rank (API-5)
+// The admin queue sorts on the generated tickets.urgency_rank column.
+console.log("\nQueue urgency rank (API-5)");
+const rank = await system.from("tickets").select("urgency_rank", { count: "exact", head: true });
+if (rank.error) {
+  line("tickets.urgency_rank", `MISSING (${rank.error.code ?? "error"})`);
+  problems.push("apply supabase/migrations/20261018090000_queue_urgency_rank.sql");
+} else {
+  line("tickets.urgency_rank", "present");
+}
+
 // ---------------------------------------------------- access rules (DB-3)
 // Only once seeded: sign in as the first dataset author (publishable key) and
 // confirm the DB-3 policies and grants are live. Changes nothing: the probe
