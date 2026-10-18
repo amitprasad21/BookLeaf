@@ -62,6 +62,18 @@ if (hasPublishable && hasSecret && publishable === secret) {
   fail("publishable != secret", "SAME VALUE", "publishable and secret keys are identical");
 }
 
+// Demo login passwords for npm run seed:apply. Only "meets minimum" is
+// reported, never the length itself.
+const MIN_SEED_PASSWORD_LENGTH = 12;
+for (const name of ["SEED_AUTHOR_PASSWORD", "SEED_ADMIN_PASSWORD"] as const) {
+  const value = process.env[name];
+  if (checkPresence(name, value)) {
+    if (value!.length >= MIN_SEED_PASSWORD_LENGTH)
+      line(`  at least ${MIN_SEED_PASSWORD_LENGTH} characters`, "yes");
+    else fail(`  at least ${MIN_SEED_PASSWORD_LENGTH} characters`, "NO", `${name} is too short`);
+  }
+}
+
 // --------------------------------------------------------------- frontends
 for (const app of ["author-frontend", "admin-frontend"] as const) {
   const path = fileURLToPath(new URL(`../../${app}/.env.local`, import.meta.url));

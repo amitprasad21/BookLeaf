@@ -27,6 +27,9 @@
     "check": "npm run format:check && npm run lint && npm run lint:api && npm run typecheck && npm test && npm run build",
     "check:env": "npm run check:env -w backend",
     "check:db": "npm run check:db -w backend",
+    "seed": "npm run seed -w backend",
+    "seed:apply": "npm run seed:apply -w backend",
+    "test:rls": "npm run test:rls -w backend",
     "dev:backend": "npm run dev -w backend",
     "dev:author": "npm run dev -w author-frontend",
     "dev:admin": "npm run dev -w admin-frontend"
