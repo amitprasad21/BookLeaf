@@ -15,7 +15,8 @@
     "seed": "tsx --env-file-if-exists=.env scripts/seed.ts",
     "seed:apply": "tsx --env-file-if-exists=.env scripts/seed.ts --apply",
     "test": "vitest run",
-    "test:rls": "vitest run --config vitest.integration.config.ts"
+    "test:live": "vitest run --config vitest.integration.config.ts",
+    "test:rls": "vitest run --config vitest.integration.config.ts rls"
   },
   "dependencies": {
     "@bookleaf/shared": "0.1.0",
