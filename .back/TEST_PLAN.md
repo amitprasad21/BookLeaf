@@ -22,7 +22,7 @@ Integration tests use a dedicated test author and test admin plus tickets they c
 | U-02 | payout-calendar | Quarter boundaries (Mar 31 → May 15; Jun 30 → Aug 14; Dec 31 → Feb 14) and leap years (**implemented**) |
 | U-03 | payout-calendar | `pendingBelowThreshold` for 0, 850, 1000, 1001 (**implemented**) |
 | U-04 | payout-calendar | `paymentPossiblyOverdue` for BK001 (true), BK016 (false: below threshold), BK002 (false: zero pending) (**implemented**, plus BK005 and published-/paid-after-quarter cases) |
-| U-05 | lifecycle | Every allowed transition passes; every other pair → InvalidTransition |
+| U-05 | lifecycle | Every allowed transition passes; every other pair → InvalidTransition (**implemented**: `backend/test/admin-ticket.test.ts`) |
 | U-06 | lifecycle | Reply on `open` → `in_progress`; `statusAfter=resolved` → `resolved`; reply on `closed` rejected |
 | U-07 | floors | `isbn_error` + low → high; `legal_or_rights` → critical; floors never lower |
 | U-08 | placeholder-guard | Detects `[insert date]`, `{{name}}` |
@@ -47,10 +47,10 @@ Integration tests use a dedicated test author and test admin plus tickets they c
 | I-08 | `GET /author/tickets/{id}` | Other author's ticket | 404 |
 | I-09 | `GET /author/tickets/{id}` | Own ticket with notes + draft | Response has no internal fields |
 | I-10 | `GET /admin/tickets` | Filters combined + urgency sort | Correct set and order (**implemented**: offline `admin-queue.test.ts` (recorded queries), live `test-integration/admin-queue.test.ts`) |
-| I-11 | `PATCH /admin/tickets/{id}` | Stale version | 409 with current ticket |
-| I-12 | `PATCH` | Invalid transition | 422 |
-| I-13 | `PATCH` | `assignedAdminId` = other admin | 422 INVALID_ASSIGNMENT |
-| I-14 | `PATCH` | Category override | `category_source=admin`; audit row with old/new |
+| I-11 | `PATCH /admin/tickets/{id}` | Stale version | 409 with current ticket (**implemented**, plus a live two-admin race) |
+| I-12 | `PATCH` | Invalid transition | 422 (**implemented**) |
+| I-13 | `PATCH` | `assignedAdminId` = other admin | 422 INVALID_ASSIGNMENT (**implemented**, plus taking or releasing a colleague's ticket) |
+| I-14 | `PATCH` | Category override | `category_source=admin`; audit row with old/new (**implemented**, offline + live) |
 | I-15 | `POST /admin/tickets/{id}/messages` | First reply | `first_response_at` set; status in_progress; author sees message |
 | I-16 | `POST /admin/tickets/{id}/notes` | Note | Visible to admin; absent from author view |
 | I-17 | `POST /admin/tickets/{id}/draft` | Twice, unchanged context | Second returns 200 cached, 1 usage event |

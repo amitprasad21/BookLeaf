@@ -22,3 +22,4 @@ Each entry records:
 | [2026-10-18-api3.md](2026-10-18-api3.md) | `/author/books` + royalty summary + payout calendar: 88 offline + 27 live tests |
 | [2026-10-18-api4.md](2026-10-18-api4.md) | Author tickets (create, list, detail), rate limit, audit: 106 offline + 32 live tests, server smoke |
 | [2026-10-18-api5.md](2026-10-18-api5.md) | Admin queue + summary, urgency-rank migration, SLA rules: 138 offline + 39 live tests, server smoke, log redaction fix |
+| [2026-10-18-api6.md](2026-10-18-api6.md) | Admin ticket detail + PATCH (transitions, overrides, self-assign, optimistic lock, audit): 159 offline + 46 live tests, two-admin race, server smoke |

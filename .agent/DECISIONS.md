@@ -29,6 +29,7 @@
 | D-022 | Token verification via `supabase.auth.getClaims()` (ES256/JWKS, local); profile + author loaded per request through the caller's RLS client | accepted | 2026-10-18 |
 | D-023 | Payout calendar in `packages/shared`; ₹1,000 threshold on the author's total pending; `nextPayoutDueBy` = earliest deadline not yet passed | accepted | 2026-10-18 |
 | D-024 | Author ticket API: zod parse in handlers (no `validate` middleware), same 400 for unknown and not-owned books, per-user limits + DB backstop, audit via the system writer | accepted | 2026-10-18 |
+| D-026 | Admin ticket PATCH: plan-then-conditional-update optimistic lock; 409 returns the ticket in `error.current`; same values are no-ops; strict self-assignment; batched audit stamped 1 ms apart | accepted | 2026-10-18 |
 | D-025 | Admin queue: urgency as a generated `urgency_rank` column (sorted and paged in the database); SLA rules in `packages/shared`; overdue = unresolved, unanswered, past target; `overdue=true` filter; normalised search; search text redacted from logs | accepted | 2026-10-18 |
 
 ---
@@ -177,3 +178,21 @@
 - **Logging:** the request log redacts the `q` value (`q=redacted`), because search text can contain author names (T-14). Found in the API-5 server smoke test.
 - **Cost:** the queue takes about 0.6 s and 0.8 s with a search (one extra lookup); the summary takes about 1.0–1.3 s (nine parallel counts).
 - **Revisit:** a single SQL function for the summary if latency matters; a trigram index on subject and name if search gets slow.
+
+### D-026: Admin ticket detail and PATCH (API-6)
+- **Context:** API-6: `GET /admin/tickets/{id}` (full admin view) and `PATCH` (status, category/priority override, self-assignment) with optimistic locking (ADMIN-15) and audit events (ADMIN-17).
+- **Optimistic lock:** read the ticket. A body `version` that differs → 409 straight away. Otherwise a pure planner (`modules/tickets/admin-service.ts`) validates and builds the column changes. The update is `UPDATE … WHERE id = ? AND version = ?`, and the version trigger bumps it. If no row matches, another write landed in between → 409. Two admins saving the same version can't both win (verified live with parallel requests).
+- **409 payload:** `details: [{ path: "version", issue: "is out of date" }]` plus `error.current` holding the ticket as it is now (AdminTicketDetail). The UI can refresh and say who changed it without another request (FLOWS F-M2). This is a new optional field on the error envelope, used only for VERSION_CONFLICT.
+- **No-op values:** a field equal to its current value is not a change, so a repeated PATCH returns 200 with the same version and no audit. This replaces the spec's "same-status transitions are rejected by validation": the outcome (no write, no audit noise) is the same, without an error for a harmless retry. Confirming the AI's category or priority **is** a change: it becomes admin-set.
+- **Assignment (A-16, made precise):** an admin may take an **unassigned** ticket or release **their own**. Taking a colleague's ticket, releasing it, or assigning someone else → 422 `INVALID_ASSIGNMENT`, with a message naming the current assignee.
+- **Status stamps:** resolving sets `resolved_at` and closing sets `closed_at`, both from the API clock. Reopening (to `in_progress` from resolved/closed) clears both; history stays in the audit trail.
+- **Audit:** one event per changed aspect (`ticket.status_changed`, `ticket.category_overridden`, `ticket.priority_overridden`, `ticket.assigned`, `ticket.unassigned`), with old/new values and the old source. Events go through the system writer in **one insert**. Rows in one statement share `now()`, so the writer stamps them 1 ms apart to keep their order (a live test caught the shuffled order). Audit failures are logged and never fail the request (as in API-4).
+- **Detail view:** the author profile has name, city and joined date, never email or phone. It includes the author's books with royalty figures (the API-3 serializer), the thread with real sender names (admins see who replied), internal notes, the AI suggestion (raw `ai_*` columns, kept after overrides) and the audit timeline (actor null = system).
+- **Cost:**
+
+  | Request | Round trips | Time |
+  |---|---|---|
+  | Detail | 2 (ticket, then books, thread, notes and timeline in parallel) | about 1.1 s |
+  | Changing PATCH | about 5 | about 1.5–1.9 s |
+
+- **Revisit:** return the planned changes without re-reading everything; move the update and audit into one Postgres function if atomicity of the audit trail becomes a requirement.

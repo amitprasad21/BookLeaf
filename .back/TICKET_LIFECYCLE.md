@@ -17,7 +17,7 @@ stateDiagram-v2
     closed --> in_progress: admin reopens
 ```
 
-Authors never change status (A-17). Any transition not drawn returns `422 INVALID_STATUS_TRANSITION`. Same-status "transitions" are no-ops rejected by validation.
+Authors never change status (A-17). Any transition not drawn returns `422 INVALID_STATUS_TRANSITION`. A requested status equal to the current one is not a change: nothing is written or audited (D-026). The machine lives in `packages/shared/src/ticket-lifecycle.ts`, so the admin portal can enable only allowed transitions.
 
 ## 2. Side effects
 
@@ -30,7 +30,7 @@ Authors never change status (A-17). Any transition not drawn returns `422 INVALI
 | → resolved | `resolved_at = now()` |
 | → closed | `closed_at = now()` |
 | Reopen (→ in_progress from resolved/closed) | `resolved_at`, `closed_at` set null (history stays in audit) |
-| Assign / unassign self | `assigned_admin_id` = caller / null; no status change; audit; event `ticket.internal_updated` |
+| Assign / unassign self | `assigned_admin_id` = caller (only when unassigned) / null (only when the caller is the assignee), otherwise 422 `INVALID_ASSIGNMENT`; no status change; audit `ticket.assigned` / `ticket.unassigned`; event `ticket.internal_updated` |
 | Internal note | Note inserted; audit `ticket.note_added` (no body in metadata); event `ticket.internal_updated` |
 | Author follow-up (P2) | Allowed on `open`/`in_progress`; message inserted; event `ticket.updated` |
 

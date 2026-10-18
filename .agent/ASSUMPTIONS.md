@@ -19,5 +19,5 @@ Each assumption is something we are acting on without confirmation. Confirm or c
 | A-13 | Authors do not see category or priority | Internal triage data; a wrong AI label shouldn't confuse authors | Author DTO | Assumed |
 | A-14 | Monochrome dark theme with provisional tokens | Blueprint rules; spec missing | UI | Provisional (Q-02) |
 | A-15 | The demo runs a single backend instance | Free-tier hosting | SSE hub, in-memory rate limits | Assumed; documented limitation |
-| A-16 | Self-assignment only (no assigning to other admins) | Assignment: "assign tickets to themselves" | PATCH rules | Assumed |
+| A-16 | Self-assignment only: an admin takes an **unassigned** ticket or releases **their own**; no assigning others and no taking over a colleague's ticket (D-026) | Assignment: "assign tickets to themselves" | PATCH rules | Assumed |
 | A-17 | Closed tickets can be reopened by an admin (to In Progress); authors cannot change status | Ops flexibility | Lifecycle | Assumed |

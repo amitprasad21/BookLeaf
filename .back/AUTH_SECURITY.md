@@ -55,7 +55,7 @@ The secret key bypasses RLS, so its use is deliberately narrow.
 | `saveTriageResult(ticketId, result)` | Update AI columns; set effective category/priority **only where `*_source` is null** (single conditional `update … where`) |
 | `markTriageFailure(ticketId, reason, final)` | Update `ai_status`, `ai_failure_reason`, increment `ai_attempts` |
 | `listTicketsForSweep()` | IDs of tickets eligible for retry |
-| `appendAuditEvent(event)` | Insert into `audit_events` **(built, API-4)** |
+| `appendAuditEvents(events)` | Insert into `audit_events`, one statement per batch, stamped 1 ms apart to keep order **(built, API-4/API-6)** |
 | `appendUsageEvent(event)` | Insert into `ai_usage_events` |
 | `sumTokensToday()` | Budget check |
 

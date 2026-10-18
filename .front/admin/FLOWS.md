@@ -10,7 +10,7 @@
 
 1. Open a ticket. The triage panel shows the AI category/priority with confidence and rationale.
 2. If wrong, the admin changes the select → `PATCH {version, category}` → the label becomes "Set by admin". The audit event is recorded and the draft context changes, so the next draft request regenerates with the right KB sections.
-3. On `409 VERSION_CONFLICT`: notice "Updated by {name} just now. Showing the latest version." The panel refreshes and the admin re-applies if still needed.
+3. On `409 VERSION_CONFLICT`: notice "Updated by {name} just now. Showing the latest version." The panel refreshes from `error.current` (`{name}` = actor of the newest timeline entry) and the admin re-applies if still needed.
 
 ## F-M3. Reply with an AI draft
 

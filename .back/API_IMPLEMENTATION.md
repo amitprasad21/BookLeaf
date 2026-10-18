@@ -1,6 +1,6 @@
 # API Implementation
 
-**Owns:** backend code structure, middleware order and coding conventions. The contract (paths, schemas, errors) is [openapi.yaml](../openapi.yaml) + [INTEGRATION_CONTRACT.md](../INTEGRATION_CONTRACT.md). Status: API-1..API-5 built; API-6..API-8 planned.
+**Owns:** backend code structure, middleware order and coding conventions. The contract (paths, schemas, errors) is [openapi.yaml](../openapi.yaml) + [INTEGRATION_CONTRACT.md](../INTEGRATION_CONTRACT.md). Status: API-1..API-6 built; API-7..API-8 planned.
 
 ## 1. Layout
 
@@ -21,14 +21,14 @@ backend/src/
 │   ├── rate-limit.ts         perUserLimit() (API-4, built); validation happens in handlers (D-024)
 ├── db/
 │   ├── user-client.ts        per-request Supabase client carrying the caller's JWT (RLS applies)
-│   └── system-writer.ts      secret-key client; narrow typed functions only (see AUTH_SECURITY §5); appendAuditEvent built (API-4)
+│   └── system-writer.ts      secret-key client; narrow typed functions only (see AUTH_SECURITY §5); appendAuditEvents built (API-4, batched in API-6)
 ├── modules/
 │   ├── health/               router.ts (public liveness)
 │   ├── me/                   router.ts (API-2)
 │   ├── author/               router.ts: createAuthorRouter({ clock, audit, ticketsRepository }): /books (API-3), /tickets (API-4)
-│   ├── admin/                router.ts: createAdminRouter({ clock, adminTicketsRepository }): /tickets, /tickets/summary (API-5)
+│   ├── admin/                router.ts: createAdminRouter({ clock, audit, adminTicketsRepository }): /tickets, /tickets/summary (API-5), /tickets/:ticketId GET + PATCH (API-6)
 │   ├── books/                repository · service (royalty summary) · serializers (API-3)
-│   ├── tickets/              repository.ts · serializers/author.ts (API-4); admin-repository.ts · serializers/admin.ts (API-5); service, lifecycle.ts (API-6+)
+│   ├── tickets/              repository.ts · serializers/author.ts (API-4); admin-repository.ts · serializers/admin.ts (API-5); admin-service.ts (PATCH planner, API-6)
 │   ├── audit/                service.ts: createAuditRecorder (logs and swallows failures) (API-4)
 │   ├── messages/  notes/
 │   └── events/               hub.ts (in-process pub/sub) · router.ts (SSE)
@@ -37,6 +37,7 @@ backend/src/
 packages/shared/src/payout-calendar.ts   quarter / 45-day due date / ₹1,000 threshold / overdue heuristic
                                          (pure; shared by the API, AI facts and frontends; tested in backend/test)
 packages/shared/src/sla.ts               first-response targets, slaState, overdue cut-offs (API-5)
+packages/shared/src/ticket-lifecycle.ts  status machine: STATUS_TRANSITIONS, canTransition (API-6)
 packages/shared/src/schemas.ts           request schemas: author tickets (API-4), admin queue query (API-5)
 └── openapi/                  serves ../../openapi.yaml + Swagger UI
 ```
@@ -63,7 +64,7 @@ packages/shared/src/schemas.ts           request schemas: author tickets (API-4)
 
 ## 3. Error classes
 
-`ValidationError (400)`, `UnauthenticatedError (401)`, `ForbiddenError (403)`, `NotFoundError (404)`, `VersionConflictError (409, includes current DTO)`, `InvalidTransitionError (422)`, `InvalidAssignmentError (422)`, `RateLimitedError (429, retryAfter)`, `AiUnavailableError (503, reason)`. Services throw these, and only the error handler formats responses.
+`ValidationError (400)`, `UnauthenticatedError (401)`, `ForbiddenError (403)`, `NotFoundError (404)`, `VersionConflictError (409, current DTO in error.current)`, `InvalidTransitionError (422)`, `InvalidAssignmentError (422)`, `RateLimitedError (429, retryAfter)`, `AiUnavailableError (503, reason)`. Services throw these, and only the error handler formats responses.
 
 ## 4. Conventions
 

@@ -110,7 +110,7 @@ AI failures are **never** surfaced through ticket creation. `POST /author/ticket
 ## 8. Concurrency
 
 - Admin ticket representations include an integer `version`.
-- `PATCH /admin/tickets/{id}` requires `version` in the body. A mismatch returns `409 VERSION_CONFLICT` with the current representation in `details`, and the UI reloads and tells the admin what changed.
+- `PATCH /admin/tickets/{id}` requires `version` in the body. A mismatch returns `409 VERSION_CONFLICT` with `details: [{ path: "version", issue: "is out of date" }]` and the current representation in `error.current`. The UI shows it and tells the admin what changed (the newest timeline entry names who). The version check is repeated atomically in the UPDATE, so concurrent saves can't both win.
 - Message and note creation are append-only and need no version.
 
 ## 9. Real-time events (SSE)
