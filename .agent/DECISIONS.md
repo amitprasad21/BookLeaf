@@ -26,6 +26,7 @@
 | D-019 | Tooling: ESLint 9 flat config (Next rules scoped to React workspaces), Prettier for code only, Redocly OpenAPI lint, `prepare` builds shared packages | accepted | 2026-10-16 |
 | D-020 | Supabase: new publishable/secret API keys (not legacy anon/service_role); self sign-up off, accounts from seed only | accepted | 2026-10-17 |
 | D-021 | Migrations applied by the user via the dashboard SQL Editor; repo files are canonical; manual migration log in `.back/DATA_MODEL.md` | accepted | 2026-10-17 |
+| D-022 | Token verification via `supabase.auth.getClaims()` (ES256/JWKS, local); profile + author loaded per request through the caller's RLS client | accepted | 2026-10-18 |
 
 ---
 
@@ -134,3 +135,11 @@
 - **Cost:** No automatic migration history; production deploys repeat the manual step. Rollback scripts live in `supabase/rollback/`, outside the migrations folder.
 - **Revisit:** If migrations become frequent or a CI deploy pipeline is added, adopt the Supabase CLI (`db push`) with the same files.
 - **Lesson (2026-10-18, DB-3):** "Success" in the editor doesn't prove the change landed in the app's database. Two attempts failed silently: one wasn't persisted, and one went to another project. The process now requires the fingerprint query (`.back/DATA_MODEL.md` migration log) before and after, plus `npm run check:db` (now with live access-rule probes). If manual application keeps failing, switch to a direct connection or the CLI so the agent can apply and verify in one step.
+
+### D-022: Token verification and per-request identity
+- **Context:** API-2. `.back/AUTH_SECURITY.md` left the choice between local JWKS verification and `auth.getUser(token)`. A dedicated JWT library (`jose`) would be a new dependency.
+- **Choice:** `supabase.auth.getClaims(token)` from the already-installed supabase-js 2.117.2. The project signs with **ES256**, so verification is local against the cached JWKS (only the first request fetches it); for legacy symmetric secrets it falls back to a server check. Require `role = authenticated`. Then one RLS-scoped query loads `profiles` with the embedded `authors` row, which both builds `req.auth` and proves the policies agree with the token.
+- **Errors:** bad, expired or forged token → 401; no profile → 403; Supabase unreachable → 500. A verifier outage never becomes "not signed in".
+- **Testability:** `AuthVerifier` interface; offline tests inject a fake, and live tests use the real verifier with real tokens.
+- **Cost:** about 230 ms per request for the profile query (Supabase round trip); the first request is about 600 ms with the JWKS fetch.
+- **Revisit:** Add a short per-token profile cache (e.g. 30–60 s, keyed by token `jti`/hash) if latency matters. Role changes would then take effect after the cache window.

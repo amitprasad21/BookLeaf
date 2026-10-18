@@ -14,10 +14,12 @@ backend/src/
 │   ├── logger.ts             pino with redaction
 │   ├── clock.ts              injectable clock (tests pin dates; Asia/Kolkata business date)
 │   └── payout-calendar.ts    quarter / due-date / threshold maths (pure, unit-tested)
-├── types/express.d.ts        adds req.requestId
+├── types/express.d.ts        adds req.requestId, req.auth, req.db
+├── auth/                     types.ts (AuthContext, AuthVerifier) · supabase-verifier.ts (API-2)
 ├── middleware/
 │   ├── request-id.ts  http-logger.ts  cors.ts  error-handler.ts  not-found.ts   (API-1, built)
-│   ├── authenticate.ts  require-role.ts  validate.ts  rate-limit.ts            (API-2 / API-4)
+│   ├── authenticate.ts  require-role.ts                                        (API-2, built)
+│   ├── validate.ts  rate-limit.ts                                              (API-4)
 ├── db/
 │   ├── user-client.ts        per-request Supabase client carrying the caller's JWT (RLS applies)
 │   └── system-writer.ts      secret-key client; narrow typed functions only (see AUTH_SECURITY §5)

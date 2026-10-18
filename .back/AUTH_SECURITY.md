@@ -6,12 +6,14 @@
 
 1. Frontends sign in with Supabase Auth (email/password). Signups are disabled; accounts are created by the seed script with confirmed emails (no emails are sent).
 2. Each API request carries `Authorization: Bearer <access_token>`.
-3. `authenticate` middleware:
-   - Rejects a missing or malformed header → 401.
-   - Verifies the token with Supabase. The method is decided at API-2 per current docs: local verification against the project's JWKS (preferred: no network hop) or `auth.getUser(token)`.
-   - Creates the request-scoped Supabase client with that token.
-   - Loads `profiles` (`role`, `author_id`, `display_name`) through that client. No profile → 403 (an auth user without a BookLeaf profile has no access).
-4. The token is never logged or echoed.
+3. `authenticate` middleware ([backend/src/middleware/authenticate.ts](../backend/src/middleware/authenticate.ts)), mounted on every `/api/v1` route except `/health`. Unknown paths therefore answer 401 to anonymous callers:
+   - Rejects a missing header, a non-`Bearer` scheme, anything not shaped like a JWT (three base64url segments), or a token over 4 KB → 401, without any network call.
+   - Verifies the token with **`supabase.auth.getClaims(token)`** ([backend/src/auth/supabase-verifier.ts](../backend/src/auth/supabase-verifier.ts), D-022). The project signs tokens with **ES256** (asymmetric), so verification is local against the cached JWKS. Expired, tampered or forged tokens → 401. The `role` claim must be `authenticated`.
+   - Creates the request-scoped Supabase client with that token ([backend/src/db/user-client.ts](../backend/src/db/user-client.ts)).
+   - Loads the profile **and** author summary in one RLS-scoped query (`profiles` + embedded `authors`). No profile → 403. Supabase unreachable → 500 (generic body, details in the log).
+   - Sets `req.auth` (`userId`, `role`, `displayName`, `author`) and `req.db`.
+4. The token is never logged or echoed (request logs carry id, method, URL and status only).
+5. Verified by `backend/test/auth.test.ts` (fake verifier, offline) and `backend/test-integration/auth.test.ts` (real tokens: tampered signature, edited payload and publishable key as bearer are all 401).
 
 ## 2. Authorization layers
 
