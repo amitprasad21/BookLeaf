@@ -1,6 +1,7 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Request, RequestHandler } from "express";
 import type { AuthContext, AuthVerifier } from "../auth/types.js";
-import { UnauthenticatedError } from "../lib/errors.js";
+import { ForbiddenError, UnauthenticatedError } from "../lib/errors.js";
 
 // JWTs are three base64url segments; anything else is rejected before any network call.
 const BEARER = /^Bearer ([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)$/;
@@ -29,4 +30,17 @@ export function authenticate(verifier: AuthVerifier): RequestHandler {
 export function authOf(req: Request): AuthContext {
   if (!req.auth) throw new UnauthenticatedError();
   return req.auth;
+}
+
+/** The caller's RLS-scoped database client. */
+export function dbOf(req: Request): SupabaseClient {
+  if (!req.db) throw new UnauthenticatedError();
+  return req.db;
+}
+
+/** The caller's author id. Authors always have one (profiles check constraint); anyone else gets 403. */
+export function authorIdOf(req: Request): string {
+  const author = authOf(req).author;
+  if (!author) throw new ForbiddenError();
+  return author.authorId;
 }

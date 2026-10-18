@@ -4,6 +4,7 @@ import type { Logger } from "pino";
 import { createApp } from "../src/app.js";
 import type { AuthContext, AuthVerifier } from "../src/auth/types.js";
 import { loadEnv } from "../src/config/env.js";
+import type { Clock } from "../src/lib/clock.js";
 import { ForbiddenError } from "../src/lib/errors.js";
 import { createLogger } from "../src/lib/logger.js";
 
@@ -29,9 +30,46 @@ export const ADMIN_CONTEXT: AuthContext = {
   author: null,
 };
 
+type Row = Record<string, unknown>;
+type QueryResult = { data: Row[] | null; error: { code: string; message: string } | null };
+
+/**
+ * Minimal in-memory stand-in for the Supabase query builder: from().select()
+ * .eq().order(), awaited like the real thing. It does NOT emulate RLS, so tests
+ * built on it prove the backend's own filters. `failWith` simulates a query error.
+ */
+export function fakeDb(
+  tables: Record<string, Row[]>,
+  failWith?: { code: string; message: string },
+): SupabaseClient {
+  return {
+    from(table: string) {
+      let rows = [...(tables[table] ?? [])];
+      const builder = {
+        select: () => builder,
+        eq(column: string, value: unknown) {
+          rows = rows.filter((row) => row[column] === value);
+          return builder;
+        },
+        order(column: string, options?: { ascending?: boolean }) {
+          const direction = options?.ascending === false ? -1 : 1;
+          rows.sort((a, b) => (String(a[column]) < String(b[column]) ? -direction : direction));
+          return builder;
+        },
+        then<T>(resolve: (result: QueryResult) => T, reject?: (reason: unknown) => T) {
+          const result: QueryResult = failWith
+            ? { data: null, error: failWith }
+            : { data: rows, error: null };
+          return Promise.resolve(result).then(resolve, reject);
+        },
+      };
+      return builder;
+    },
+  } as unknown as SupabaseClient;
+}
+
 /** Offline stand-in for the Supabase verifier. Unknown tokens are rejected (null -> 401). */
-export function fakeVerifier(): AuthVerifier {
-  const db = {} as SupabaseClient; // no route under test touches the database yet
+export function fakeVerifier(db: SupabaseClient = fakeDb({})): AuthVerifier {
   return {
     async verify(token) {
       switch (token) {
@@ -53,10 +91,26 @@ export function fakeVerifier(): AuthVerifier {
 export const bearer = (token: string) => `Bearer ${token}`;
 
 /** App with test env defaults (silent logs, dev CORS origins, fake verifier) plus overrides. */
-export function buildTestApp(envOverrides: NodeJS.ProcessEnv = {}, logger?: Logger, verifier?: AuthVerifier) {
+export function buildTestApp(
+  envOverrides: NodeJS.ProcessEnv = {},
+  logger?: Logger,
+  verifier?: AuthVerifier,
+  clock?: Clock,
+) {
   const env = loadEnv({ NODE_ENV: "test", ...envOverrides });
-  return createApp({ env, logger: logger ?? createLogger(env), verifier: verifier ?? fakeVerifier() });
+  return createApp({
+    env,
+    logger: logger ?? createLogger(env),
+    verifier: verifier ?? fakeVerifier(),
+    ...(clock ? { clock } : {}),
+  });
 }
+
+/** A clock pinned to a business date (midday India time). */
+export const fixedClock =
+  (isoDate: string): Clock =>
+  () =>
+    new Date(`${isoDate}T06:30:00Z`);
 
 /** A logger whose JSON lines are captured in memory for assertions. */
 export function captureLogger() {

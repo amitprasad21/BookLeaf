@@ -681,7 +681,7 @@ components:
     Book:
       type: object
       description: Nullable fields are null for books still in production; never coerce to zero.
-      required: [bookId, title, isbn, genre, status, totalCopiesSold, totalRoyaltyEarned, royaltyPaid, royaltyPending, availableOn]
+      required: [bookId, title, isbn, genre, publicationDate, status, isPublished, mrp, authorRoyaltyPerCopy, totalCopiesSold, totalRoyaltyEarned, royaltyPaid, royaltyPending, lastRoyaltyPayoutDate, printPartner, availableOn]
       properties:
         bookId: { type: string, example: BK001 }
         title: { type: string }

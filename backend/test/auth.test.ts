@@ -119,11 +119,14 @@ describe("role guards", () => {
     expect(adminOnAuthor.status).toBe(403);
   });
 
-  it("lets the right role through to the namespace (404 until its routes exist)", async () => {
+  it("lets the right role through to the namespace (unknown paths there are 404)", async () => {
     const app = buildTestApp();
     expect(
-      (await request(app).get("/api/v1/author/books").set("Authorization", bearer(TEST_TOKENS.author)))
-        .status,
+      (
+        await request(app)
+          .get("/api/v1/author/no-such-route")
+          .set("Authorization", bearer(TEST_TOKENS.author))
+      ).status,
     ).toBe(404);
     expect(
       (await request(app).get("/api/v1/admin/tickets").set("Authorization", bearer(TEST_TOKENS.admin)))
