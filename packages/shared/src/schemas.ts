@@ -8,6 +8,7 @@ import {
   TICKET_PRIORITIES,
   TICKET_STATUSES,
   TicketCategorySchema,
+  TicketPrioritySchema,
   TicketStatusSchema,
 } from "./enums.js";
 
@@ -112,3 +113,23 @@ export const AdminTicketQueueQuerySchema = PageQuerySchema.extend({
   message: "must be on or after createdFrom",
 });
 export type AdminTicketQueueQuery = z.infer<typeof AdminTicketQueueQuerySchema>;
+
+const UPDATE_FIELDS = ["status", "category", "priority", "assignedAdminId"] as const;
+
+/**
+ * PATCH /admin/tickets/{ticketId}. `version` is the optimistic lock; at least
+ * one change is required. `assignedAdminId` is the caller's own id (assign
+ * yourself) or null (unassign yourself); the API enforces that rule (A-16).
+ */
+export const UpdateTicketRequestSchema = z
+  .strictObject({
+    version: z.number().int().min(1),
+    status: TicketStatusSchema.optional(),
+    category: TicketCategorySchema.optional(),
+    priority: TicketPrioritySchema.optional(),
+    assignedAdminId: z.uuid().nullable().optional(),
+  })
+  .refine((body) => UPDATE_FIELDS.some((field) => body[field] !== undefined), {
+    message: `include at least one of ${UPDATE_FIELDS.join(", ")}`,
+  });
+export type UpdateTicketRequest = z.infer<typeof UpdateTicketRequestSchema>;

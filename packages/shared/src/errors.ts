@@ -38,6 +38,8 @@ export interface ErrorBody {
     code: ErrorCode;
     message: string;
     details?: ErrorDetail[];
+    /** VERSION_CONFLICT only: the resource as it is now, so the client can refresh without another request. */
+    current?: unknown;
     requestId: string;
   };
 }

@@ -4,3 +4,4 @@ export * from "./labels.js";
 export * from "./payout-calendar.js";
 export * from "./schemas.js";
 export * from "./sla.js";
+export * from "./ticket-lifecycle.js";
