@@ -1,5 +1,6 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
+import { loggableUrl } from "../src/middleware/http-logger.js";
 import { buildTestApp, captureLogger, settle } from "./helpers.js";
 
 describe("request logging", () => {
@@ -21,6 +22,19 @@ describe("request logging", () => {
     expect(entry?.level).toBe(40); // warn for 4xx (401: unknown token)
     expect(entry?.req).toEqual({ id: res.headers["x-request-id"], method: "GET", url: "/api/v1/unknown" });
     expect(entry?.res).toEqual({ statusCode: 401 });
+  });
+
+  it("redacts search text in logged URLs (it can contain author names)", async () => {
+    const { logger, lines } = captureLogger();
+    await request(buildTestApp({ logger })).get("/api/v1/admin/tickets?status=open&q=Priya%20Sharma&page=2");
+    await settle();
+
+    expect(JSON.stringify(lines())).not.toMatch(/Priya/);
+    expect((lines()[0]?.req as { url: string }).url).toBe(
+      "/api/v1/admin/tickets?status=open&q=redacted&page=2",
+    );
+    expect(loggableUrl("/api/v1/admin/tickets?q=a&q=b")).toBe("/api/v1/admin/tickets?q=redacted");
+    expect(loggableUrl("/api/v1/admin/tickets?sort=urgency")).toBe("/api/v1/admin/tickets?sort=urgency");
   });
 
   it("does not log health checks", async () => {

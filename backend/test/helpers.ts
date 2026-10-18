@@ -99,6 +99,7 @@ export interface TestAppOptions {
   clock?: Clock;
   systemWriter?: SystemWriter;
   ticketsRepository?: AppDeps["ticketsRepository"];
+  adminTicketsRepository?: AppDeps["adminTicketsRepository"];
 }
 
 /** App with test defaults (silent logs, dev CORS origins, fake verifier, recording audit writer). */
@@ -111,6 +112,7 @@ export function buildTestApp(options: TestAppOptions = {}) {
     systemWriter: options.systemWriter ?? recordingSystemWriter().writer,
     ...(options.clock ? { clock: options.clock } : {}),
     ...(options.ticketsRepository ? { ticketsRepository: options.ticketsRepository } : {}),
+    ...(options.adminTicketsRepository ? { adminTicketsRepository: options.adminTicketsRepository } : {}),
   });
 }
 

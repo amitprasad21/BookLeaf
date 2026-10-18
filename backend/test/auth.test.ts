@@ -129,7 +129,7 @@ describe("role guards", () => {
       ).status,
     ).toBe(404);
     expect(
-      (await request(app).get("/api/v1/admin/tickets").set("Authorization", bearer(TEST_TOKENS.admin)))
+      (await request(app).get("/api/v1/admin/no-such-route").set("Authorization", bearer(TEST_TOKENS.admin)))
         .status,
     ).toBe(404);
   });

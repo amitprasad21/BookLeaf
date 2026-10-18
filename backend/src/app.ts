@@ -16,11 +16,15 @@ import { httpLogger } from "./middleware/http-logger.js";
 import { notFound } from "./middleware/not-found.js";
 import { requestId } from "./middleware/request-id.js";
 import { requireRole } from "./middleware/require-role.js";
-import { adminRouter } from "./modules/admin/router.js";
+import { createAdminRouter } from "./modules/admin/router.js";
 import { createAuditRecorder } from "./modules/audit/service.js";
 import { createAuthorRouter } from "./modules/author/router.js";
 import { healthRouter } from "./modules/health/router.js";
 import { meRouter } from "./modules/me/router.js";
+import {
+  createAdminTicketsRepository,
+  type AdminTicketsRepository,
+} from "./modules/tickets/admin-repository.js";
 import { createTicketsRepository, type TicketsRepository } from "./modules/tickets/repository.js";
 import { docsRouter } from "./openapi/docs.js";
 
@@ -35,6 +39,8 @@ export interface AppDeps {
   clock?: Clock;
   /** Defaults to the Supabase implementation over the caller's RLS client; tests inject a fake. */
   ticketsRepository?: (db: SupabaseClient) => TicketsRepository;
+  /** Same, for the admin queue. */
+  adminTicketsRepository?: (db: SupabaseClient) => AdminTicketsRepository;
 }
 
 export function createApp({
@@ -44,6 +50,7 @@ export function createApp({
   systemWriter,
   clock = systemClock,
   ticketsRepository = createTicketsRepository,
+  adminTicketsRepository = createAdminTicketsRepository,
 }: AppDeps) {
   const app = express();
   app.disable("x-powered-by");
@@ -64,7 +71,7 @@ export function createApp({
   app.use("/api/v1", authenticate(verifier));
   app.use("/api/v1/me", meRouter);
   app.use("/api/v1/author", requireRole("author"), createAuthorRouter({ clock, audit, ticketsRepository }));
-  app.use("/api/v1/admin", requireRole("admin"), adminRouter);
+  app.use("/api/v1/admin", requireRole("admin"), createAdminRouter({ clock, adminTicketsRepository }));
 
   app.use(notFound);
   app.use(errorHandler(logger));

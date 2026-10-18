@@ -5,8 +5,11 @@ import { readFileSync } from "node:fs";
 import {
   AI_STATUSES,
   AI_UNAVAILABLE_REASONS,
+  ASSIGNEE_FILTERS,
   ERROR_CODES,
+  QUEUE_SORTS,
   ROLES,
+  SLA_STATES,
   TICKET_CATEGORIES,
   TICKET_PRIORITIES,
   TICKET_STATUSES,
@@ -20,7 +23,9 @@ const repoFile = (path: string) => readFileSync(new URL(`../../${path}`, import.
 const migration = repoFile("supabase/migrations/20261017090000_initial_schema.sql");
 const spec = parse(repoFile("openapi.yaml")) as {
   components: { schemas: Record<string, { enum?: string[]; properties?: Record<string, unknown> }> };
+  paths: Record<string, { get?: { parameters?: { name?: string; schema?: { enum?: string[] } }[] } }>;
 };
+const queueRank = repoFile("supabase/migrations/20261018090000_queue_urgency_rank.sql");
 
 const quotedValues = (list: string): string[] =>
   [...list.matchAll(/'([^']+)'/g)].flatMap((match) => (match[1] === undefined ? [] : [match[1]]));
@@ -74,5 +79,28 @@ describe("schema contract: migration ↔ @bookleaf/shared ↔ openapi.yaml", () 
 
   it("revokes all access from the anon role", () => {
     expect(migration).toMatch(/revoke all on all tables in schema public from anon;/);
+  });
+
+  it("SLA states, queue sorts and assignee filters match openapi.yaml", () => {
+    const queueParam = (name: string) =>
+      spec.paths["/admin/tickets"]?.get?.parameters?.find((param) => param.name === name)?.schema?.enum;
+    expect(openApiEnum("SlaState")).toEqual([...SLA_STATES]);
+    expect(queueParam("sort")).toEqual([...QUEUE_SORTS]);
+    expect(queueParam("assignee")).toEqual([...ASSIGNEE_FILTERS]);
+  });
+
+  it("the generated urgency rank orders priorities critical, high, untriaged, medium, low", () => {
+    const ranks = [...queueRank.matchAll(/when priority (= '(\w+)'|is null) then (\d)/g)].map((match) => [
+      match[2] ?? "untriaged",
+      Number(match[3]),
+    ]);
+    expect(ranks).toEqual([
+      ["critical", 0],
+      ["high", 1],
+      ["untriaged", 2],
+      ["medium", 3],
+    ]);
+    expect(queueRank).toMatch(/else 4/); // low
+    expect(queueRank).toMatch(/case when status = 'open' or status = 'in_progress' then 0 else 10 end/);
   });
 });

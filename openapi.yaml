@@ -234,6 +234,10 @@ paths:
       tags: [Admin]
       summary: Ticket queue across all authors
       operationId: listAdminTickets
+      description: |
+        Filters combine (AND). Sorting and paging happen in the database.
+        `slaState` is computed at request time from the first-response targets
+        in .back/TICKET_LIFECYCLE.md.
       parameters:
         - $ref: '#/components/parameters/StatusFilter'
         - name: category
@@ -250,18 +254,32 @@ paths:
         - name: aiStatus
           in: query
           schema: { $ref: '#/components/schemas/AiStatus' }
+        - name: overdue
+          in: query
+          description: |
+            Only `true` is accepted: unresolved tickets with no first reply that
+            are past their first-response target (the summary's `slaBreached`).
+          schema: { type: string, enum: ['true'] }
         - name: createdFrom
           in: query
+          description: India business date (Asia/Kolkata), inclusive
           schema: { type: string, format: date }
         - name: createdTo
           in: query
+          description: India business date (Asia/Kolkata), inclusive; not before `createdFrom`
           schema: { type: string, format: date }
         - name: q
           in: query
-          description: Matches reference, subject or author name
+          description: |
+            Matches reference, subject or author name (case-insensitive, partial).
+            Characters other than letters, digits, spaces and - ' . & / # are
+            treated as spaces; a search with nothing left is ignored.
           schema: { type: string, maxLength: 100 }
         - name: sort
           in: query
+          description: |
+            `urgency` = unresolved first, then priority (critical, high,
+            untriaged, medium, low), then oldest first.
           schema: { type: string, enum: [urgency, created_at, -created_at, -updated_at], default: urgency }
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PageSize'
@@ -835,7 +853,11 @@ components:
 
     SlaState:
       type: string
-      description: First-response target state (internal targets; see .back/TICKET_LIFECYCLE.md)
+      description: |
+        First-response target state (internal targets; see .back/TICKET_LIFECYCLE.md).
+        met / breached = first reply on or before / after the target; without a
+        reply: on_track, due_soon (last 25% of the target) or breached while
+        unresolved, and not_applicable once resolved or closed.
       enum: [on_track, due_soon, breached, met, not_applicable]
 
     AdminQueueItem:
@@ -992,6 +1014,7 @@ components:
 
     QueueSummary:
       type: object
+      description: Status counts cover every ticket; the other counts cover unresolved (open, in_progress) tickets only.
       required: [open, inProgress, resolved, closed, unassigned, critical, high, slaBreached, needsManualTriage]
       properties:
         open: { type: integer }
@@ -1001,8 +1024,12 @@ components:
         unassigned: { type: integer }
         critical: { type: integer }
         high: { type: integer }
-        slaBreached: { type: integer }
-        needsManualTriage: { type: integer }
+        slaBreached:
+          type: integer
+          description: Overdue, as the `overdue=true` filter (no first reply, past the target)
+        needsManualTriage:
+          type: integer
+          description: '`ai_status = manual_review_required`'
 
     AiUsageSummary:
       type: object

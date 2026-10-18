@@ -1,5 +1,6 @@
 // In-memory stand-ins for data access in offline route tests.
 import { randomUUID } from "node:crypto";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AuditEventInput, SystemWriter } from "../src/db/system-writer.js";
 import type {
   AuthorTicketRow,
@@ -87,4 +88,46 @@ export function fakeTicketsStore(books: { book_id: string; author_id: string; ti
       if (sender === "admin" && ticket.first_response_at === null) ticket.first_response_at = now;
     },
   };
+}
+
+/** One recorded query-builder call, e.g. ["in", "status", ["open"]]. */
+export type BuilderCall = [method: string, ...args: unknown[]];
+
+/**
+ * Records every call made on Supabase query builders, per `from()` table, and
+ * resolves with the canned result for that table. Lets offline tests check the
+ * exact filters a repository sends without a database.
+ */
+type CannedResult = { data?: unknown; count?: number };
+
+export function recordingSupabase(
+  results: Record<string, CannedResult | ((calls: BuilderCall[], index: number) => CannedResult)> = {},
+) {
+  const queries: { table: string; calls: BuilderCall[] }[] = [];
+  const db = {
+    from(table: string) {
+      const query = { table, calls: [] as BuilderCall[] };
+      queries.push(query);
+      const builder: object = new Proxy(
+        {},
+        {
+          get(_target, method: string) {
+            if (method === "then") {
+              const canned = results[table];
+              const value =
+                typeof canned === "function" ? canned(query.calls, queries.indexOf(query)) : canned;
+              const result = { data: value?.data ?? [], count: value?.count ?? 0, error: null };
+              return (resolve: (value: unknown) => unknown) => Promise.resolve(result).then(resolve);
+            }
+            return (...args: unknown[]) => {
+              query.calls.push([method, ...args]);
+              return builder;
+            };
+          },
+        },
+      );
+      return builder;
+    },
+  } as unknown as SupabaseClient;
+  return { db, queries };
 }
