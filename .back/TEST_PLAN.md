@@ -31,7 +31,7 @@ Integration tests use a dedicated test author and test admin plus tickets they c
 | U-11 | sla | met / breached / due_soon / on_track / not_applicable boundaries (**implemented**: `backend/test/sla.test.ts`) |
 | U-12 | facts | Never includes email, phone, city; `authorBooks` only for General tickets in royalty/general categories |
 | U-13 | KB selection | Each category maps to the expected section IDs |
-| U-14 | router | Failover order, breaker transitions, no failover on refusal/bad_request |
+| U-14 | router | Failover order, breaker transitions, no failover on refusal/bad_request (**implemented**: `backend/test/ai-router.test.ts`, adapters in `ai-providers.test.ts`) |
 
 ## API integration cases
 

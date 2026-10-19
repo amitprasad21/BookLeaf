@@ -1,21 +1,25 @@
 # AI Provider Orchestration
 
-**Owns:** the provider interface, provider adapters, router, circuit breaker, budget, job queue, sweeper and usage accounting. What the AI does (taxonomy, prompts, schemas) is in [AI_SPEC.md](../AI_SPEC.md); failure semantics are in [AI_FAILURE_HANDLING.md](AI_FAILURE_HANDLING.md). Status: planned (AI-2..AI-4).
+**Owns:** the provider interface, provider adapters, router, circuit breaker, budget, job queue, sweeper and usage accounting. What the AI does (taxonomy, prompts, schemas) is in [AI_SPEC.md](../AI_SPEC.md); failure semantics are in [AI_FAILURE_HANDLING.md](AI_FAILURE_HANDLING.md). Status: provider layer built (AI-1/AI-2, D-028); triage, drafts, queue and sweeper planned (AI-3/AI-4).
 
 ## 1. Module layout
 
 ```text
 backend/src/ai/
-├── orchestrator.ts        triageTicket(), getOrCreateDraft(): the only entry points used by services
-├── router.ts              provider selection, failover, circuit + budget gates
-├── circuit-breaker.ts
-├── budget.ts              daily token budget (reads ai_usage_events via system writer)
-├── queue.ts               in-process job queue (concurrency 2) + startup sweeper
-├── usage.ts               usage event recording + cost estimate
-├── providers/
+├── orchestrator.ts        triageTicket(), getOrCreateDraft(): the only entry points used by services (AI-3/AI-4)
+├── config.ts              env → provider plan (per-task models) → router (built, AI-2)
+├── router.ts              provider selection, failover, circuit + budget gates, usage events (built)
+├── circuit-breaker.ts     (built)
+├── budget.ts              daily token budget (system writer sums ai_usage_events) (built)
+├── pricing.ts             list-price estimate per model (built)
+├── usage.ts               usage event recording, failures logged and swallowed (built)
+├── queue.ts               in-process job queue (concurrency 2) + startup sweeper (AI-3)
+├── providers/             (built)
 │   ├── types.ts           LlmProvider interface + error taxonomy
-│   ├── anthropic.ts       @anthropic-ai/sdk adapter (structured outputs)
-│   ├── openai-compatible.ts  optional fallback adapter (configured base URL)
+│   ├── http.ts            fetch with timeout and the one bounded retry layer
+│   ├── json-schema.ts     zod contract → provider JSON Schema; parse + validate output
+│   ├── gemini.ts          Gemini REST generateContent adapter (no SDK)
+│   ├── groq.ts            Groq OpenAI-compatible adapter (no SDK)
 │   └── mock.ts            deterministic provider for tests and local dev
 ├── prompts/               triage.ts, draft.ts (versioned prompt builders)
 ├── knowledge-base/        kb.*.md section files + index.ts (section registry)
@@ -26,37 +30,41 @@ backend/src/ai/
 
 ## 2. Provider interface
 
+As built (`backend/src/ai/providers/types.ts`):
+
 ```ts
 interface LlmProvider {
-  readonly name: 'anthropic' | 'openai-compatible' | 'mock';
-  readonly model: string;
+  readonly name: 'gemini' | 'groq' | 'mock';
+  modelFor(task: 'triage' | 'draft'): string;   // models can differ per task (D-028)
   generateStructured<T>(req: {
     task: 'triage' | 'draft';
-    system: SystemBlock[];          // stable blocks first, with cache hints
-    user: string;                   // volatile content last
-    schema: ZodType<T>;
-    maxTokens: number;
-    effort?: 'low' | 'medium' | 'high';
+    system: string;        // stable instructions, never ticket text
+    user: string;          // volatile content, ticket delimited as untrusted data
+    schema: ZodType<T>;    // strict objects, every property required (nullable for optional)
+    schemaName: string;
+    maxOutputTokens: number;
     timeoutMs: number;
   }): Promise<{ value: T; usage: TokenUsage; latencyMs: number }>;
 }
 
 type ProviderErrorKind =
-  | 'auth'            // 401/403: invalid or revoked key
-  | 'rate_limited'    // 429 after SDK retries
-  | 'overloaded'      // 529/5xx after SDK retries
+  | 'auth'            // 401/403/404 or Gemini API_KEY_INVALID: key or model access (configuration)
+  | 'quota'           // 429 with a retry delay > 60 s: a quota window (e.g. free-tier daily cap)
+  | 'rate_limited'    // 429 after the bounded retries
+  | 'overloaded'      // 5xx / Groq 498 after the bounded retries
   | 'timeout'
   | 'connection'
-  | 'bad_request'     // 400: our bug or prompt too large
-  | 'refused'         // stop_reason === 'refusal'
-  | 'invalid_output'; // schema/semantic validation failed, or stop_reason === 'max_tokens'
-
-class ProviderError extends Error { kind: ProviderErrorKind; retryAfterMs?: number }
+  | 'bad_request'     // 400/413: our bug or prompt too large
+  | 'refused'         // safety stop, blocked prompt, refusal, content filter
+  | 'invalid_output'; // not JSON for the schema, or cut off at the token limit (usage still counted)
 ```
 
-Adapters translate SDK-specific typed exceptions into `ProviderError`, never by matching error message strings. Retries for transient errors happen **inside the SDK** (`maxRetries = AI_MAX_RETRIES`, which honours `retry-after`). The router does not add a second retry loop.
+Adapters classify failures from HTTP status and documented structured fields, never by matching message text. Transient retries happen **inside the adapter** (`http.ts`):
+- up to `AI_MAX_RETRIES` extra attempts for 408/429/5xx and connection drops;
+- the provider's retry delay is honoured when it is 5 s or less;
+- a timeout is never retried (it already used the attempt's time).
 
-**Anthropic adapter specifics** (see [AI_SPEC.md](../AI_SPEC.md) §2): `client.messages.parse()` with `output_config.format` from the zod schema; no `temperature`/`top_p`/`top_k`; `output_config.effort` per task; check `stop_reason` before reading content; system prompt blocks carry `cache_control` breakpoints; usage maps `input_tokens`, `output_tokens`, `cache_read_input_tokens`, `cache_creation_input_tokens`.
+The router adds no second retry loop. Provider-specific request and response details: [AI_SPEC.md](../AI_SPEC.md) §2.
 
 ## 3. Router algorithm
 
@@ -75,6 +83,7 @@ route(request):
           usage.record(e.kind)
           switch e.kind:
             auth        → breaker(provider).forceOpen(untilConfigChange); log config error (no key); continue
+            quota       → breaker(provider).openFor(1 hour); continue   # the fallback carries on
             bad_request → do not fail over (same request fails anywhere); throw AiUnavailable('provider_unavailable')
             refused     → do not fail over (policy decision, not outage); throw AiUnavailable('refused')
             invalid_output → (caller may do one repair attempt) ; throw AiUnavailable('invalid_output')
@@ -128,9 +137,10 @@ Every attempt (including failures and budget/circuit skips) writes one `ai_usage
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `AI_PRIMARY_PROVIDER` | `mock` (dev) / required in prod | `anthropic` \| `openai-compatible` \| `mock` \| `none` |
-| `AI_PRIMARY_MODEL` | (none) | e.g. `claude-haiku-5-5` (pending D-010) |
-| `AI_FALLBACK_*` | empty | Optional fallback provider |
+| `AI_PRIMARY_PROVIDER` | `mock` (dev/test); required in prod (`gemini`, `groq` or `none`; never `mock`) | `gemini` \| `groq` \| `mock` \| `none` |
+| `AI_PRIMARY_MODEL` / `AI_PRIMARY_DRAFT_MODEL` | Gemini: `gemini-3.5-flash-lite` / `gemini-3.8-flash`; Groq: `openai/gpt-oss-120b` | The model sets both tasks unless the draft model is given |
+| `AI_FALLBACK_PROVIDER` (+ `_MODEL`, `_DRAFT_MODEL`) | empty | Must differ from the primary (C-14) |
+| `GEMINI_API_KEY` / `GROQ_API_KEY` | (none) | Required for each configured provider; never printed. Placeholders and empty values count as not set |
 | `AI_DAILY_TOKEN_BUDGET` | 300000 | Hard daily cap |
 | `AI_TRIAGE_TIMEOUT_MS` / `AI_DRAFT_TIMEOUT_MS` | 15000 / 30000 | Per-attempt timeouts |
 | `AI_MAX_RETRIES` | 2 | SDK retries for transient errors |

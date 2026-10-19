@@ -21,3 +21,4 @@ Each assumption is something we are acting on without confirmation. Confirm or c
 | A-15 | The demo runs a single backend instance | Free-tier hosting | SSE hub, in-memory rate limits | Assumed; documented limitation |
 | A-16 | Self-assignment only: an admin takes an **unassigned** ticket or releases **their own**; no assigning others and no taking over a colleague's ticket (D-026) | Assignment: "assign tickets to themselves" | PATCH rules | Assumed |
 | A-17 | Closed tickets can be reopened by an admin (to In Progress); authors cannot change status | Ops flexibility | Lifecycle | Assumed |
+| A-18 | The demo may run on Gemini's free tier, where Google may use prompts and outputs to improve its products; a production deployment uses the paid tier (no such use) | Free keys supplied for the assessment; the dataset is fictional (A-11) | AI provider config, README limitations | Assumed (D-028) |

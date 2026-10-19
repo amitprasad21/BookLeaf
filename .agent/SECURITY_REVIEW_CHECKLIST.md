@@ -39,7 +39,7 @@
 | R-06 | Malformed model output sets an invalid category/priority | Rejected; ticket → manual review | not run |
 | R-07 | RLS misconfigured or secret key used outside the system writer | RLS tests fail loudly; grep check for the key's import sites | partially run: ESLint rule blocks `db/system-writer` imports outside the allowlist (probe, API-4); SEC-2 grep pending |
 | R-08 | Private attachment URL reused after expiry | n/a unless X-1 | n/a |
-| R-09 | Provider key missing, invalid, over quota or logged | Manual mode; config error logged without the key | not run |
+| R-09 | Provider key missing, invalid, over quota or logged | Manual mode; config error logged without the key | partially run (AI-2): a missing key for a configured provider stops startup naming the variable only (`env.test.ts`); an auth error is not retried, holds the provider open and is logged without key material; quota parks the provider and the fallback serves (`ai-router.test.ts`); adapters keep keys out of URLs and error messages (`ai-providers.test.ts`); `check:ai` prints presence only. Ticket manual mode: AI-3 |
 | R-10 | Production returns a stack trace or accepts an unapproved origin | Neither happens | not run |
 
 ## Findings log

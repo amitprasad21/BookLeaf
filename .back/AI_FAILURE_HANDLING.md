@@ -6,6 +6,8 @@
 
 ## Failure matrix
 
+As built (AI-2, D-028), "Detection" comes from the REST adapters' classification of HTTP status and structured fields rather than SDK exception classes. A 429 with a retry delay over 60 s is a `quota` window (the provider is parked for an hour and the fallback serves). Router-level behaviour for AF-01..AF-08 is implemented and tested in `backend/test/ai-router.test.ts`; ticket-state outcomes (`failed`, `manual_review_required`) arrive with the triage queue (AI-3).
+
 | Condition | Detection | Retry? | Fallback provider? | Breaker | Triage outcome (`ai_status` / reason) | Draft outcome | Admin sees |
 |---|---|---|---|---|---|---|---|
 | Temporary rate limit (429) | SDK `RateLimitError` after its retries | SDK only (bounded, honours `retry-after`) | Yes, if configured | +1 failure | `failed` / `provider_unavailable` → sweeper | 503 `provider_unavailable` | "AI is busy right now. Retry shortly or write manually." |

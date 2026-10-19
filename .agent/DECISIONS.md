@@ -14,7 +14,7 @@
 | D-007 | Save-first, asynchronous in-process AI triage with startup sweeper | proposed | 2026-10-16 |
 | D-008 | One combined triage call (category + priority) | proposed | 2026-10-16 |
 | D-009 | Deterministic facts builder + category-based KB sectioning | proposed | 2026-10-16 |
-| D-010 | Primary LLM: Anthropic Claude Haiku 5.5 | proposed | 2026-10-16 |
+| D-010 | Primary LLM: Anthropic Claude Haiku 5.5 | superseded by D-028 | 2026-10-16 |
 | D-011 | API namespaces `/author/*` and `/admin/*` with separate serializers | proposed | 2026-10-16 |
 | D-012 | Not-owned resources return 404 | proposed | 2026-10-16 |
 | D-013 | Optimistic locking via `version` on admin ticket updates | proposed | 2026-10-16 |
@@ -29,6 +29,7 @@
 | D-022 | Token verification via `supabase.auth.getClaims()` (ES256/JWKS, local); profile + author loaded per request through the caller's RLS client | accepted | 2026-10-18 |
 | D-023 | Payout calendar in `packages/shared`; ₹1,000 threshold on the author's total pending; `nextPayoutDueBy` = earliest deadline not yet passed | accepted | 2026-10-18 |
 | D-024 | Author ticket API: zod parse in handlers (no `validate` middleware), same 400 for unknown and not-owned books, per-user limits + DB backstop, audit via the system writer | accepted | 2026-10-18 |
+| D-028 | AI providers: Gemini (3.5 Flash-Lite triage, 3.8 Flash drafts) + Groq gpt-oss-120b fallback on free tiers; REST adapters without SDKs; no second key per provider; no Logfire | accepted | 2026-10-18 |
 | D-027 | Admin reply as one Postgres function (`admin_send_reply`, security invoker, locked row, open/in-progress only); notes via RLS insert; audit after commit without text | accepted | 2026-10-18 |
 | D-026 | Admin ticket PATCH: plan-then-conditional-update optimistic lock; 409 returns the ticket in `error.current`; same values are no-ops; strict self-assignment; batched audit stamped 1 ms apart | accepted | 2026-10-18 |
 | D-025 | Admin queue: urgency as a generated `urgency_rank` column (sorted and paged in the database); SLA rules in `packages/shared`; overdue = unresolved, unanswered, past target; `overdue=true` filter; normalised search; search text redacted from logs | accepted | 2026-10-18 |
@@ -83,11 +84,11 @@
 - **Choice:** Code computes dates, payout windows, thresholds and production stage. The KB is split into sections selected by category.
 - **Rationale:** LLMs are unreliable at date arithmetic. Sectioning sends only the relevant ~20–40% of the KB. Both are unit-testable.
 
-### D-010: Primary LLM, Claude Haiku 5.5 (proposed)
+### D-010: Primary LLM, Claude Haiku 5.5 (superseded by D-028)
 - **Context:** The assignment suggests gpt-4o-mini or Claude Haiku for cost; the blueprint says to choose the provider just in time.
 - **Proposal:** `claude-haiku-5-5` for both tasks, structured outputs, prompt caching. Sonnet 5.5 for drafts only if the eval shows Haiku drafts need heavy edits.
 - **Rationale:** Lowest cost tier with schema-constrained JSON. One model keeps one cache and one eval baseline. Details: [AI_SPEC.md](../AI_SPEC.md) section 2.
-- **Pending:** User confirmation at AI-1 (Q-04). Record eval results here when available.
+- **Outcome (2026-10-18):** not adopted. At AI-1 the user provided Gemini and Groq keys instead and asked for the best free-tier models; see D-028.
 
 ### D-011: Separate author/admin namespaces and serializers
 - **Rationale:** The authorization surface is explicit per path. Author DTOs physically cannot include internal fields (C-08).
@@ -216,3 +217,23 @@
 - **Notes:** a plain RLS-scoped insert (`admin_profile_id` = caller, enforced by the policy). The ticket FK doubles as the existence check (23503 → 404). There is no version bump, since notes are append-only internal data.
 - **Audit:** after the commit through the system writer: `ticket.reply_sent` `{ messageId, draftId, firstResponse }`, `ticket.status_changed` `{ from, to, via: "reply" }` when the status moved, and `ticket.note_added` `{ noteId }`. Message and note text never enters the audit trail.
 - **Cost:** a reply, a note or a refusal (422) each takes about 0.5–0.7 s.
+
+### D-028: AI providers and the provider layer (AI-1, AI-2)
+- **Context:** AI-1/AI-2. The user added `GEMINI_API_KEY`, `GROQ_API_KEY` and `GROQ_FALLBACK_API_KEY` to `backend/.env` and asked for the best models usable on the free tier. There is no Anthropic key, so D-010 doesn't apply.
+- **Models** (verified on the providers' pages 2026-10-18; AI_SPEC §2):
+  - Triage: Gemini `gemini-3.5-flash-lite`.
+  - Drafts: Gemini `gemini-3.8-flash`.
+  - Fallback for both: Groq `openai/gpt-oss-120b`.
+  - Per-task models replace "one model for both": on the free tier the most capable Flash model has a small daily quota, so it goes where quality matters and volume is low.
+- **No second key per provider:** `GROQ_FALLBACK_API_KEY` is deliberately unused. A backup key for the same provider is key cycling (C-14). Config validation rejects a fallback on the same provider, and `check:ai` flags the extra key.
+- **No SDKs:** both providers are plain REST APIs, so the adapters use `fetch`. This adds zero dependencies; the Anthropic SDK install the user approved earlier was not done, since there's no key.
+- **Error mapping:** failures are classified from HTTP status and structured fields (Gemini `ErrorInfo.reason`, `RetryInfo`, `finishReason`; Groq `error.code`, `finish_reason`, `retry-after`), never from message text. The adapter's bounded retry is the only retry layer. A retry delay over 60 s is classified `quota` and parks that provider for an hour, while the fallback carries on.
+- **Router:**
+  - Budget gate first, then primary, then fallback.
+  - The per-provider circuit breaker opens after 3 consecutive transient failures, probes after the cooldown, doubles the cooldown when a probe fails, and stays open on configuration errors (bad key, no model access).
+  - Refusals, bad requests and invalid output are never failed over.
+  - Every attempt or skip writes one `ai_usage_events` row (tokens, latency, list-price estimate), and errors carry `retryable` for the triage queue (AI-3).
+- **Budget:** `AI_DAILY_TOKEN_BUDGET` covers input + output tokens since 00:00 Asia/Kolkata, summed by the system writer (the Data API has aggregates off), cached for 30 s and topped up locally.
+- **Logfire: not adopted.** pino's structured logs plus `ai_usage_events` already show calls, failures, tokens, latency and cost. Logfire would add a vendor and a key, and ship traces (possibly ticket text) to a third party, for no assessment benefit.
+- **Privacy:** Gemini's free tier may use content to improve Google's products (A-18). That's acceptable for the fictional demo data; production uses the paid tier.
+- **Verified:** `check:ai:live` made one synthetic call per model (Flash-Lite OK, 3.8 Flash OK on retry after one transient overload, Groq OK). 55 offline AI tests.

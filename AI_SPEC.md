@@ -16,28 +16,40 @@
 5. **Validate everything.** Structured outputs, exact enums, semantic checks and a fact guard. Invalid output never reaches the database.
 6. **Measure, don't assume.** A labelled evaluation set decides model and prompt changes. Every call records tokens, latency and outcome.
 
-## 2. Model choice (proposed, awaiting confirmation)
+## 2. Model choice (decided at AI-1, D-028)
 
-| Option | List price per 1M tokens (input / output)¹ | Fit |
-|---|---|---|
-| **Anthropic Claude Haiku 5.5** (`claude-haiku-5-5`), **proposed primary** | $0.10 / $0.50 | Classification plus short drafting is exactly the "inexpensive, works well" tier the assignment suggests. Supports structured outputs (schema-constrained JSON) and prompt caching (512-token minimum prefix). |
-| Anthropic Claude Sonnet 5.5 (`claude-sonnet-5-5`) | $2.00 / $10.00 | Candidate for **drafts only** if the eval shows Haiku drafts need heavy edits. 20× the cost. |
-| Anthropic Claude Opus 5.5 (`claude-opus-5-5`) | $4.00 / $20.00 | Highest quality; not justified for this workload unless evals prove otherwise. |
-| OpenAI-compatible provider (e.g. OpenAI, OpenRouter, Groq) | Varies | Optional **fallback** only, if approved, separately keyed and budget-capped. |
+The user supplied Gemini and Groq keys and asked for the best free-tier models. Verified 2026-10-18 against the providers' own pages:
 
-¹ Anthropic first-party prices as cached on 2026-10-06 in the Claude API reference used for this design. **Verify current pricing before relying on these numbers.**
+| Role | Provider / model | Why | Paid list price per 1M tokens (in / out)¹ |
+|---|---|---|---|
+| **Drafts** | Gemini `gemini-3.8-flash` (stable) | Google's "most intelligent Flash model". Its free quota is small (third-party reports say about 20 requests/day), so it serves the low-volume, quality-sensitive task | $0.75 / $3.75 (rising 2027-01-01) |
+| **Triage** (one call per ticket) | Gemini `gemini-3.5-flash-lite` (stable) | Google's recommended high-throughput model, with a much larger free quota | $0.30 / $2.50 |
+| **Fallback** for both | Groq `openai/gpt-oss-120b` (production) | A different provider (C-14), strict JSON-schema output, fast | $0.15 / $0.60 ($0.075 cached input) |
 
-**Why one primary model for both tasks:** one SDK, one cache namespace, one eval baseline. Splitting triage and drafts across models is a later, measured decision.
+¹ Calls run on the providers' free tiers and are not billed. Usage events still record a list-price **estimate** (`backend/src/ai/pricing.ts`).
 
-**Model-specific API notes for Claude Haiku 5.5** (must be honoured in implementation):
+**Not used:**
+- Anthropic (the earlier proposal, D-010): no key was provided.
+- A second Groq key: using it as a backup once the first is exhausted is key cycling (C-14).
 
-- Use **structured outputs**: `client.messages.parse()` with `output_config.format` set from a zod schema (`zodOutputFormat`). Do not use the deprecated `output_format` parameter, and do not use assistant prefill (rejected on current models).
-- **Sampling parameters (`temperature`, `top_p`, `top_k`) must not be set to non-default values; the API rejects them.** Consistency comes from schema-constrained output, explicit rubrics and the eval set, not from `temperature: 0`.
-- Thinking is adaptive by default. Effort defaults to `medium`. Triage starts at `effort: "low"`; drafts start at the default. Both are tuned against the eval set.
-- Always check `stop_reason` before reading content: `refusal` → manual review; `max_tokens` → invalid output.
-- The SDK retries 408/409/429/5xx and connection errors itself (`maxRetries`, default 2) and honours `retry-after`. It is the **only** retry layer; the router adds failover and circuit breaking, not more retries.
+**Data use:**
+- On Gemini's **free** tier, Google may use prompts and outputs to improve its products. The paid tier opts out.
+- Groq does not retain inference data by default.
+- The demo data is fictional (A-11), so the free tier is acceptable here. A production deployment must use Gemini's paid tier (A-18).
 
-The final choice, with eval evidence, goes in [.agent/DECISIONS.md](.agent/DECISIONS.md) (D-010) and the README.
+**API notes, as implemented** (`backend/src/ai/providers/`, no SDKs: D-028):
+- **Gemini:**
+  - REST `models/{model}:generateContent` with the key in the `x-goog-api-key` header.
+  - Structured output via `generationConfig.responseMimeType = "application/json"` and `responseJsonSchema`, generated from the zod contract.
+  - Thinking stays at each model's default: Flash-Lite minimal, 3.8 Flash medium.
+  - Thinking tokens are billed as output and counted as output.
+  - `finishReason` other than `STOP`: `MAX_TOKENS` → invalid output; safety reasons → refused.
+- **Groq:**
+  - OpenAI-compatible `chat/completions` with `response_format: { type: "json_schema", json_schema: { strict: true } }`.
+  - Strict mode needs every property required and `additionalProperties: false`, so AI output schemas use strict objects, with nullable fields for optional values.
+  - `finish_reason: length` → invalid output.
+- **Sampling:** temperature and other sampling parameters are not set. Consistency comes from the schema, the rubric and the eval set.
+- **Retries:** each adapter makes a bounded number of retries (`AI_MAX_RETRIES`) for 408/429/5xx and connection drops, honouring the provider's retry delay when it is 5 s or less. A longer delay means a quota window (`quota`), so the router fails over instead of waiting.
 
 ## 3. AI tasks
 

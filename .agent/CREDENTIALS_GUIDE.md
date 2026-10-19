@@ -26,8 +26,8 @@
 | DB-1 | Supabase secret key (bypasses RLS) | `SUPABASE_SECRET_KEY` | `backend/.env` only | **Server-only** |
 | DB-2 | Database migration access (CLI login or connection string; decided at DB-2) | TBD at DB-2, explained before asking | Local shell / `backend/.env` only | **Server-only** |
 | DB-4 | Demo passwords for seeded accounts (**user-chosen**, at least 12 characters, never a reused real password) | `SEED_AUTHOR_PASSWORD`, `SEED_ADMIN_PASSWORD` (placeholders added to `backend/.env` 2026-10-17; at the user's request the agent **generated** random 20-character values into the file without displaying them; the user reads them from `backend/.env` when needed) | `backend/.env` (used by `npm run seed:apply` and `npm run test:rls` only) | Demo-only; published in README for evaluators |
-| AI-1 | Primary LLM key (provider chosen at AI-1) | `ANTHROPIC_API_KEY` (if Anthropic) + `AI_PRIMARY_PROVIDER`, `AI_PRIMARY_MODEL` | `backend/.env` | **Server-only** |
-| AI-1 (optional) | Fallback LLM key (only if approved) | `AI_FALLBACK_PROVIDER`, `AI_FALLBACK_MODEL`, `AI_FALLBACK_BASE_URL`, `AI_FALLBACK_API_KEY` | `backend/.env` | **Server-only** |
+| AI-1 | LLM keys (D-028) | `GEMINI_API_KEY` (primary), `GROQ_API_KEY` (fallback) + `AI_PRIMARY_PROVIDER=gemini`, `AI_FALLBACK_PROVIDER=groq` (models default per provider) | `backend/.env` | **Server-only** |
+| AI-1 | Never a second key for the same provider | (`GROQ_FALLBACK_API_KEY` is unused and flagged by `check:ai`: key cycling, C-14) | n/a | n/a |
 | DEP-1/2 | Hosting accounts (Render, Vercel) | Same names as above in each host's environment settings | Render (backend) · Vercel ×2 (frontends) | Per variable as above |
 
 **Confirmed at DB-1 (2026-10-17, official Supabase docs):** use **publishable** (`sb_publishable_…`) and **secret** (`sb_secret_…`) keys from **Settings → API Keys** (the **Connect** dialog also shows the URL and publishable key). Legacy `anon`/`service_role` keys are deprecated and slated for removal by the end of 2026. Supabase rejects secret keys sent from a browser (401), but that's no reason to relax the rule.
@@ -43,10 +43,10 @@
 6. Agent runs `npm run check:env`, which prints each variable as configured/missing/placeholder, the key kind, frontend↔backend matches, a "no server secrets in frontend files" check, and connection pass/fail plus "sign-ups disabled". **Completed 2026-10-17: Result OK** ([verification/2026-10-17-db1.md](verification/2026-10-17-db1.md)).
 
 ### LLM provider (AI-1)
-1. Agent confirms the provider/model decision (Q-04) and that the mock provider covers all tests.
-2. User creates a key in the provider's official console, with spend limits set there if available.
-3. User puts it in `backend/.env` under the variable for that provider, and sets `AI_PRIMARY_PROVIDER` / `AI_PRIMARY_MODEL`.
-4. Agent runs a presence check, then **one** low-cost smoke call (triage on a fixed synthetic ticket), reporting pass/fail plus token counts only.
+1. Agent confirms the provider/model decision (Q-04 → D-028) and that the mock provider covers all tests.
+2. User creates a key in the provider's official console (Google AI Studio, GroqCloud), with spend limits set there if available.
+3. User puts it in `backend/.env` under the provider's variable (`GEMINI_API_KEY`, `GROQ_API_KEY`), and sets `AI_PRIMARY_PROVIDER` / `AI_FALLBACK_PROVIDER`.
+4. Agent runs `npm run check:ai` (presence, providers and models; never values), then `npm run check:ai:live`: **one** synthetic call per model, reporting the outcome kind, latency and token counts only. **Completed 2026-10-18** ([verification/2026-10-19-ai1-ai2.md](verification/2026-10-19-ai1-ai2.md)).
 
 ### Hosting (DEP-1/2)
 1. User connects the repository to Render/Vercel through the official dashboards.

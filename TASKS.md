@@ -55,8 +55,8 @@ Still to add, each with approval: `@anthropic-ai/sdk` (AI-2) and `@testing-libra
 
 | ID | Task | Depends on | Status | Req. IDs |
 |---|---|---|---|---|
-| AI-1 | Confirm provider/model (Q-04); just-in-time key setup; safe presence check + one low-cost smoke call | API-1 | todo | AI-02, AI-05 |
-| AI-2 | Provider interface, mock provider, router, circuit breaker, daily budget, usage events | API-4 | todo | AI-03, AI-04 |
+| AI-1 | Confirm provider/model (Q-04); just-in-time key setup; safe presence check + one low-cost smoke call | API-1 | done ([.agent/verification/2026-10-19-ai1-ai2.md](.agent/verification/2026-10-19-ai1-ai2.md)) | AI-02, AI-05 |
+| AI-2 | Provider interface, mock provider, router, circuit breaker, daily budget, usage events | API-4 | done ([.agent/verification/2026-10-19-ai1-ai2.md](.agent/verification/2026-10-19-ai1-ai2.md)) | AI-03, AI-04 |
 | AI-3 | Triage: prompt, schema, policy floors, async queue, startup sweeper, `/triage` retry | AI-2 | todo | ADMIN-04/06, AI-06 |
 | AI-4 | Draft: KB sections, facts builder, prompt, validation, fact guard, context-hash reuse, `/draft` | AI-2, API-3 | todo | ADMIN-08, AI-01/07/09 |
 | AI-5 | Admin UI: suggestion badges with source, low-confidence flag, draft panel, regenerate, warnings, manual-mode states | AI-3, AI-4, FE-M3 | todo | ADMIN-08..10 |
