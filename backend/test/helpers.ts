@@ -100,6 +100,7 @@ export interface TestAppOptions {
   systemWriter?: SystemWriter;
   ticketsRepository?: AppDeps["ticketsRepository"];
   adminTicketsRepository?: AppDeps["adminTicketsRepository"];
+  triage?: AppDeps["triage"];
 }
 
 /** App with test defaults (silent logs, dev CORS origins, fake verifier, recording audit writer). */
@@ -113,6 +114,7 @@ export function buildTestApp(options: TestAppOptions = {}) {
     ...(options.clock ? { clock: options.clock } : {}),
     ...(options.ticketsRepository ? { ticketsRepository: options.ticketsRepository } : {}),
     ...(options.adminTicketsRepository ? { adminTicketsRepository: options.adminTicketsRepository } : {}),
+    ...(options.triage ? { triage: options.triage } : {}),
   });
 }
 

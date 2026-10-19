@@ -1,4 +1,6 @@
 import {
+  businessDate,
+  businessDayStart,
   AdminReplyRequestSchema,
   AdminTicketQueueQuerySchema,
   MessageBodyRequestSchema,
@@ -8,7 +10,14 @@ import {
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Router } from "express";
 import type { Clock } from "../../lib/clock.js";
-import { NotFoundError, VersionConflictError } from "../../lib/errors.js";
+import type { TriageControl } from "../../ai/control.js";
+import {
+  AiUnavailableError,
+  NotFoundError,
+  RateLimitedError,
+  VersionConflictError,
+} from "../../lib/errors.js";
+import { perUserLimit } from "../../middleware/rate-limit.js";
 import { authOf, dbOf } from "../../middleware/authenticate.js";
 import type { AuditRecorder } from "../audit/service.js";
 import type { AdminTicketsRepository } from "../tickets/admin-repository.js";
@@ -19,13 +28,22 @@ export interface AdminRouterDeps {
   clock: Clock;
   audit: AuditRecorder;
   adminTicketsRepository: (db: SupabaseClient) => AdminTicketsRepository;
+  triage: TriageControl;
 }
 
 const TICKET_NOT_FOUND = "We couldn't find that ticket.";
+/** Manual AI re-triage cap per ticket per business day (AI_PROVIDER_ORCHESTRATION section 5). */
+export const MANUAL_TRIAGE_PER_DAY = 3;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** /api/v1/admin/* (role admin, enforced in app.ts). */
-export function createAdminRouter({ clock, audit, adminTicketsRepository }: AdminRouterDeps) {
+export function createAdminRouter({ clock, audit, adminTicketsRepository, triage }: AdminRouterDeps) {
   const router = Router();
+  const triageLimit = perUserLimit({
+    windowMs: 60_000,
+    limit: 5,
+    message: "Too many AI triage requests. Please wait a minute.",
+  });
 
   // operationId: listAdminTickets. Default sort: unresolved first, then
   // priority (critical, high, untriaged, medium, low), then oldest.
@@ -153,6 +171,46 @@ export function createAdminRouter({ clock, audit, adminTicketsRepository }: Admi
       metadata: { noteId: note.id },
     });
     res.status(201).json({ data: toInternalNote(note) });
+  });
+
+  // operationId: retryTriage. Re-runs AI triage in the background (202). Admin
+  // overrides are never replaced; the per-ticket cap is counted from audit events.
+  router.post("/tickets/:ticketId/triage", triageLimit, async (req, res) => {
+    const { ticketId } = TicketIdParamsSchema.parse(req.params);
+    const auth = authOf(req);
+    const repository = adminTicketsRepository(dbOf(req));
+    const ticket = await repository.findTicket(ticketId);
+    if (!ticket) throw new NotFoundError(TICKET_NOT_FOUND);
+    if (ticket.ai_status === "pending") {
+      res.status(202).json({ data: { aiStatus: "pending" } }); // already queued or running
+      return;
+    }
+
+    const now = clock();
+    const today = businessDate(now);
+    const used = await repository.countAuditEvents(
+      ticketId,
+      "ticket.triage_requested",
+      businessDayStart(today).toISOString(),
+    );
+    if (used >= MANUAL_TRIAGE_PER_DAY) {
+      const resetsAt = businessDayStart(today).getTime() + DAY_MS;
+      throw new RateLimitedError(
+        Math.max(1, Math.ceil((resetsAt - now.getTime()) / 1000)),
+        `AI triage was already retried ${MANUAL_TRIAGE_PER_DAY} times today for this ticket. Please triage it manually.`,
+      );
+    }
+    const availability = await triage.availability();
+    if (!availability.ok) throw new AiUnavailableError(availability.reason);
+
+    if (!(await triage.retry(ticketId))) throw new NotFoundError(TICKET_NOT_FOUND);
+    await audit({
+      ticketId,
+      actorProfileId: auth.userId,
+      action: "ticket.triage_requested",
+      metadata: { previousAiStatus: ticket.ai_status },
+    });
+    res.status(202).json({ data: { aiStatus: "pending" } });
   });
 
   return router;

@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import express from "express";
 import helmet from "helmet";
 import type { Logger } from "pino";
+import { disabledTriage, type TriageControl } from "./ai/control.js";
 import type { AuthVerifier } from "./auth/types.js";
 import type { Env } from "./config/env.js";
 import type { SystemWriter } from "./db/system-writer.js";
@@ -41,6 +42,8 @@ export interface AppDeps {
   ticketsRepository?: (db: SupabaseClient) => TicketsRepository;
   /** Same, for the admin queue. */
   adminTicketsRepository?: (db: SupabaseClient) => AdminTicketsRepository;
+  /** AI triage (queue + retries). Defaults to disabled; server.ts wires the real one. */
+  triage?: TriageControl;
 }
 
 export function createApp({
@@ -51,6 +54,7 @@ export function createApp({
   clock = systemClock,
   ticketsRepository = createTicketsRepository,
   adminTicketsRepository = createAdminTicketsRepository,
+  triage = disabledTriage,
 }: AppDeps) {
   const app = express();
   app.disable("x-powered-by");
@@ -70,8 +74,16 @@ export function createApp({
   const audit = createAuditRecorder(systemWriter, logger);
   app.use("/api/v1", authenticate(verifier));
   app.use("/api/v1/me", meRouter);
-  app.use("/api/v1/author", requireRole("author"), createAuthorRouter({ clock, audit, ticketsRepository }));
-  app.use("/api/v1/admin", requireRole("admin"), createAdminRouter({ clock, audit, adminTicketsRepository }));
+  app.use(
+    "/api/v1/author",
+    requireRole("author"),
+    createAuthorRouter({ clock, audit, ticketsRepository, triage }),
+  );
+  app.use(
+    "/api/v1/admin",
+    requireRole("admin"),
+    createAdminRouter({ clock, audit, adminTicketsRepository, triage }),
+  );
 
   app.use(notFound);
   app.use(errorHandler(logger));

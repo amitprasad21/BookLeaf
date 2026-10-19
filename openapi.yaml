@@ -526,12 +526,30 @@ paths:
       tags: [Admin AI]
       summary: Re-run AI triage (for tickets in manual review)
       operationId: retryTriage
-      description: Suggestions never overwrite admin overrides.
+      description: |
+        Resets the ticket's AI triage to pending with fresh attempts and runs
+        it in the background (D-029). Suggestions never overwrite admin
+        overrides. A ticket already pending answers 202 without doing anything
+        again. Limits: 3 per ticket per India business day (429 until
+        midnight) and 5 per minute per admin. 503 `AI_UNAVAILABLE` when AI is
+        off, the daily budget is spent or every provider's circuit is open.
       parameters:
         - $ref: '#/components/parameters/TicketId'
       responses:
         '202':
           description: Triage queued; a ticket.triaged event follows
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [aiStatus]
+                    properties:
+                      aiStatus: { type: string, enum: [pending] }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
