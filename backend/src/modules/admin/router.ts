@@ -7,6 +7,9 @@ import {
   MessageBodyRequestSchema,
   TicketIdParamsSchema,
   UpdateTicketRequestSchema,
+  type QueueSummaryDto,
+  type ThreadMessageDto,
+  type TriageAcceptedDto,
 } from "@bookleaf/shared";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Router } from "express";
@@ -43,6 +46,7 @@ const TICKET_NOT_FOUND = "We couldn't find that ticket.";
 /** Manual AI re-triage cap per ticket per business day (AI_PROVIDER_ORCHESTRATION section 5). */
 export const MANUAL_TRIAGE_PER_DAY = 3;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const TRIAGE_ACCEPTED: TriageAcceptedDto = { aiStatus: "pending" };
 
 /** /api/v1/admin/* (role admin, enforced in app.ts). */
 export function createAdminRouter({ clock, audit, adminTicketsRepository, triage, drafts }: AdminRouterDeps) {
@@ -70,7 +74,8 @@ export function createAdminRouter({ clock, audit, adminTicketsRepository, triage
 
   // operationId: getAdminTicketSummary. Registered before /tickets/:ticketId.
   router.get("/tickets/summary", async (req, res) => {
-    res.json({ data: await adminTicketsRepository(dbOf(req)).summary(clock()) });
+    const summary: QueueSummaryDto = await adminTicketsRepository(dbOf(req)).summary(clock());
+    res.json({ data: summary });
   });
 
   // operationId: getAdminTicket
@@ -147,15 +152,14 @@ export function createAdminRouter({ clock, audit, adminTicketsRepository, triage
         : []),
     ]);
 
-    res.status(201).json({
-      data: {
-        id: sent.messageId,
-        senderRole: "admin",
-        senderName: auth.displayName,
-        body: input.body,
-        createdAt: sent.createdAt,
-      },
-    });
+    const message: ThreadMessageDto = {
+      id: sent.messageId,
+      senderRole: "admin",
+      senderName: auth.displayName,
+      body: input.body,
+      createdAt: sent.createdAt,
+    };
+    res.status(201).json({ data: message });
   });
 
   // operationId: listInternalNotes
@@ -190,7 +194,7 @@ export function createAdminRouter({ clock, audit, adminTicketsRepository, triage
     const ticket = await repository.findTicket(ticketId);
     if (!ticket) throw new NotFoundError(TICKET_NOT_FOUND);
     if (ticket.ai_status === "pending") {
-      res.status(202).json({ data: { aiStatus: "pending" } }); // already queued or running
+      res.status(202).json({ data: TRIAGE_ACCEPTED }); // already queued or running
       return;
     }
 
@@ -218,7 +222,7 @@ export function createAdminRouter({ clock, audit, adminTicketsRepository, triage
       action: "ticket.triage_requested",
       metadata: { previousAiStatus: ticket.ai_status },
     });
-    res.status(202).json({ data: { aiStatus: "pending" } });
+    res.status(202).json({ data: TRIAGE_ACCEPTED });
   });
 
   // operationId: getOrCreateDraft. 200 = a ready draft for the same context was

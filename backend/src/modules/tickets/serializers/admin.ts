@@ -1,9 +1,15 @@
-import { slaState } from "@bookleaf/shared";
+import {
+  slaState,
+  type AdminQueueItemDto,
+  type AdminTicketDetailDto,
+  type AiDraftDto,
+  type InternalNoteDto,
+} from "@bookleaf/shared";
 import { toBookDto } from "../../books/serializers.js";
 import type { AdminQueueRow, AdminTicketDetailRows, AiDraftRow, NoteRow } from "../admin-repository.js";
 
 /** AdminQueueItem (openapi.yaml). `slaState` is computed at `now`, never stored. */
-export function toAdminQueueItem(row: AdminQueueRow, now: Date) {
+export function toAdminQueueItem(row: AdminQueueRow, now: Date): AdminQueueItemDto {
   return {
     id: row.id,
     reference: row.reference,
@@ -39,8 +45,13 @@ const adminRef = (profile: { id: string; display_name: string } | null) =>
   profile ? { userId: profile.id, displayName: profile.display_name } : null;
 
 /** InternalNote (openapi.yaml). Admin-only: no author endpoint reads notes. */
-export function toInternalNote(note: NoteRow) {
-  return { id: note.id, author: adminRef(note.admin), body: note.body, createdAt: note.created_at };
+export function toInternalNote(note: NoteRow): InternalNoteDto {
+  return {
+    id: note.id,
+    author: { userId: note.admin.id, displayName: note.admin.display_name },
+    body: note.body,
+    createdAt: note.created_at,
+  };
 }
 
 /**
@@ -49,7 +60,7 @@ export function toInternalNote(note: NoteRow) {
  * sender names, internal notes, the AI suggestion and the audit timeline.
  * Author email and phone are never included.
  */
-export function toAdminTicketDetail(detail: AdminTicketDetailRows, now: Date) {
+export function toAdminTicketDetail(detail: AdminTicketDetailRows, now: Date): AdminTicketDetailDto {
   const { ticket } = detail;
   return {
     ...toAdminQueueItem(ticket, now),
@@ -98,7 +109,7 @@ export function toAdminTicketDetail(detail: AdminTicketDetailRows, now: Date) {
 }
 
 /** AiDraft (openapi.yaml). Admin-only; the reply text is only a suggestion until an admin sends it. */
-export function toAiDraft(row: AiDraftRow) {
+export function toAiDraft(row: AiDraftRow): AiDraftDto {
   return {
     id: row.id,
     ticketId: row.ticket_id,
