@@ -1,9 +1,10 @@
+import type { MeDto } from "@bookleaf/shared";
 import { Router } from "express";
 import type { AuthContext } from "../../auth/types.js";
 import { authOf } from "../../middleware/authenticate.js";
 
 /** Me DTO (openapi.yaml components/schemas/Me). Everything comes from the verified auth context. */
-export function toMeDto(auth: AuthContext) {
+export function toMeDto(auth: AuthContext): MeDto {
   return {
     userId: auth.userId,
     role: auth.role,

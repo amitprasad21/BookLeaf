@@ -7,6 +7,7 @@ import {
   paymentPossiblyOverdue,
   payoutCalendar,
   PAYOUT_THRESHOLD_INR,
+  PUBLISHED_STATUS as PUBLISHED,
 } from "@bookleaf/shared";
 
 /** The catalogue fields the facts read (a subset of a books row). */
@@ -41,7 +42,6 @@ export interface TriageFacts {
   };
 }
 
-const PUBLISHED = "Published & Live";
 const paise = (inr: number) => Math.round(inr * 100);
 
 export function buildTriageFacts(

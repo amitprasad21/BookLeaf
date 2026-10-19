@@ -7,26 +7,15 @@ import {
   paymentPossiblyOverdue,
   payoutCalendar,
   PAYOUT_THRESHOLD_INR,
+  PRODUCTION_STAGES,
+  productionStage,
+  PUBLISHED_STATUS as PUBLISHED,
   type TicketCategory,
 } from "@bookleaf/shared";
 import type { BookRow } from "../../modules/books/repository.js";
 
-/** Production stages in order (KB, kb.production). */
-export const PRODUCTION_STAGES = [
-  "Manuscript Received",
-  "Editing",
-  "Cover Design",
-  "Typesetting",
-  "Proofreading",
-  "ISBN Assignment",
-  "Printing",
-  "Distribution Setup",
-  "Published & Live",
-] as const;
 /** Where the KB says delays typically happen. */
 const KNOWN_DELAY_POINTS = new Set(["Cover Design", "Proofreading"]);
-const IN_PRODUCTION = /^In Production - (.+)$/;
-const PUBLISHED = "Published & Live";
 
 export interface DraftFacts {
   today: string;
@@ -78,23 +67,15 @@ export interface DraftFactsInput {
 const paise = (inr: number) => Math.round(inr * 100);
 
 function production(status: string): DraftFacts["production"] {
-  const stage = IN_PRODUCTION.exec(status)?.[1];
-  if (!stage) return null;
-  const index = PRODUCTION_STAGES.indexOf(stage as (typeof PRODUCTION_STAGES)[number]);
-  if (index === -1)
-    return {
-      currentStage: stage,
-      stageNumber: 0,
-      of: PRODUCTION_STAGES.length,
-      nextStage: null,
-      knownDelayPoint: false,
-    };
+  const current = productionStage(status);
+  if (!current) return null;
+  const known = current.number > 0;
   return {
-    currentStage: stage,
-    stageNumber: index + 1,
-    of: PRODUCTION_STAGES.length,
-    nextStage: PRODUCTION_STAGES[index + 1] ?? null,
-    knownDelayPoint: KNOWN_DELAY_POINTS.has(stage),
+    currentStage: current.stage,
+    stageNumber: current.number,
+    of: current.of,
+    nextStage: known ? (PRODUCTION_STAGES[current.number] ?? null) : null,
+    knownDelayPoint: known && KNOWN_DELAY_POINTS.has(current.stage),
   };
 }
 

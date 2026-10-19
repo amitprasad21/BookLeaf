@@ -1,9 +1,8 @@
+import { PUBLISHED_STATUS, type BookDto } from "@bookleaf/shared";
 import type { BookRow } from "./repository.js";
 
-export const PUBLISHED_STATUS = "Published & Live";
-
 /** Book DTO (openapi.yaml components/schemas/Book). Nulls stay null: the UI shows "Not yet set", never ₹0. */
-export function toBookDto(row: BookRow) {
+export function toBookDto(row: BookRow): BookDto {
   return {
     bookId: row.book_id,
     title: row.title,

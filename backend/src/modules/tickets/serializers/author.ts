@@ -1,12 +1,13 @@
 // Author-facing ticket DTOs (openapi.yaml AuthorTicketSummary / AuthorTicketDetail).
 // An explicit allowlist: AI suggestions, category, priority, assignee, notes,
 // drafts and version can't leak here because they're never read or copied (C-08).
+import type { AuthorTicketDetailDto, AuthorTicketSummaryDto } from "@bookleaf/shared";
 import type { AuthorTicketRow, ThreadMessageRow } from "../repository.js";
 
 /** Admin replies are signed as the team, not by individual staff (assumption A-07). */
 export const SUPPORT_SENDER_NAME = "BookLeaf Support";
 
-export function toAuthorTicketSummary(row: AuthorTicketRow) {
+export function toAuthorTicketSummary(row: AuthorTicketRow): AuthorTicketSummaryDto {
   return {
     id: row.id,
     reference: row.reference,
@@ -19,7 +20,11 @@ export function toAuthorTicketSummary(row: AuthorTicketRow) {
   };
 }
 
-export function toAuthorTicketDetail(row: AuthorTicketRow, messages: ThreadMessageRow[], authorName: string) {
+export function toAuthorTicketDetail(
+  row: AuthorTicketRow,
+  messages: ThreadMessageRow[],
+  authorName: string,
+): AuthorTicketDetailDto {
   return {
     ...toAuthorTicketSummary(row),
     description: row.description ?? "",
