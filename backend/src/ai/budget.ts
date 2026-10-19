@@ -2,7 +2,7 @@
 // output tokens recorded since 00:00 Asia/Kolkata. The database total is
 // cached for 30 s and topped up locally after each call, so a burst can't
 // overshoot by more than the calls already in flight.
-import { businessDate } from "@bookleaf/shared";
+import { businessDate, businessDayStart } from "@bookleaf/shared";
 
 export interface BudgetOptions {
   dailyTokens: number;
@@ -25,8 +25,7 @@ export interface DailyBudget {
   status(): Promise<BudgetStatus>;
 }
 
-/** India has no daylight saving, so the business day always starts at +05:30. */
-const dayStart = (date: string) => new Date(`${date}T00:00:00+05:30`).toISOString();
+const dayStart = (date: string) => businessDayStart(date).toISOString();
 
 export function createDailyBudget(options: BudgetOptions): DailyBudget {
   const now = options.now ?? (() => new Date());

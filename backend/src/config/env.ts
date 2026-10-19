@@ -63,7 +63,8 @@ const EnvSchema = z
     GEMINI_API_KEY: optionalSetting(z.string().min(1)),
     GROQ_API_KEY: optionalSetting(z.string().min(1)),
     AI_DAILY_TOKEN_BUDGET: optionalSetting(z.coerce.number().int().min(0)).default(300_000),
-    AI_TRIAGE_TIMEOUT_MS: optionalSetting(z.coerce.number().int().min(1_000)).default(15_000),
+    // Triage runs in the background; free-tier Flash-Lite took 8-13 s per call (D-029).
+    AI_TRIAGE_TIMEOUT_MS: optionalSetting(z.coerce.number().int().min(1_000)).default(30_000),
     AI_DRAFT_TIMEOUT_MS: optionalSetting(z.coerce.number().int().min(1_000)).default(30_000),
     AI_MAX_RETRIES: optionalSetting(z.coerce.number().int().min(0).max(5)).default(2),
     AI_CIRCUIT_FAILURE_THRESHOLD: optionalSetting(z.coerce.number().int().min(1)).default(3),

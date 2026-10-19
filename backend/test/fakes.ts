@@ -1,7 +1,14 @@
 // In-memory stand-ins for data access in offline route tests.
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AuditEventInput, SystemWriter, UsageEventInput } from "../src/db/system-writer.js";
+import type { TicketCategory, TicketPriority } from "@bookleaf/shared";
+import type {
+  AuditEventInput,
+  SystemWriter,
+  TriageTicket,
+  TriageWrite,
+  UsageEventInput,
+} from "../src/db/system-writer.js";
 import type { AdminTicketsRepository } from "../src/modules/tickets/admin-repository.js";
 import type {
   AuthorTicketRow,
@@ -14,9 +21,62 @@ type StoredTicket = AuthorTicketRow & { author_id: string };
 type StoredMessage = ThreadMessageRow & { ticket_id: string };
 
 /** Captures audit and usage events; `fail` makes every append throw. */
-export function recordingSystemWriter(options: { fail?: boolean; tokensUsedToday?: number } = {}) {
+/** A ticket as the fake triage store holds it: the triage view plus the effective values. */
+export interface FakeTriageTicket extends TriageTicket {
+  category: TicketCategory | null;
+  priority: TicketPriority | null;
+  aiFailureReason: string | null;
+  result: TriageWrite | null;
+  updatedAt: string;
+}
+
+export function fakeTriageTicket(overrides: Partial<FakeTriageTicket> = {}): FakeTriageTicket {
+  return {
+    id: "6f9d3c1e-1d2a-4c55-9a51-1b8f2f0c0007",
+    version: 1,
+    authorId: "AUTH001",
+    bookId: "BK001",
+    subject: "Royalty for Q3 not received",
+    description: "I haven't received my royalty payment for the last quarter. Could you check?",
+    status: "open",
+    aiStatus: "pending",
+    aiAttempts: 0,
+    categorySource: null,
+    prioritySource: null,
+    authorBooks: [
+      {
+        book_id: "BK001",
+        title: "Whispers of the Ganges",
+        status: "Published & Live",
+        publication_date: "2024-01-15",
+        last_royalty_payout_date: "2025-12-01",
+        royalty_pending: 3570,
+      },
+    ],
+    category: null,
+    priority: null,
+    aiFailureReason: null,
+    result: null,
+    updatedAt: "2026-10-18T06:00:00.000Z",
+    ...overrides,
+  };
+}
+
+/**
+ * Captures audit and usage events, and holds triage tickets in memory with the
+ * same rules as the real writer (version lock, admin overrides kept).
+ * `fail` makes every append throw.
+ */
+export function recordingSystemWriter(
+  options: { fail?: boolean; tokensUsedToday?: number; triageTickets?: FakeTriageTicket[] } = {},
+) {
   const events: AuditEventInput[] = [];
   const usage: UsageEventInput[] = [];
+  const tickets = new Map((options.triageTickets ?? []).map((ticket) => [ticket.id, ticket]));
+  const bump = (ticket: FakeTriageTicket) => {
+    ticket.version += 1;
+    ticket.updatedAt = new Date().toISOString();
+  };
   const writer: SystemWriter = {
     async appendAuditEvents(batch) {
       if (options.fail) throw new Error("audit insert failed (simulated)");
@@ -32,8 +92,55 @@ export function recordingSystemWriter(options: { fail?: boolean; tokensUsedToday
         usage.reduce((sum, event) => sum + event.inputTokens + event.outputTokens, 0)
       );
     },
+    async loadTicketForTriage(ticketId) {
+      const ticket = tickets.get(ticketId);
+      return ticket ? structuredClone(ticket) : null;
+    },
+    async saveTriageResult(claim, result) {
+      const ticket = tickets.get(claim.id);
+      if (!ticket || ticket.version !== claim.version) return false;
+      Object.assign(ticket, {
+        aiStatus: "completed",
+        aiAttempts: claim.aiAttempts + 1,
+        aiFailureReason: null,
+        result,
+        ...(claim.categorySource === "admin" ? {} : { category: result.category, categorySource: "ai" }),
+        ...(claim.prioritySource === "admin" ? {} : { priority: result.priority, prioritySource: "ai" }),
+      });
+      bump(ticket);
+      return true;
+    },
+    async markTriageFailure(claim, reason, final) {
+      const ticket = tickets.get(claim.id);
+      if (!ticket || ticket.version !== claim.version) return false;
+      Object.assign(ticket, {
+        aiStatus: final ? "manual_review_required" : "failed",
+        aiFailureReason: reason,
+        aiAttempts: claim.aiAttempts + 1,
+      });
+      bump(ticket);
+      return true;
+    },
+    async resetTriage(ticketId) {
+      const ticket = tickets.get(ticketId);
+      if (!ticket) return false;
+      Object.assign(ticket, { aiStatus: "pending", aiFailureReason: null, aiAttempts: 0 });
+      bump(ticket);
+      return true;
+    },
+    async listTicketsForSweep(olderThanIso, maxAttempts, limit) {
+      return [...tickets.values()]
+        .filter(
+          (ticket) =>
+            (ticket.aiStatus === "pending" || ticket.aiStatus === "failed") &&
+            ticket.aiAttempts < maxAttempts &&
+            ticket.updatedAt < olderThanIso,
+        )
+        .slice(0, limit)
+        .map((ticket) => ticket.id);
+    },
   };
-  return { writer, events, usage };
+  return { writer, events, usage, tickets };
 }
 
 /**
@@ -164,6 +271,7 @@ export function adminRepository(methods: Partial<AdminTicketsRepository>): Admin
     sendReply: unused("sendReply"),
     listNotes: unused("listNotes"),
     addNote: unused("addNote"),
+    countAuditEvents: unused("countAuditEvents"),
     ...methods,
   };
 }

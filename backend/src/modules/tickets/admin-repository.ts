@@ -1,4 +1,5 @@
 import {
+  businessDayStart,
   overdueCreatedBefore,
   type AdminTicketQueueQuery,
   type AiStatus,
@@ -134,6 +135,8 @@ export interface AdminTicketsRepository {
   /** Null when the ticket doesn't exist. */
   listNotes(ticketId: string): Promise<NoteRow[] | null>;
   addNote(ticketId: string, adminProfileId: string, body: string): Promise<NoteRow>;
+  /** How many audit events with this action the ticket has had since the instant (per-ticket caps). */
+  countAuditEvents(ticketId: string, action: string, sinceIso: string): Promise<number>;
 }
 
 export interface NewReply {
@@ -177,8 +180,7 @@ const NOTE_COLUMNS =
   "id, body, created_at, admin:profiles!internal_notes_admin_profile_id_fkey(id, display_name)";
 const TICKET_NOT_FOUND = "We couldn't find that ticket.";
 
-/** Business dates are Asia/Kolkata (A-04), which has no daylight saving. */
-const businessDayStart = (date: string) => new Date(`${date}T00:00:00+05:30`);
+/** Business dates are Asia/Kolkata (A-04). */
 const nextBusinessDayStart = (date: string) =>
   new Date(businessDayStart(date).getTime() + 24 * 60 * 60 * 1000);
 
@@ -438,6 +440,17 @@ export function createAdminTicketsRepository(db: SupabaseClient): AdminTicketsRe
       if (error?.code === "23503") throw new NotFoundError(TICKET_NOT_FOUND);
       if (error) throw mapPostgrestError(error, "note insert");
       return data as unknown as NoteRow;
+    },
+
+    async countAuditEvents(ticketId, action, sinceIso) {
+      const { count, error } = await db
+        .from("audit_events")
+        .select("id", { count: "exact", head: true })
+        .eq("ticket_id", ticketId)
+        .eq("action", action)
+        .gte("created_at", sinceIso);
+      if (error) throw mapPostgrestError(error, "audit count");
+      return count ?? 0;
     },
   };
 }

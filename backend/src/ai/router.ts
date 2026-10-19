@@ -47,8 +47,13 @@ export class AiRouteError extends AiUnavailableError {
   }
 }
 
+export type AiAvailability =
+  { ok: true } | { ok: false; reason: "not_configured" | "budget_exhausted" | "circuit_open" };
+
 export interface AiRouter {
   route<T>(request: StructuredRequest<T>, context: RouteContext): Promise<RoutedResult<T>>;
+  /** Whether a call could go out now (no call is made): for the sweeper and manual retries. */
+  availability(): Promise<AiAvailability>;
   circuits(): Partial<Record<ProviderName, CircuitSnapshot>>;
 }
 
@@ -209,6 +214,13 @@ export function createAiRouter(options: AiRouterOptions): AiRouter {
       }
       if (!attempted) throw new AiRouteError("circuit_open", true);
       throw new AiRouteError("provider_unavailable", sawTransient);
+    },
+
+    async availability() {
+      if (!options.primary) return { ok: false, reason: "not_configured" };
+      if (await options.budget.exhausted()) return { ok: false, reason: "budget_exhausted" };
+      const open = [...breakers.values()].every((breaker) => breaker.state === "open");
+      return open ? { ok: false, reason: "circuit_open" } : { ok: true };
     },
 
     circuits() {
