@@ -111,6 +111,11 @@ export function payoutCalendar(today: string): PayoutCalendar {
   };
 }
 
+/** The instant a business date starts in Asia/Kolkata (UTC+05:30, no daylight saving). */
+export function businessDayStart(date: string): Date {
+  return new Date(`${date}T00:00:00+05:30`);
+}
+
 /** Pending royalties that will roll over instead of being paid (0 < pending < ₹1,000). */
 export function isBelowPayoutThreshold(pending: number): boolean {
   return pending > 0 && pending < PAYOUT_THRESHOLD_INR;
