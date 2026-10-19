@@ -1,6 +1,6 @@
 import { createAiFromEnv } from "./ai/config.js";
 import { createTriageControl } from "./ai/control.js";
-import { MOCK_RESPONDERS } from "./ai/prompts/triage.js";
+import { MOCK_RESPONDERS } from "./ai/prompts/index.js";
 import { createJobQueue, createSweeper } from "./ai/queue.js";
 import { createTriageService } from "./ai/triage.js";
 import { createApp } from "./app.js";

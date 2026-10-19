@@ -105,4 +105,7 @@ export const mockTriageResponder: MockResponder = (request) => {
   };
 };
 
-export const MOCK_RESPONDERS: Record<string, MockResponder> = { [TRIAGE_SCHEMA_NAME]: mockTriageResponder };
+/** Triage only; drafts register theirs in prompts/index.ts. */
+export const TRIAGE_MOCK_RESPONDERS: Record<string, MockResponder> = {
+  [TRIAGE_SCHEMA_NAME]: mockTriageResponder,
+};

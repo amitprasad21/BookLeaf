@@ -1,7 +1,9 @@
-// Builds the AI router from validated configuration (D-028). Model defaults
-// per provider: on Gemini's free tier, triage (one call per ticket) uses the
-// high-throughput Flash-Lite model and drafts (on demand, quality matters) use
-// the most capable Flash model; Groq's gpt-oss-120b serves both as fallback.
+// Builds the AI router from validated configuration (D-028, D-030). Model
+// defaults per provider: Gemini 3.5 Flash-Lite for both tasks. Measured on the
+// free tier, 3.8 Flash timed out on draft-sized prompts (30 s three times, then
+// no answer in 90 s) while Flash-Lite drafted in about 2 s; set
+// AI_PRIMARY_DRAFT_MODEL=gemini-3.8-flash on a key where it's fast enough.
+// Groq's gpt-oss-120b serves both tasks as the fallback.
 import type { Logger } from "pino";
 import type { Env } from "../config/env.js";
 import type { SystemWriter } from "../db/system-writer.js";
@@ -14,7 +16,7 @@ import { createAiRouter, type AiRouter } from "./router.js";
 import { createUsageRecorder } from "./usage.js";
 
 export const DEFAULT_MODELS: Record<ProviderName, Record<AiTask, string>> = {
-  gemini: { triage: "gemini-3.5-flash-lite", draft: "gemini-3.8-flash" },
+  gemini: { triage: "gemini-3.5-flash-lite", draft: "gemini-3.5-flash-lite" },
   groq: { triage: "openai/gpt-oss-120b", draft: "openai/gpt-oss-120b" },
   mock: { triage: MOCK_MODEL, draft: MOCK_MODEL },
 };

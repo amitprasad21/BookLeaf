@@ -54,6 +54,8 @@ export interface AiRouter {
   route<T>(request: StructuredRequest<T>, context: RouteContext): Promise<RoutedResult<T>>;
   /** Whether a call could go out now (no call is made): for the sweeper and manual retries. */
   availability(): Promise<AiAvailability>;
+  /** The primary provider's model for a task, or null when AI is off. */
+  modelFor(task: "triage" | "draft"): string | null;
   circuits(): Partial<Record<ProviderName, CircuitSnapshot>>;
 }
 
@@ -214,6 +216,10 @@ export function createAiRouter(options: AiRouterOptions): AiRouter {
       }
       if (!attempted) throw new AiRouteError("circuit_open", true);
       throw new AiRouteError("provider_unavailable", sawTransient);
+    },
+
+    modelFor(task) {
+      return options.primary?.modelFor(task) ?? null;
     },
 
     async availability() {

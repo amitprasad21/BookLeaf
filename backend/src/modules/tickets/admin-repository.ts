@@ -4,9 +4,11 @@ import {
   type AdminTicketQueueQuery,
   type AiStatus,
   type AiUnavailableReason,
+  type EscalationTeam,
   type TicketCategory,
   type TicketPriority,
   type TicketStatus,
+  type TriageSignal,
   type ValueSource,
 } from "@bookleaf/shared";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -54,7 +56,7 @@ export interface AdminTicketRow extends Omit<AdminQueueRow, "author"> {
   ai_category: TicketCategory | null;
   ai_priority: TicketPriority | null;
   ai_confidence: number | null;
-  ai_signals: string[];
+  ai_signals: TriageSignal[];
   ai_rationale: string | null;
   ai_policy_floor: string | null;
   ai_processed_at: string | null;
@@ -137,7 +139,36 @@ export interface AdminTicketsRepository {
   addNote(ticketId: string, adminProfileId: string, body: string): Promise<NoteRow>;
   /** How many audit events with this action the ticket has had since the instant (per-ticket caps). */
   countAuditEvents(ticketId: string, action: string, sinceIso: string): Promise<number>;
+  /** The newest `ready` draft for this exact context, if any (draft reuse). */
+  findReadyDraft(ticketId: string, contextHash: string): Promise<AiDraftRow | null>;
+  /** Insert as the calling admin (RLS: requested_by must be the caller). */
+  insertDraft(draft: NewDraft): Promise<AiDraftRow>;
+  /** Mark every other ready draft of the ticket superseded (admins may only change `status`). */
+  supersedeOtherDrafts(ticketId: string, keepId: string): Promise<void>;
 }
+
+export interface AiDraftRow {
+  id: string;
+  ticket_id: string;
+  status: "ready" | "superseded";
+  reply: string;
+  kb_sections_used: string[];
+  needs_escalation: boolean;
+  escalation_team: EscalationTeam;
+  internal_checklist: string[];
+  missing_information: string[];
+  fact_warnings: string[];
+  context_hash: string;
+  prompt_version: string;
+  provider: string;
+  model: string;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  requested_by: string;
+  created_at: string;
+}
+
+export type NewDraft = Omit<AiDraftRow, "id" | "status" | "created_at">;
 
 export interface NewReply {
   body: string;
@@ -440,6 +471,37 @@ export function createAdminTicketsRepository(db: SupabaseClient): AdminTicketsRe
       if (error?.code === "23503") throw new NotFoundError(TICKET_NOT_FOUND);
       if (error) throw mapPostgrestError(error, "note insert");
       return data as unknown as NoteRow;
+    },
+
+    async findReadyDraft(ticketId, contextHash) {
+      const { data, error } = await db
+        .from("ai_drafts")
+        .select("*")
+        .eq("ticket_id", ticketId)
+        .eq("context_hash", contextHash)
+        .eq("status", "ready")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw mapPostgrestError(error, "draft lookup");
+      return data as AiDraftRow | null;
+    },
+
+    async insertDraft(draft) {
+      const { data, error } = await db.from("ai_drafts").insert(draft).select("*").single();
+      if (error?.code === "23503") throw new NotFoundError(TICKET_NOT_FOUND);
+      if (error) throw mapPostgrestError(error, "draft insert");
+      return data as AiDraftRow;
+    },
+
+    async supersedeOtherDrafts(ticketId, keepId) {
+      const { error } = await db
+        .from("ai_drafts")
+        .update({ status: "superseded" })
+        .eq("ticket_id", ticketId)
+        .eq("status", "ready")
+        .neq("id", keepId);
+      if (error) throw mapPostgrestError(error, "draft supersede");
     },
 
     async countAuditEvents(ticketId, action, sinceIso) {

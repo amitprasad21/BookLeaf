@@ -325,7 +325,7 @@ describe("daily budget", () => {
 describe("AI configuration", () => {
   const base = { NODE_ENV: "test" };
 
-  it("defaults: Gemini triage on Flash-Lite, drafts on 3.8 Flash; Groq gpt-oss-120b as fallback", () => {
+  it("defaults: Gemini Flash-Lite for triage and drafts; Groq gpt-oss-120b as fallback", () => {
     const plan = aiPlan(
       loadEnv({
         ...base,
@@ -336,7 +336,10 @@ describe("AI configuration", () => {
       }),
     );
     expect(plan).toEqual({
-      primary: { provider: "gemini", models: { triage: "gemini-3.5-flash-lite", draft: "gemini-3.8-flash" } },
+      primary: {
+        provider: "gemini",
+        models: { triage: "gemini-3.5-flash-lite", draft: "gemini-3.5-flash-lite" },
+      },
       fallback: { provider: "groq", models: { triage: "openai/gpt-oss-120b", draft: "openai/gpt-oss-120b" } },
     });
     expect(DEFAULT_MODELS.mock).toEqual({ triage: "mock-1", draft: "mock-1" });

@@ -272,6 +272,9 @@ export function adminRepository(methods: Partial<AdminTicketsRepository>): Admin
     listNotes: unused("listNotes"),
     addNote: unused("addNote"),
     countAuditEvents: unused("countAuditEvents"),
+    findReadyDraft: unused("findReadyDraft"),
+    insertDraft: unused("insertDraft"),
+    supersedeOtherDrafts: unused("supersedeOtherDrafts"),
     ...methods,
   };
 }

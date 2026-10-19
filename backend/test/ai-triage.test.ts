@@ -7,10 +7,10 @@ import { buildTriageFacts } from "../src/ai/facts/triage-facts.js";
 import {
   buildTriageUserContent,
   mockTriageResponder,
-  MOCK_RESPONDERS,
   TRIAGE_PROMPT_VERSION,
   TRIAGE_SYSTEM_PROMPT,
 } from "../src/ai/prompts/triage.js";
+import { MOCK_RESPONDERS } from "../src/ai/prompts/index.js";
 import { toProviderJsonSchema } from "../src/ai/providers/json-schema.js";
 import { createMockProvider } from "../src/ai/providers/mock.js";
 import type { LlmProvider } from "../src/ai/providers/types.js";

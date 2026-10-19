@@ -9,7 +9,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createAiFromEnv } from "../src/ai/config.js";
 import { createTriageControl } from "../src/ai/control.js";
-import { MOCK_RESPONDERS } from "../src/ai/prompts/triage.js";
+import { MOCK_RESPONDERS } from "../src/ai/prompts/index.js";
 import { createJobQueue } from "../src/ai/queue.js";
 import { createTriageService } from "../src/ai/triage.js";
 import { createApp } from "../src/app.js";
@@ -36,7 +36,8 @@ const firstBook = (authorId: string) => toBookRows(data).find((book) => book.aut
 const authorEmail = (id: string) => data.authors.find((author) => author.author_id === id)!.email;
 const noSession = { auth: { persistSession: false, autoRefreshToken: false } };
 
-describe.runIf(configured)("AI triage against live providers and Supabase", () => {
+// Real model calls: allow for a provider timeout plus the fallback.
+describe.runIf(configured)("AI triage against live providers and Supabase", { timeout: 90_000 }, () => {
   // Real providers regardless of AI_PRIMARY_PROVIDER in .env: this suite is about them.
   const appEnv = loadEnv({
     ...process.env,
