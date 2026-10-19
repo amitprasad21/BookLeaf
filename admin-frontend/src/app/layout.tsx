@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "@bookleaf/ui/tokens.css";
+import "@bookleaf/ui/components.css";
+import { AppProviders } from "@/providers/AppProviders";
 
 export const metadata: Metadata = {
-  title: "BookLeaf Support Console",
+  title: { default: "BookLeaf Support Console", template: "%s · BookLeaf Support Console" },
   description: "Ticket queue and triage for the BookLeaf operations team.",
   robots: { index: false, follow: false },
 };
@@ -11,7 +13,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   );
 }
