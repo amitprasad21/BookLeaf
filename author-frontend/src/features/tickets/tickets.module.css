@@ -1,0 +1,176 @@
+/* ---------- Raise a query ---------- */
+
+.form {
+  margin-top: var(--space-2);
+}
+
+.formNotice {
+  margin-bottom: var(--space-5);
+}
+
+.formNotice:focus {
+  outline: none;
+}
+
+.noticeText {
+  margin: 0;
+}
+
+.summaryList {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-5);
+}
+
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* ---------- My Tickets ---------- */
+
+.filters {
+  margin-bottom: var(--space-5);
+}
+
+/* Table from 768 px (md), cards below (ACCESSIBILITY_RESPONSIVENESS.md). */
+.tableView {
+  display: none;
+}
+
+.cardView {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 768px) {
+  .tableView {
+    display: block;
+  }
+
+  .cardView {
+    display: none;
+  }
+}
+
+/* The subject link covers the whole row or card (a real <a>, COMPONENTS.md Table). */
+.row,
+.card {
+  position: relative;
+}
+
+.rowLink {
+  color: var(--color-text);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.rowLink::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.reference {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
+.updated {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.card {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+}
+
+.card:hover {
+  border-color: var(--color-border-control);
+}
+
+.cardMeta {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
+.more {
+  margin: var(--space-4) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* ---------- Ticket detail ---------- */
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-target);
+  margin-bottom: var(--space-3);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.detailHeader {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.detailTitle {
+  margin: 0;
+  font-size: var(--text-xl);
+  line-height: var(--leading-xl);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.explainer {
+  margin: 0;
+}
+
+.detailFacts {
+  margin: var(--space-2) 0;
+}
+
+.sectionTitle {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-lg);
+  line-height: var(--leading-lg);
+  font-weight: 600;
+}
+
+.attachment {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
+.noReply {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-4);
+  border: 1px dashed var(--color-border-control);
+  border-radius: var(--radius-panel);
+  color: var(--color-text-muted);
+}
