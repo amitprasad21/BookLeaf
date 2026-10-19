@@ -1,5 +1,7 @@
 import { createAiFromEnv } from "./ai/config.js";
 import { createTriageControl } from "./ai/control.js";
+import { createDraftService } from "./ai/drafts.js";
+import { createAuditRecorder } from "./modules/audit/service.js";
 import { MOCK_RESPONDERS } from "./ai/prompts/index.js";
 import { createJobQueue, createSweeper } from "./ai/queue.js";
 import { createTriageService } from "./ai/triage.js";
@@ -48,8 +50,14 @@ const sweeper = createSweeper({
   logger,
 });
 const triage = createTriageControl({ queue: triageQueue, writer: systemWriter, router: aiRouter });
+const drafts = createDraftService({
+  router: aiRouter,
+  clock: systemClock,
+  audit: createAuditRecorder(systemWriter, logger),
+  timeoutMs: env.AI_DRAFT_TIMEOUT_MS,
+});
 
-const server = createApp({ env, logger, verifier, systemWriter, triage }).listen(env.PORT, () => {
+const server = createApp({ env, logger, verifier, systemWriter, triage, drafts }).listen(env.PORT, () => {
   logger.info(
     { port: env.PORT, nodeEnv: env.NODE_ENV, ai: env.AI_PRIMARY_PROVIDER },
     "BookLeaf API listening",

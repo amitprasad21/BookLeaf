@@ -1,3 +1,4 @@
+import type { Request } from "express";
 import { rateLimit } from "express-rate-limit";
 import { RateLimitedError } from "../lib/errors.js";
 
@@ -6,13 +7,20 @@ import { RateLimitedError } from "../lib/errors.js";
  * Requests that fail (4xx/5xx) don't count, so a typo doesn't use up a slot.
  * The database trigger is the backstop for anything that bypasses the API.
  */
-export function perUserLimit(options: { windowMs: number; limit: number; message: string }) {
+export function perUserLimit(options: {
+  windowMs: number;
+  limit: number;
+  message: string;
+  /** Requests for which the limit doesn't apply (they aren't counted either). */
+  skip?: (req: Request) => boolean;
+}) {
   return rateLimit({
     windowMs: options.windowMs,
     limit: options.limit,
     standardHeaders: false,
     legacyHeaders: false,
     skipFailedRequests: true,
+    ...(options.skip ? { skip: options.skip } : {}),
     keyGenerator: (req) => req.auth?.userId ?? "anonymous",
     handler: (req, _res, next) => {
       // express-rate-limit attaches its counters as req.rateLimit at runtime.

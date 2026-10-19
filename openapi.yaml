@@ -485,6 +485,16 @@ paths:
         thread, linked book facts, prompt version) is unchanged, unless
         `regenerate` is true. Rate limited. Returns 503 AI_UNAVAILABLE when no
         draft can be produced; the admin then writes the reply manually.
+
+        As built (D-030): the context hash covers the prompt and knowledge
+        base versions, the model, the effective category, the ticket text, the
+        latest thread message and the deterministic facts. Regeneration is
+        limited to 10 per minute per admin and 5 per ticket per India business
+        day (429). Drafts that fail validation get one repair attempt. The
+        server sets the standard sign-off. Amounts and dates that are in
+        neither the facts nor the author's own words are returned in
+        `factWarnings`; they never block the draft. Nothing is sent to the
+        author until an admin posts a reply.
       parameters:
         - $ref: '#/components/parameters/TicketId'
       requestBody:
@@ -515,6 +525,7 @@ paths:
                 required: [data]
                 properties:
                   data: { $ref: '#/components/schemas/AiDraft' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }

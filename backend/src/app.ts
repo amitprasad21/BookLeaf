@@ -6,6 +6,7 @@ import express from "express";
 import helmet from "helmet";
 import type { Logger } from "pino";
 import { disabledTriage, type TriageControl } from "./ai/control.js";
+import { disabledDrafts, type DraftService } from "./ai/drafts.js";
 import type { AuthVerifier } from "./auth/types.js";
 import type { Env } from "./config/env.js";
 import type { SystemWriter } from "./db/system-writer.js";
@@ -44,6 +45,8 @@ export interface AppDeps {
   adminTicketsRepository?: (db: SupabaseClient) => AdminTicketsRepository;
   /** AI triage (queue + retries). Defaults to disabled; server.ts wires the real one. */
   triage?: TriageControl;
+  /** AI reply drafts. Defaults to disabled (503 not_configured); server.ts wires the real one. */
+  drafts?: DraftService;
 }
 
 export function createApp({
@@ -55,6 +58,7 @@ export function createApp({
   ticketsRepository = createTicketsRepository,
   adminTicketsRepository = createAdminTicketsRepository,
   triage = disabledTriage,
+  drafts = disabledDrafts,
 }: AppDeps) {
   const app = express();
   app.disable("x-powered-by");
@@ -82,7 +86,7 @@ export function createApp({
   app.use(
     "/api/v1/admin",
     requireRole("admin"),
-    createAdminRouter({ clock, audit, adminTicketsRepository, triage }),
+    createAdminRouter({ clock, audit, adminTicketsRepository, triage, drafts }),
   );
 
   app.use(notFound);

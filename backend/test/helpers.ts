@@ -101,6 +101,7 @@ export interface TestAppOptions {
   ticketsRepository?: AppDeps["ticketsRepository"];
   adminTicketsRepository?: AppDeps["adminTicketsRepository"];
   triage?: AppDeps["triage"];
+  drafts?: AppDeps["drafts"];
 }
 
 /** App with test defaults (silent logs, dev CORS origins, fake verifier, recording audit writer). */
@@ -115,6 +116,7 @@ export function buildTestApp(options: TestAppOptions = {}) {
     ...(options.ticketsRepository ? { ticketsRepository: options.ticketsRepository } : {}),
     ...(options.adminTicketsRepository ? { adminTicketsRepository: options.adminTicketsRepository } : {}),
     ...(options.triage ? { triage: options.triage } : {}),
+    ...(options.drafts ? { drafts: options.drafts } : {}),
   });
 }
 

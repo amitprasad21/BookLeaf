@@ -1,6 +1,6 @@
 import { slaState } from "@bookleaf/shared";
 import { toBookDto } from "../../books/serializers.js";
-import type { AdminQueueRow, AdminTicketDetailRows, NoteRow } from "../admin-repository.js";
+import type { AdminQueueRow, AdminTicketDetailRows, AiDraftRow, NoteRow } from "../admin-repository.js";
 
 /** AdminQueueItem (openapi.yaml). `slaState` is computed at `now`, never stored. */
 export function toAdminQueueItem(row: AdminQueueRow, now: Date) {
@@ -94,5 +94,23 @@ export function toAdminTicketDetail(detail: AdminTicketDetailRows, now: Date) {
       metadata: event.metadata,
       createdAt: event.created_at,
     })),
+  };
+}
+
+/** AiDraft (openapi.yaml). Admin-only; the reply text is only a suggestion until an admin sends it. */
+export function toAiDraft(row: AiDraftRow) {
+  return {
+    id: row.id,
+    ticketId: row.ticket_id,
+    reply: row.reply,
+    kbSectionsUsed: row.kb_sections_used,
+    needsEscalation: row.needs_escalation,
+    escalationTeam: row.escalation_team,
+    internalChecklist: row.internal_checklist,
+    missingInformation: row.missing_information,
+    factWarnings: row.fact_warnings,
+    promptVersion: row.prompt_version,
+    model: row.model,
+    createdAt: row.created_at,
   };
 }

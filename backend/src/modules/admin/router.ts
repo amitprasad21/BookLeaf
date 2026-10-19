@@ -2,6 +2,7 @@ import {
   businessDate,
   businessDayStart,
   AdminReplyRequestSchema,
+  DraftRequestSchema,
   AdminTicketQueueQuerySchema,
   MessageBodyRequestSchema,
   TicketIdParamsSchema,
@@ -11,6 +12,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { Router } from "express";
 import type { Clock } from "../../lib/clock.js";
 import type { TriageControl } from "../../ai/control.js";
+import type { DraftService } from "../../ai/drafts.js";
 import {
   AiUnavailableError,
   NotFoundError,
@@ -22,13 +24,19 @@ import { authOf, dbOf } from "../../middleware/authenticate.js";
 import type { AuditRecorder } from "../audit/service.js";
 import type { AdminTicketsRepository } from "../tickets/admin-repository.js";
 import { planTicketUpdate } from "../tickets/admin-service.js";
-import { toAdminQueueItem, toAdminTicketDetail, toInternalNote } from "../tickets/serializers/admin.js";
+import {
+  toAdminQueueItem,
+  toAdminTicketDetail,
+  toAiDraft,
+  toInternalNote,
+} from "../tickets/serializers/admin.js";
 
 export interface AdminRouterDeps {
   clock: Clock;
   audit: AuditRecorder;
   adminTicketsRepository: (db: SupabaseClient) => AdminTicketsRepository;
   triage: TriageControl;
+  drafts: DraftService;
 }
 
 const TICKET_NOT_FOUND = "We couldn't find that ticket.";
@@ -37,7 +45,7 @@ export const MANUAL_TRIAGE_PER_DAY = 3;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** /api/v1/admin/* (role admin, enforced in app.ts). */
-export function createAdminRouter({ clock, audit, adminTicketsRepository, triage }: AdminRouterDeps) {
+export function createAdminRouter({ clock, audit, adminTicketsRepository, triage, drafts }: AdminRouterDeps) {
   const router = Router();
   const triageLimit = perUserLimit({
     windowMs: 60_000,
@@ -211,6 +219,27 @@ export function createAdminRouter({ clock, audit, adminTicketsRepository, triage
       metadata: { previousAiStatus: ticket.ai_status },
     });
     res.status(202).json({ data: { aiStatus: "pending" } });
+  });
+
+  // operationId: getOrCreateDraft. 200 = a ready draft for the same context was
+  // reused (no AI call); 201 = generated. Regenerations: 10 a minute per admin,
+  // 5 a day per ticket. 503 AI_UNAVAILABLE → the admin writes the reply manually.
+  const regenerateLimit = perUserLimit({
+    windowMs: 60_000,
+    limit: 10,
+    message: "Too many draft regenerations. Please wait a minute.",
+    skip: (req) => (req.body as { regenerate?: unknown } | undefined)?.regenerate !== true,
+  });
+  router.post("/tickets/:ticketId/draft", regenerateLimit, async (req, res) => {
+    const { ticketId } = TicketIdParamsSchema.parse(req.params);
+    const { regenerate } = DraftRequestSchema.parse(req.body ?? {});
+    const { draft, created } = await drafts.getOrCreate({
+      store: adminTicketsRepository(dbOf(req)),
+      ticketId,
+      adminId: authOf(req).userId,
+      regenerate,
+    });
+    res.status(created ? 201 : 200).json({ data: toAiDraft(draft) });
   });
 
   return router;
