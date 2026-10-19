@@ -8,14 +8,25 @@ const SUPABASE = {
   SUPABASE_SECRET_KEY: "sb_secret_x",
 };
 
+const AI_DEFAULTS = {
+  AI_PRIMARY_PROVIDER: "mock",
+  AI_DAILY_TOKEN_BUDGET: 300_000,
+  AI_TRIAGE_TIMEOUT_MS: 15_000,
+  AI_DRAFT_TIMEOUT_MS: 30_000,
+  AI_MAX_RETRIES: 2,
+  AI_CIRCUIT_FAILURE_THRESHOLD: 3,
+  AI_CIRCUIT_COOLDOWN_MS: 60_000,
+};
+
 describe("loadEnv", () => {
-  it("applies development defaults", () => {
+  it("applies development defaults (AI on the local mock)", () => {
     expect(loadEnv({ ...SUPABASE })).toEqual({
       NODE_ENV: "development",
       PORT: 4000,
       LOG_LEVEL: "info",
       CORS_ALLOWED_ORIGINS: ["http://localhost:3000", "http://localhost:3001"],
       ...SUPABASE,
+      ...AI_DEFAULTS,
     });
   });
 
@@ -51,8 +62,51 @@ describe("loadEnv", () => {
   });
 
   it("requires an explicit allowlist in production", () => {
-    expect(() => loadEnv({ ...SUPABASE, NODE_ENV: "production" })).toThrow(
+    expect(() => loadEnv({ ...SUPABASE, NODE_ENV: "production", AI_PRIMARY_PROVIDER: "none" })).toThrow(
       /^Invalid environment configuration: CORS_ALLOWED_ORIGINS$/,
+    );
+  });
+
+  it("requires an explicit, real AI provider in production (never the mock)", () => {
+    const production = { ...SUPABASE, NODE_ENV: "production", CORS_ALLOWED_ORIGINS: "https://a.example.com" };
+    expect(() => loadEnv(production)).toThrow(/^Invalid environment configuration: AI_PRIMARY_PROVIDER$/);
+    expect(() => loadEnv({ ...production, AI_PRIMARY_PROVIDER: "mock" })).toThrow(/AI_PRIMARY_PROVIDER/);
+    expect(loadEnv({ ...production, AI_PRIMARY_PROVIDER: "none" }).AI_PRIMARY_PROVIDER).toBe("none");
+  });
+
+  it("requires the key of each configured AI provider, naming it without the value", () => {
+    expect(() =>
+      loadEnv({ ...SUPABASE, AI_PRIMARY_PROVIDER: "gemini", AI_FALLBACK_PROVIDER: "groq" }),
+    ).toThrow(/^Invalid environment configuration: GEMINI_API_KEY, GROQ_API_KEY$/);
+    const env = loadEnv({
+      ...SUPABASE,
+      AI_PRIMARY_PROVIDER: "gemini",
+      GEMINI_API_KEY: "test-gemini-key",
+    });
+    expect(env.AI_PRIMARY_PROVIDER).toBe("gemini");
+  });
+
+  it("refuses a fallback on the same provider (no key cycling, C-14)", () => {
+    expect(() =>
+      loadEnv({ ...SUPABASE, AI_PRIMARY_PROVIDER: "groq", AI_FALLBACK_PROVIDER: "groq", GROQ_API_KEY: "k" }),
+    ).toThrow(/^Invalid environment configuration: AI_FALLBACK_PROVIDER$/);
+  });
+
+  it("treats empty values and .env.example placeholders as not set", () => {
+    const env = loadEnv({
+      ...SUPABASE,
+      AI_PRIMARY_MODEL: "replace-with-model-id",
+      AI_FALLBACK_PROVIDER: "",
+      AI_DAILY_TOKEN_BUDGET: "",
+    });
+    expect(env.AI_PRIMARY_MODEL).toBeUndefined();
+    expect(env.AI_FALLBACK_PROVIDER).toBeUndefined();
+    expect(env.AI_DAILY_TOKEN_BUDGET).toBe(300_000);
+  });
+
+  it("rejects an unknown AI provider", () => {
+    expect(() => loadEnv({ ...SUPABASE, AI_PRIMARY_PROVIDER: "anthropic" })).toThrow(
+      /^Invalid environment configuration: AI_PRIMARY_PROVIDER$/,
     );
   });
 

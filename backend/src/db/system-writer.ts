@@ -14,10 +14,43 @@ export interface AuditEventInput {
   metadata?: Record<string, unknown>;
 }
 
+export type UsageOutcome =
+  | "success"
+  | "invalid_output"
+  | "refused"
+  | "timeout"
+  | "rate_limited"
+  | "provider_error"
+  | "auth_error"
+  | "budget_blocked"
+  | "circuit_open"
+  | "not_configured";
+
+/** One AI call attempt (or skip) for cost and reliability accounting. Never prompt or output text. */
+export interface UsageEventInput {
+  ticketId: string | null;
+  task: "triage" | "draft";
+  provider: string;
+  model: string;
+  promptVersion: string | null;
+  outcome: UsageOutcome;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  latencyMs: number | null;
+  estimatedCostUsd: number;
+}
+
 export interface SystemWriter {
   /** One insert for all events (a PATCH can record several changes at once). */
   appendAuditEvents(events: AuditEventInput[]): Promise<void>;
+  appendUsageEvent(event: UsageEventInput): Promise<void>;
+  /** Input + output tokens recorded since `sinceIso` (the daily AI budget). */
+  tokensUsedSince(sinceIso: string): Promise<number>;
 }
+
+const PAGE = 1000;
 
 export function createSystemWriter(project: { url: string; secretKey: string }): SystemWriter {
   const db = createClient(project.url, project.secretKey, {
@@ -39,6 +72,40 @@ export function createSystemWriter(project: { url: string; secretKey: string }):
         })),
       );
       if (error) throw new Error(`audit insert failed (${error.code})`);
+    },
+
+    async appendUsageEvent(event) {
+      const { error } = await db.from("ai_usage_events").insert({
+        ticket_id: event.ticketId,
+        task: event.task,
+        provider: event.provider,
+        model: event.model,
+        prompt_version: event.promptVersion,
+        outcome: event.outcome,
+        input_tokens: event.inputTokens,
+        output_tokens: event.outputTokens,
+        cache_read_tokens: event.cacheReadTokens,
+        cache_write_tokens: event.cacheWriteTokens,
+        latency_ms: event.latencyMs,
+        estimated_cost_usd: event.estimatedCostUsd,
+      });
+      if (error) throw new Error(`usage insert failed (${error.code})`);
+    },
+
+    async tokensUsedSince(sinceIso) {
+      // Summed here: the Data API has aggregates off. A day is a few hundred rows.
+      let total = 0;
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await db
+          .from("ai_usage_events")
+          .select("input_tokens, output_tokens")
+          .gte("created_at", sinceIso)
+          .order("id")
+          .range(from, from + PAGE - 1);
+        if (error) throw new Error(`usage read failed (${error.code})`);
+        for (const row of data ?? []) total += row.input_tokens + row.output_tokens;
+        if ((data ?? []).length < PAGE) return total;
+      }
     },
   };
 }

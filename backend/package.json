@@ -12,6 +12,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "check:env": "tsx --env-file-if-exists=.env scripts/check-env.ts",
     "check:db": "tsx --env-file-if-exists=.env scripts/check-db.ts",
+    "check:ai": "tsx --env-file-if-exists=.env scripts/check-ai.ts",
+    "check:ai:live": "tsx --env-file-if-exists=.env scripts/check-ai.ts --live",
     "seed": "tsx --env-file-if-exists=.env scripts/seed.ts",
     "seed:apply": "tsx --env-file-if-exists=.env scripts/seed.ts --apply",
     "test": "vitest run",

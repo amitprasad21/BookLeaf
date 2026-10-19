@@ -1,7 +1,7 @@
 // In-memory stand-ins for data access in offline route tests.
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AuditEventInput, SystemWriter } from "../src/db/system-writer.js";
+import type { AuditEventInput, SystemWriter, UsageEventInput } from "../src/db/system-writer.js";
 import type { AdminTicketsRepository } from "../src/modules/tickets/admin-repository.js";
 import type {
   AuthorTicketRow,
@@ -13,16 +13,27 @@ import type {
 type StoredTicket = AuthorTicketRow & { author_id: string };
 type StoredMessage = ThreadMessageRow & { ticket_id: string };
 
-/** Captures audit events; `fail` makes every append throw. */
-export function recordingSystemWriter(options: { fail?: boolean } = {}) {
+/** Captures audit and usage events; `fail` makes every append throw. */
+export function recordingSystemWriter(options: { fail?: boolean; tokensUsedToday?: number } = {}) {
   const events: AuditEventInput[] = [];
+  const usage: UsageEventInput[] = [];
   const writer: SystemWriter = {
     async appendAuditEvents(batch) {
       if (options.fail) throw new Error("audit insert failed (simulated)");
       events.push(...batch);
     },
+    async appendUsageEvent(event) {
+      if (options.fail) throw new Error("usage insert failed (simulated)");
+      usage.push(event);
+    },
+    async tokensUsedSince() {
+      return (
+        (options.tokensUsedToday ?? 0) +
+        usage.reduce((sum, event) => sum + event.inputTokens + event.outputTokens, 0)
+      );
+    },
   };
-  return { writer, events };
+  return { writer, events, usage };
 }
 
 /**

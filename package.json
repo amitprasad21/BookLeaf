@@ -27,6 +27,8 @@
     "check": "npm run format:check && npm run lint && npm run lint:api && npm run typecheck && npm test && npm run build",
     "check:env": "npm run check:env -w backend",
     "check:db": "npm run check:db -w backend",
+    "check:ai": "npm run check:ai -w backend",
+    "check:ai:live": "npm run check:ai:live -w backend",
     "seed": "npm run seed -w backend",
     "seed:apply": "npm run seed:apply -w backend",
     "test:live": "npm run test:live -w backend",
