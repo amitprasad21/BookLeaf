@@ -1,36 +1,37 @@
 # Handover
 
 **Session:** 2026-10-19 (Claude Code)
-**Branch:** `feature/author-portal` (from `main` at `1e9a4bd`; seven commits; not merged, not pushed)
+**Branch:** `feature/admin-portal` (from `main` at `7a688a9`; seven commits; not merged, not pushed)
 
 ## Done
 
-- Merged to `main` with approval: Phase 0 through API-7 and AI-1..AI-4. The backend API is complete except SSE. Tickets are triaged by AI in the background, and admins can request reply drafts (Gemini 3.5 Flash-Lite, Groq fallback).
-- **FE-1 + author portal, built and committed** ([verification/2026-10-19-fe1-author.md](verification/2026-10-19-fe1-author.md), D-031, A-19):
-  - `packages/ui`: `components.css` + icons + primitives (AppShell/NavBar, PageHeader, Panel, Button, fields, badges, ChipGroup, Notice, states, KeyFigure, ConnectionIndicator, MessageThread, Disclosure). Presentation only; callers pass the wording.
-  - `packages/shared`:
-    - `format.ts` (INR, dates, relative time, null wording), `dto.ts` (response types), `production.ts` (stages moved from the draft facts).
-    - Backend serializers now return these DTO types.
-  - `author-frontend`:
-    - `lib/` (config, Supabase client, API client with refresh-once, query client), `providers/` (session with `/me` role check).
-    - Features: session (login, portal shell + guard), books (view model + screen), tickets (form logic, new, list, detail, seen markers).
-    - Routes `/login`, `/books`, `/tickets`, `/tickets/new`, `/tickets/[ticketId]`; CSP in `next.config.ts`.
-  - `.claude/launch.json` gained `author-frontend-dev`.
-- Results: author typecheck, lint, Prettier and production build pass. 11 shared + 22 author logic tests pass. Signed-out browser checks pass (guard, `next`, expired notice, headers, 320 px).
+- Merged to `main` with approval: Phase 0 through API-7, AI-1..AI-4, FE-1 (author set) and the author portal FE-A1..A4. The author portal's signed-in screens are still unchecked in a browser.
+- **Support console, built and committed** ([verification/2026-10-19-admin-portal.md](verification/2026-10-19-admin-portal.md), D-032):
+  - `packages/shared`: admin DTOs (returned by the admin serializers and routes) and console labels. Knowledge base and policy-floor names are checked against the backend by `backend/test/labels.test.ts`.
+  - `packages/ui`: `CheckboxGroup`, `Tabs`, `ConfirmDialog`, `Pagination`, `SlaIndicator`, `Timeline`.
+  - `admin-frontend`:
+    - Session layer copied from the author portal (role admin).
+    - `features/queue` (URL filters, summary shortcuts, "Show N updates", inline assign).
+    - `features/ticket` (header, triage + assignment, author context, notes, timeline, version-conflict handling, reply editor with the AI draft).
+  - `.claude/launch.json` gained `admin-frontend-dev` (port 3001).
+- Results: `npm run check` exit 0 (303 backend tests); 29 admin + 22 author logic tests; console production build; signed-out console checks in the browser.
 
 ## In progress
 
-- **Signed-in browser checks** (skipped for now at the user's request, 2026-10-19). The author demo password is in `backend/.env`, and the sign-in form sends credentials to the hosted Supabase project, so the user signs in (in the browser pane). Then check:
-  - My Books for Sneha Kulkarni (BK013 in production) and Kavita Deshmukh (BK016 rollover).
-  - The query form: validation, then one real submit if approved (creates a ticket and one free-tier triage call; delete it afterwards like the live suites do).
-  - My Tickets and the ticket detail; the viewport matrix.
-- Then mark FE-A1..A4 done in TASKS with the evidence.
+- **Signed-in browser checks for both portals** (author and admin). The demo passwords are in `backend/.env`, and sign-in goes to the hosted Supabase project, so the user signs in in the browser pane. Then check:
+  - Author: My Books (Sneha Kulkarni: BK013 in production; Kavita Deshmukh: BK016 rollover), the query form, My Tickets, ticket detail.
+  - Admin:
+    - Queue filters and shortcuts; open a royalty ticket and review the AI draft (one free-tier call unless reused).
+    - Override the category and see the draft refresh; add a note; send a reply on a test ticket (create and delete it like the live suites, only if approved).
+  - The viewport matrix.
+- Then mark FE-M1..M4, AI-5 and FE-A1..A4 done in TASKS with the evidence.
 
 ## Broken / risky
 
 - **npm 10.2.5 on PATH** crashes on this workspace. Use Node's bundled npm 11.6.2 (`"C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js"`). Root scripts swallow extra flags; run vitest inside a workspace when flags are needed.
 - **Bash heredocs in this environment halve backslashes.** Write code containing `\n` or regexes with the file editor, not via heredoc + Python.
-- The author logic tests run with the root-hoisted Vitest (`npx vitest run --root author-frontend`). Declaring `vitest` (and Testing Library, jsdom) in `author-frontend/package.json` needs approval. Until then, `npm test` doesn't run them.
+- The frontend logic tests run with the root-hoisted Vitest (`npx vitest run --root author-frontend` / `--root admin-frontend`). They have no config, so tested modules avoid the `@/` alias. Declaring `vitest` (and Testing Library, jsdom) in the frontends needs approval; until then `npm test` doesn't run them.
+- A partial-tree typecheck (e.g. while splitting commits) can trip over stale `.next/dev/types` left by a dev server; delete that git-ignored folder first.
 - Free-tier Gemini: quotas unpublished; content may be used by Google (A-18).
 - `GROQ_FALLBACK_API_KEY` in `backend/.env` is unused (C-14); delete it.
 - Ticket writes and their audit events are separate writes. An audit failure is logged, not retried.
@@ -38,23 +39,23 @@
 
 ## Next
 
-1. Signed-in author checks (above), then commits on `feature/author-portal` after approval.
-2. Admin portal: FE-M1..M4 + AI-5 (queue, detail, triage and draft panel, reply editor), building the remaining `packages/ui` components.
-3. API-8 (SSE; switches both portals from polling to "Live"), AI-6 (evals), hardening and deployment.
+1. Fast-forward `main` to `feature/admin-portal` (needs approval); the signed-in checks (above).
+2. API-8 (SSE): both portals switch from polling to "Live"; the queue's polled copy becomes event-driven.
+3. AI-6 (evals; a live run needs approval), hardening (nonce CSP, shared web package if the session copies drift), deployment.
 
 ## Do not touch
 
 - `backend/.env`, `author-frontend/.env.local`, `admin-frontend/.env.local`: real credentials, git-ignored, never read into chat.
 - `supabase/seed/bookleaf_sample_data.json` (byte-identical). `docs/blueprint/`.
 
-## Commits (approved by the user 2026-10-19; grouping left to the agent)
+## Commits (approved by the user 2026-10-19)
 
-On `feature/author-portal` (hashes: `git log --oneline main..`). Each code commit was checked on its own (the rest stashed): typecheck, lint and the relevant tests.
+On `feature/admin-portal` (hashes: `git log --oneline main..`). Each code commit was checked on its own (the rest stashed): typecheck, lint and the relevant tests.
 
-1. `feat(shared): add display formatters, response DTOs and production stages`
-2. `refactor(api): return the shared DTO types and production stages`
-3. `feat(ui): add component styles, icons and primitives`
-4. `feat(author): add sign-in, session and API client`
-5. `feat(author): add My Books`
-6. `feat(author): add Raise a query, My Tickets and ticket detail`
-7. `docs: record FE-1 and author portal decisions and verification`
+1. `feat(shared): add admin response DTOs and console labels`
+2. `refactor(api): return the shared admin DTO types`
+3. `feat(ui): add checkbox group, tabs, dialog, pagination, SLA indicator and timeline`
+4. `feat(admin): add sign-in, session and API client`
+5. `feat(admin): add the ticket queue`
+6. `feat(admin): add the ticket page with triage, notes, timeline and the AI reply editor`
+7. `docs: record support console decisions and verification`

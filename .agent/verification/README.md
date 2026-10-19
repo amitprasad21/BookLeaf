@@ -28,3 +28,4 @@ Each entry records:
 | [2026-10-19-ai3.md](2026-10-19-ai3.md) | AI triage: queue, sweeper, floors, manual re-run; 267 offline + 57 live tests, smoke on Gemini incl. an injection attempt |
 | [2026-10-19-ai4.md](2026-10-19-ai4.md) | AI reply drafts: KB, facts, guards, reuse, regenerate; 290 offline + 61 live tests; live drafts reviewed, two fixes from live output |
 | [2026-10-19-fe1-author.md](2026-10-19-fe1-author.md) | UI package + author portal: typecheck, lint, build, 33 logic tests, signed-out browser checks (signed-in checks pending) |
+| [2026-10-19-admin-portal.md](2026-10-19-admin-portal.md) | Support console + rest of FE-1: typecheck, lint, build, `npm run check`, 29 logic tests, signed-out browser checks (signed-in checks pending) |

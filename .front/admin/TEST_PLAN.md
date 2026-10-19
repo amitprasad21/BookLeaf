@@ -2,6 +2,8 @@
 
 Status of every case: **not run** until recorded in [.agent/verification/](../../.agent/verification/README.md).
 
+**Run so far (2026-10-19, [2026-10-19-admin-portal.md](../../.agent/verification/2026-10-19-admin-portal.md)):** MT-01 and MT-09 and the MT-04 wording at logic level (Vitest: `admin-frontend/src/features/**/*.test.ts`). Rendered component tests need Testing Library (not installed); the signed-in journeys need an admin sign-in.
+
 ## Automated (component/integration)
 
 | ID | Case | Expected |

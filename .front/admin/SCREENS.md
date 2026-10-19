@@ -21,7 +21,7 @@ Open · In progress · Unassigned · Critical · Overdue · Needs manual triage.
 - Search: reference, subject or author name
 - "Clear filters"
 
-**Sort** (select): Most urgent (default) · Newest · Oldest · Recently updated. The urgency rule is shown in a tooltip: "Unresolved first, then priority, then oldest."
+**Sort** (select): Most urgent (default) · Newest · Oldest · Recently updated. The urgency rule is shown as hint text under the Sort select: "Unresolved first, then priority, then oldest."
 
 **Table columns** (≥ 1024 px):
 
@@ -30,10 +30,10 @@ Open · In progress · Unassigned · Critical · Overdue · Needs manual triage.
 | Priority | `PriorityBadge` + `SourceTag` icon (AI/Admin); "Needs triage" if null |
 | Ticket | Reference (mono) + subject (link to detail) |
 | Author | Name; book title (or "General") beneath |
-| Category | Label + source icon; "Low confidence" marker when AI confidence < 0.5 |
+| Category | Label + source icon. (The "Low confidence" marker is on the ticket page only: the list API has no confidence, D-032.) |
 | Status | `StatusBadge` |
 | Age | Relative age since created; `SlaIndicator` when breached/due soon |
-| Assignee | Name or "Unassigned"; inline "Assign to me" button on hover/focus |
+| Assignee | Name or "Unassigned"; inline "Assign to me" button (always visible: hover-only controls fail on touch) |
 | AI | `pending` spinner + "Triaging…", or "Manual" when `manual_review_required` |
 
 Below 768 px: cards showing priority, subject, author, status and age.

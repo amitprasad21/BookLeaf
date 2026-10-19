@@ -3,7 +3,7 @@
 **Owns:** the current milestone, verified facts, blockers and open questions. Update at the end of every session.
 
 **Last updated:** 2026-10-19
-**Milestone:** Phase 0, SETUP-2, SETUP-3 and API-1 are merged to `main`. DB-1 (Supabase project + credentials) is merged to `main`. DB-2 (initial schema, applied and verified) is merged to `main`. DB-3 (RLS policies) and DB-4 (seed) are **applied, seeded, verified and merged** (project `jhszxq…`). API-2 (auth, role guards, `GET /me`), API-3 (`GET /author/books` + royalty summary + shared payout calendar), API-4 (author tickets), API-5 (admin queue + summary; migration `20261018090000_queue_urgency_rank.sql` applied by the user) and API-6 (admin ticket detail + PATCH) are merged. API-7 (admin replies + internal notes; migration `20261018120000_admin_reply_function.sql` applied by the user) is merged. AI-1/AI-2 (providers: Gemini primary, Groq fallback; router, breaker, budget, usage) are merged. AI-3 (triage: queue, sweeper, floors, manual re-run) is merged. AI-4 (reply drafts) is merged (`main` at `1e9a4bd`). FE-1 (UI package, author set) and the author portal FE-A1..A4 are built and committed on `feature/author-portal` (not merged): offline checks, build and the signed-out browser checks pass; the signed-in browser checks wait for an author sign-in (skipped for now at the user's request). No admin screens, SSE or deployment yet.
+**Milestone:** Phase 0, SETUP-2, SETUP-3 and API-1 are merged to `main`. DB-1 (Supabase project + credentials) is merged to `main`. DB-2 (initial schema, applied and verified) is merged to `main`. DB-3 (RLS policies) and DB-4 (seed) are **applied, seeded, verified and merged** (project `jhszxq…`). API-2 (auth, role guards, `GET /me`), API-3 (`GET /author/books` + royalty summary + shared payout calendar), API-4 (author tickets), API-5 (admin queue + summary; migration `20261018090000_queue_urgency_rank.sql` applied by the user) and API-6 (admin ticket detail + PATCH) are merged. API-7 (admin replies + internal notes; migration `20261018120000_admin_reply_function.sql` applied by the user) is merged. AI-1/AI-2 (providers: Gemini primary, Groq fallback; router, breaker, budget, usage) are merged. AI-3 (triage: queue, sweeper, floors, manual re-run) is merged. AI-4 (reply drafts) is merged (`main` at `1e9a4bd`). FE-1 (UI package, author set) and the author portal FE-A1..A4 are merged (`main` at `7a688a9`): offline checks, build and the signed-out browser checks pass; the signed-in browser checks wait for an author sign-in (skipped for now at the user's request). The support console (FE-M1..M4 + AI-5, rest of FE-1) is built and committed on `feature/admin-portal` (not merged): offline checks, build and signed-out browser checks pass; signed-in checks wait for an admin sign-in. No SSE or deployment yet.
 
 ## Verified facts (with evidence)
 
@@ -23,6 +23,8 @@
 | `npm run check` (format, lint, OpenAPI lint, typecheck, tests, build) exits 0; `openapi.yaml` is valid OpenAPI 3.1 with 18 operationIds; fresh `npm ci` rebuilds shared packages via `prepare` | [.agent/verification/2026-10-16-setup3.md](.agent/verification/2026-10-16-setup3.md) |
 | `main` fast-forwarded to SETUP-3 (`6898131`) with the user's approval | `git branch -v` |
 | `main` fast-forwarded to API-1 (`af9fc08`) with the user's approval | `git branch -v` |
+| Support console (in progress): queue with URL filters, summary shortcuts, "Show N updates" polling and inline assign; ticket page with triage controls (allowed transitions, overrides with AI source and confidence, policy floor, retry triage), conflict handling, author context, notes, timeline; reply editor with the AI draft (warnings, missing information, escalation, regenerate, manual mode). Shared admin DTOs and labels (KB/floor names checked against the backend). `npm run check` exit 0 (303 backend tests), 29 admin + 22 author logic tests, production build, signed-out browser checks; signed-in screens not yet checked | [.agent/verification/2026-10-19-admin-portal.md](.agent/verification/2026-10-19-admin-portal.md) |
+| `main` fast-forwarded to the author portal (`7a688a9`) with the user's approval | `git branch -v` |
 | FE-1 + author portal (in progress): `packages/ui` primitives and icons, shared formatters and DTO types, author sign-in/session/API client, My Books, Raise a query, My Tickets and ticket detail (15 s polling). Typecheck, lint, production build, 33 new logic tests (11 shared + 22 author) and the signed-out browser checks pass; signed-in screens not yet checked | [.agent/verification/2026-10-19-fe1-author.md](.agent/verification/2026-10-19-fe1-author.md) |
 | `main` fast-forwarded to AI-4 (`1e9a4bd`) with the user's approval | `git branch -v` |
 | AI-4: admins get reply drafts grounded in the KB and the author's own facts (reused by context hash, regenerate capped, fact warnings, standard sign-off); on the free tier Gemini 3.8 Flash was too slow, so drafts use 3.5 Flash-Lite (about 2 s) with Groq fallback; a live draft that called an overdue payment "not overdue" led to explicit facts-reading rules; 290 offline tests, 61 live tests | [.agent/verification/2026-10-19-ai4.md](.agent/verification/2026-10-19-ai4.md) |
@@ -49,8 +51,8 @@
 
 ## Not done / not verified
 
-- No deployment. Not built yet: the admin portal (FE-M1..M4, AI-5), SSE (API-8) and evals (AI-6). Author follow-up messages are deferred (X-2).
-- Author portal: the signed-in screens have not been checked in a browser. Frontend component tests (Testing Library) and end-to-end tests (Playwright) are not installed; the author logic tests run with the root-hoisted Vitest, which `author-frontend/package.json` doesn't declare yet.
+- No deployment. Not built yet: SSE (API-8) and evals (AI-6). Author follow-up messages are deferred (X-2).
+- Author portal and support console: the signed-in screens have not been checked in a browser. Frontend component tests (Testing Library) and end-to-end tests (Playwright) are not installed; the author logic tests run with the root-hoisted Vitest, which `author-frontend/package.json` doesn't declare yet.
 - Rate limits are in-memory per instance (A-15); the database trigger is the cross-instance cap.
 - Mermaid diagrams in the docs have not been rendered locally (no renderer installed); they target GitHub's renderer.
 - The blueprint PDF was not regenerated (pandoc/XeLaTeX not installed, and not required for this phase).
@@ -78,4 +80,4 @@
 
 ## Next step
 
-Check the signed-in author screens in the browser (needs an author sign-in by the user), then mark FE-A1..A4 done. Fast-forwarding `main` needs approval. Then the admin portal FE-M1..M4 + AI-5, API-8 (SSE) and AI-6 (evals).
+Check the signed-in screens of both portals in the browser (needs a sign-in by the user), then fast-forward `main` to `feature/admin-portal` (needs approval). Then API-8 (SSE), AI-6 (evals), hardening and deployment.

@@ -29,6 +29,7 @@
 | D-022 | Token verification via `supabase.auth.getClaims()` (ES256/JWKS, local); profile + author loaded per request through the caller's RLS client | accepted | 2026-10-18 |
 | D-023 | Payout calendar in `packages/shared`; ₹1,000 threshold on the author's total pending; `nextPayoutDueBy` = earliest deadline not yet passed | accepted | 2026-10-18 |
 | D-024 | Author ticket API: zod parse in handlers (no `validate` middleware), same 400 for unknown and not-owned books, per-user limits + DB backstop, audit via the system writer | accepted | 2026-10-18 |
+| D-032 | Support console: session layer copied from the author portal (no shared web package yet); polled queue offered as "Show N updates"; AI draft requested on open only when it's the team's turn; category override refetches the draft; KB and policy-floor names in `packages/shared` with a sync test | accepted | 2026-10-19 |
 | D-031 | Frontend foundation: `packages/ui` is presentation-only (no `@bookleaf/shared` dependency; CSS classes over tokens); DTO types in `packages/shared` and returned by the serializers; session from `INITIAL_SESSION` + `/me`; 15 s polling until SSE; CSP with `'unsafe-inline'` scripts (nonce CSP is a hardening option) | accepted | 2026-10-19 |
 | D-030 | AI drafts: Flash-Lite for drafts (3.8 Flash too slow on the free tier), KB as a TS module with category selection, facts-reading rules in the prompt, guards with one repair, server-set sign-off, fact warnings, context-hash reuse, admin-RLS storage | accepted | 2026-10-19 |
 | D-029 | AI triage: background queue + sweeper; attempts counted on the final write under the version lock; admin values never replaced; manual re-run caps; JSON-escaped ticket; provider schema shape-only; 30 s triage timeout | accepted | 2026-10-19 |
@@ -313,3 +314,27 @@
   - React escapes all text, no `dangerouslySetInnerHTML` is allowed (lint rule), and messages are plain text. A nonce CSP is the hardening upgrade.
 - **Unsent text:** the query draft (about, subject, description) is kept in `sessionStorage` until sent, so it survives errors, reloads and an expired session (FLOWS F-A5).
 - **Revisit:** at API-8 (indicator and invalidation), at hardening (nonce CSP, cookie sessions per ALTERNATIVES), and if a monochrome spec arrives (tokens only).
+
+### D-032: Support console (FE-M1..M4, AI-5)
+- **Context:** the admin portal: queue, ticket page, triage controls, the AI draft in the reply editor.
+- **Session layer copied, not shared:** `lib/` (config, Supabase client, API client), the session provider and the sign-in screen are copies of the author portal's, with role `admin`, storage key `bookleaf-admin-auth` and the console copy.
+  - A shared package would need a new workspace (and a lockfile change), because `packages/ui` stays free of Supabase and React Query.
+  - Revisit at hardening if the copies start to drift.
+- **Live queue without reordering:**
+  - The shown list is fetched on load, filter changes and the admin's own actions.
+  - A second, polled copy (15 s) is compared with it: new, changed (version or AI state) and removed tickets give "Show N updates", and new tickets are announced politely.
+  - Rows never move under the admin (admin/SCREENS.md M2). API-8 will invalidate the polled copy instead.
+- **AI draft on open, only when it's the team's turn:** no reply yet, or the author wrote last.
+  - Otherwise the editor offers "Draft a reply with AI", so opening a ticket just to check it doesn't spend a model call.
+  - The API's context-hash reuse (D-030) makes reopening free either way.
+- **Draft vs typing:** the field shows the draft until the admin types. Typing first keeps the typed text when a late draft arrives (MT-10).
+  - The draft the text started from is sent as `draftId`.
+  - Unsent text is kept per ticket in `sessionStorage`.
+  - Regenerating over edits asks first.
+- **Category override refetches the shown draft:** the knowledge base sections follow the category; the API reuses the draft if nothing changed.
+- **Names from the backend sources live in `packages/shared`:** knowledge base section titles and policy-floor rules. `backend/test/labels.test.ts` fails if they drift.
+- **Deviations from admin/SCREENS.md:**
+  - The queue has no "Low confidence" marker, because the list API carries no confidence; the ticket page shows it.
+  - "Assign to me" is always visible (hover-only controls fail on touch).
+  - The urgency rule is hint text under Sort, not a tooltip.
+
