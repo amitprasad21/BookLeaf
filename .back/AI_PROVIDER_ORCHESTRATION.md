@@ -1,12 +1,12 @@
 # AI Provider Orchestration
 
-**Owns:** the provider interface, provider adapters, router, circuit breaker, budget, job queue, sweeper and usage accounting. What the AI does (taxonomy, prompts, schemas) is in [AI_SPEC.md](../AI_SPEC.md); failure semantics are in [AI_FAILURE_HANDLING.md](AI_FAILURE_HANDLING.md). Status: provider layer (AI-1/AI-2, D-028) and triage with queue and sweeper (AI-3, D-029) built; drafts planned (AI-4).
+**Owns:** the provider interface, provider adapters, router, circuit breaker, budget, job queue, sweeper and usage accounting. What the AI does (taxonomy, prompts, schemas) is in [AI_SPEC.md](../AI_SPEC.md); failure semantics are in [AI_FAILURE_HANDLING.md](AI_FAILURE_HANDLING.md). Status: provider layer (AI-1/AI-2, D-028), triage with queue and sweeper (AI-3, D-029) and drafts (AI-4, D-030) built.
 
 ## 1. Module layout
 
 ```text
 backend/src/ai/
-├── orchestrator.ts        triageTicket(), getOrCreateDraft(): the only entry points used by services (AI-3/AI-4)
+├── drafts.ts              getOrCreate(): reuse by context hash or generate, guards, fact warnings, storage (built, AI-4)
 ├── config.ts              env → provider plan (per-task models) → router (built, AI-2)
 ├── router.ts              provider selection, failover, circuit + budget gates, usage events (built)
 ├── circuit-breaker.ts     (built)
@@ -23,10 +23,10 @@ backend/src/ai/
 │   ├── gemini.ts          Gemini REST generateContent adapter (no SDK)
 │   ├── groq.ts            Groq OpenAI-compatible adapter (no SDK)
 │   └── mock.ts            deterministic provider for tests and local dev
-├── prompts/               triage.ts (built: system prompt, user content, repair note, mock responder), draft.ts (AI-4)
-├── knowledge-base/        kb.*.md section files + index.ts (section registry)
-├── facts/                 triage-facts.ts (built); draft facts (AI-4); payout rules from @bookleaf/shared
-├── validation/            floors.ts (built); fact-guard.ts, placeholder-guard.ts (AI-4); schemas live in packages/shared
+├── prompts/               triage.ts, draft.ts (built: static prompts, delimited user content, repair notes, mock responders); index.ts collects the mocks
+├── knowledge-base/        index.ts: the 12 KB sections, KB_VERSION, selectKbSections (built, AI-4)
+├── facts/                 triage-facts.ts, draft-facts.ts (built); payout rules from @bookleaf/shared
+├── validation/            floors.ts, draft-guards.ts (shape problems, fact warnings, standard sign-off) (built); schemas live in packages/shared
 └── eval/                  golden sets + runners
 ```
 
@@ -134,6 +134,12 @@ As built (AI-3, D-029):
 5. Run the fact guard → `fact_warnings`.
 6. Mark earlier drafts `superseded`; insert the new draft; audit `ai.draft_generated` / `ai.draft_regenerated`; return 201.
 
+As built (AI-4, D-030):
+- It runs on the admin's request with the admin's RLS-scoped repository (`findDetail`, `findReadyDraft`, `insertDraft`, `supersedeOtherDrafts`, `countAuditEvents`), so no system writer is involved.
+- The guards also reject a reply with no paragraph breaks, and the server sets the standard sign-off before the fact guard runs.
+- Regeneration caps: 5 per ticket per India business day (from audit events) and 10 per minute per admin (route limiter).
+- With AI off, the route answers 503 `not_configured`.
+
 ## 8. Usage accounting and cost estimate
 
 Every attempt (including failures and budget/circuit skips) writes one `ai_usage_events` row: task, provider, model, prompt version, outcome, tokens (incl. cache read/write), latency, estimated cost. Cost uses a per-model price table in `ai/pricing.ts` (USD per 1M tokens for input, output, cache read and cache write). Prices are verified against the provider's current pricing at AI-1 and always labelled "estimate".
@@ -143,7 +149,7 @@ Every attempt (including failures and budget/circuit skips) writes one `ai_usage
 | Variable | Default | Meaning |
 |---|---|---|
 | `AI_PRIMARY_PROVIDER` | `mock` (dev/test); required in prod (`gemini`, `groq` or `none`; never `mock`) | `gemini` \| `groq` \| `mock` \| `none` |
-| `AI_PRIMARY_MODEL` / `AI_PRIMARY_DRAFT_MODEL` | Gemini: `gemini-3.5-flash-lite` / `gemini-3.8-flash`; Groq: `openai/gpt-oss-120b` | The model sets both tasks unless the draft model is given |
+| `AI_PRIMARY_MODEL` / `AI_PRIMARY_DRAFT_MODEL` | Gemini: `gemini-3.5-flash-lite` for both (D-030; `gemini-3.8-flash` was too slow for drafts on the free tier); Groq: `openai/gpt-oss-120b` | The model sets both tasks unless the draft model is given |
 | `AI_FALLBACK_PROVIDER` (+ `_MODEL`, `_DRAFT_MODEL`) | empty | Must differ from the primary (C-14) |
 | `GEMINI_API_KEY` / `GROQ_API_KEY` | (none) | Required for each configured provider; never printed. Placeholders and empty values count as not set |
 | `AI_DAILY_TOKEN_BUDGET` | 300000 | Hard daily cap |

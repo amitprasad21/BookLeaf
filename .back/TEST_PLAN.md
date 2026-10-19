@@ -25,12 +25,12 @@ Integration tests use a dedicated test author and test admin plus tickets they c
 | U-05 | lifecycle | Every allowed transition passes; every other pair → InvalidTransition (**implemented**: `backend/test/admin-ticket.test.ts`) |
 | U-06 | lifecycle | Reply on `open` → `in_progress`; `statusAfter=resolved` → `resolved`; reply on `closed` rejected (**implemented** in the database function; live `test-integration/admin-replies.test.ts`) |
 | U-07 | floors | `isbn_error` + low → high; `legal_or_rights` → critical; floors never lower (**implemented**: `backend/test/ai-triage.test.ts`) |
-| U-08 | placeholder-guard | Detects `[insert date]`, `{{name}}` |
-| U-09 | fact-guard | `₹3,570` matches BK001 pending; `₹4,000` flagged; dates normalised across formats |
+| U-08 | placeholder-guard | Detects `[insert date]`, `{{name}}` (**implemented**, plus a nameless greeting and one-block replies: `backend/test/ai-drafts.test.ts`) |
+| U-09 | fact-guard | `₹3,570` matches BK001 pending; `₹4,000` flagged; dates normalised across formats (**implemented**) |
 | U-10 | serializers | Author DTO keys = exact allowlist (snapshot) |
 | U-11 | sla | met / breached / due_soon / on_track / not_applicable boundaries (**implemented**: `backend/test/sla.test.ts`) |
-| U-12 | facts | Never includes email, phone, city; `authorBooks` only for General tickets in royalty/general categories |
-| U-13 | KB selection | Each category maps to the expected section IDs |
+| U-12 | facts | Never includes email, phone, city; `authorBooks` only for General tickets in royalty/general categories (**implemented**, plus production stage facts) |
+| U-13 | KB selection | Each category maps to the expected section IDs (**implemented**) |
 | U-14 | router | Failover order, breaker transitions, no failover on refusal/bad_request (**implemented**: `backend/test/ai-router.test.ts`, adapters in `ai-providers.test.ts`) |
 
 ## API integration cases
@@ -53,8 +53,8 @@ Integration tests use a dedicated test author and test admin plus tickets they c
 | I-14 | `PATCH` | Category override | `category_source=admin`; audit row with old/new (**implemented**, offline + live) |
 | I-15 | `POST /admin/tickets/{id}/messages` | First reply | `first_response_at` set; status in_progress; author sees message (**implemented**, offline + live) |
 | I-16 | `POST /admin/tickets/{id}/notes` | Note | Visible to admin; absent from author view (**implemented**, offline + live) |
-| I-17 | `POST /admin/tickets/{id}/draft` | Twice, unchanged context | Second returns 200 cached, 1 usage event |
-| I-18 | `POST /admin/tickets/{id}/draft` | Mock invalid output | 503 `invalid_output` after one repair attempt |
+| I-17 | `POST /admin/tickets/{id}/draft` | Twice, unchanged context | Second returns 200 cached, 1 usage event (**implemented**: offline + live) |
+| I-18 | `POST /admin/tickets/{id}/draft` | Mock invalid output | 503 `invalid_output` after one repair attempt (**implemented**) |
 | I-19 | `POST /author/tickets` | 6 within 10 min | 6th → 429 with Retry-After |
 | I-20 | `GET /events` | Author subscribed; admin replies to another author's ticket | No event delivered to this author |
 | I-21 | error handler | Forced internal error in production mode | Generic 500, no stack, requestId present |

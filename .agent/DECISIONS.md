@@ -29,6 +29,7 @@
 | D-022 | Token verification via `supabase.auth.getClaims()` (ES256/JWKS, local); profile + author loaded per request through the caller's RLS client | accepted | 2026-10-18 |
 | D-023 | Payout calendar in `packages/shared`; ₹1,000 threshold on the author's total pending; `nextPayoutDueBy` = earliest deadline not yet passed | accepted | 2026-10-18 |
 | D-024 | Author ticket API: zod parse in handlers (no `validate` middleware), same 400 for unknown and not-owned books, per-user limits + DB backstop, audit via the system writer | accepted | 2026-10-18 |
+| D-030 | AI drafts: Flash-Lite for drafts (3.8 Flash too slow on the free tier), KB as a TS module with category selection, facts-reading rules in the prompt, guards with one repair, server-set sign-off, fact warnings, context-hash reuse, admin-RLS storage | accepted | 2026-10-19 |
 | D-029 | AI triage: background queue + sweeper; attempts counted on the final write under the version lock; admin values never replaced; manual re-run caps; JSON-escaped ticket; provider schema shape-only; 30 s triage timeout | accepted | 2026-10-19 |
 | D-028 | AI providers: Gemini (3.5 Flash-Lite triage, 3.8 Flash drafts) + Groq gpt-oss-120b fallback on free tiers; REST adapters without SDKs; no second key per provider; no Logfire | accepted | 2026-10-18 |
 | D-027 | Admin reply as one Postgres function (`admin_send_reply`, security invoker, locked row, open/in-progress only); notes via RLS insert; audit after commit without text | accepted | 2026-10-18 |
@@ -262,3 +263,30 @@
 - **Timeout:** `AI_TRIAGE_TIMEOUT_MS` default raised from 15 s to 30 s. Free-tier Flash-Lite took 8–13 s per triage in the smoke test, and nobody waits on a background job.
 - **Measured:** about 1,100–1,150 input and 74–107 output tokens per triage on `gemini-3.5-flash-lite` (≈ $0.0005 at list price; free tier). One unusable answer in five was fixed by the repair attempt.
 - **Live test usage:** the live suite's provider calls stay in `ai_usage_events` (with `ticket_id` null once the test tickets are deleted). They are real usage and count toward the daily budget.
+
+### D-030: AI reply drafts (AI-4)
+- **Context:** AI-4: `POST /admin/tickets/{id}/draft`, with knowledge base sections, a facts builder, the prompt, validation, the fact guard and context-hash reuse.
+- **Draft model changed from D-028:** Gemini **3.5 Flash-Lite** is now the default for drafts too.
+  - Measured on the free tier 2026-10-19: `gemini-3.8-flash` timed out on draft-sized prompts three times at 30 s, then gave no answer in 90 s even with thinking set to low. Earlier it also returned one 5xx overload.
+  - `gemini-3.5-flash-lite` drafted in about 2 s (1.3–1.4k tokens in, 240–360 out).
+  - Groq gpt-oss-120b (about 2.4 s) remains the fallback.
+  - 3.8 Flash stays available through `AI_PRIMARY_DRAFT_MODEL=gemini-3.8-flash`, e.g. on a paid key. AI-6 evals can compare quality.
+- **Knowledge base:** `backend/src/ai/knowledge-base/index.ts`.
+  - A TypeScript module, not `.md` files, so it ships with the build without file copying.
+  - Twelve sections transcribed from the assignment PDF on 2026-10-19 (₹ signs and ranges restored where text extraction dropped them); `KB_VERSION` is part of the context hash.
+  - Section choice is deterministic by effective category (AI_SPEC §7), plus distribution for a metadata change request.
+- **Facts:** `facts/draft-facts.ts`.
+  - First name only; the book's catalogue and royalty figures; the author's books for General royalty/general tickets.
+  - The payout calendar with the overdue and threshold flags; the production stage, its position of 9, the next stage and known delay points.
+  - Never email, phone or city.
+- **Prompt** (`draft-2026-10-19.2`):
+  - The assignment's tone guidelines plus explicit rules for reading the facts. After a live draft told an author with `paymentPossiblyOverdue: true` that the payment was not overdue, the prompt now requires: acknowledge it, escalate to finance, update within 48 hours. Below threshold → explain the rollover; production → stage and next step without blame.
+  - KB sections, facts, ticket and the last 4 thread messages (1,500 characters each) are delimited and JSON-escaped.
+- **Guards:**
+  - Shape problems (sections not provided, `[…]`/`{{…}}` placeholders, a nameless greeting, a reply with no paragraph breaks) trigger one repair attempt; a second failure is 503 `invalid_output`. The paragraph rule came from a live one-block reply, which the repair fixed.
+  - The sign-off is set by the server, replacing whatever closing the model wrote. A live draft had it inline and then twice.
+  - The fact guard turns ₹ amounts and dates that are in neither the facts nor the author's words into `factWarnings`. It never blocks.
+- **Reuse:** `context_hash` = sha256 of [prompt version, KB version, primary draft model, effective category, subject, description, latest message id, facts]. A `ready` draft with the same hash is returned with 200 and no AI call.
+- **Regeneration:** 201, limited to 5 per ticket per India business day (counted from `ai.draft_regenerated` audit events) and 10 per minute per admin (plain opens aren't limited). Earlier drafts become `superseded`.
+- **Storage:** drafts are stored through the admin's RLS-scoped client (policy: `requested_by` = caller; admins may only change `status`). No system writer is involved. Audit `ai.draft_generated`/`ai.draft_regenerated` records ids, provider, model, sections and the warning count, never text.
+- **Measured:** about 4–7 s per `/draft` request end to end, with the model call itself about 2 s on Flash-Lite. A reused draft returns in about 1.4 s.

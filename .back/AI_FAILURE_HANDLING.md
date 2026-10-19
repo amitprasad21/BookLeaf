@@ -6,7 +6,7 @@
 
 ## Failure matrix
 
-As built (AI-2, D-028), "Detection" comes from the REST adapters' classification of HTTP status and structured fields rather than SDK exception classes. A 429 with a retry delay over 60 s is a `quota` window (the provider is parked for an hour and the fallback serves). Router-level behaviour for AF-01..AF-08 is implemented and tested in `backend/test/ai-router.test.ts`; ticket-state outcomes (`failed`, `manual_review_required`) are implemented by the triage job (AI-3, D-029) and tested in `backend/test/ai-triage.test.ts` (AF-04, AF-05, AF-07, AF-09, AF-10) and live in `test-integration/ai-triage.test.ts`. AF-11 (draft fact warnings) arrives with AI-4.
+As built (AI-2, D-028), "Detection" comes from the REST adapters' classification of HTTP status and structured fields rather than SDK exception classes. A 429 with a retry delay over 60 s is a `quota` window (the provider is parked for an hour and the fallback serves). Router-level behaviour for AF-01..AF-08 is implemented and tested in `backend/test/ai-router.test.ts`; ticket-state outcomes (`failed`, `manual_review_required`) are implemented by the triage job (AI-3, D-029) and tested in `backend/test/ai-triage.test.ts` (AF-04, AF-05, AF-07, AF-09, AF-10) and live in `test-integration/ai-triage.test.ts`. AF-11 (draft fact mismatch → draft returned with warnings) is implemented in AI-4 (`ai-drafts.test.ts`). The draft path also covers AF-04 (one repair, then 503 `invalid_output`) and AF-07 (AI off → 503 `not_configured`).
 
 | Condition | Detection | Retry? | Fallback provider? | Breaker | Triage outcome (`ai_status` / reason) | Draft outcome | Admin sees |
 |---|---|---|---|---|---|---|---|

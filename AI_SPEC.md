@@ -22,7 +22,7 @@ The user supplied Gemini and Groq keys and asked for the best free-tier models. 
 
 | Role | Provider / model | Why | Paid list price per 1M tokens (in / out)¹ |
 |---|---|---|---|
-| **Drafts** | Gemini `gemini-3.8-flash` (stable) | Google's "most intelligent Flash model". Its free quota is small (third-party reports say about 20 requests/day), so it serves the low-volume, quality-sensitive task | $0.75 / $3.75 (rising 2027-01-01) |
+| **Drafts** | Gemini `gemini-3.5-flash-lite` (changed in AI-4, D-030) | `gemini-3.8-flash` was the first choice, but on the free tier it timed out on draft-sized prompts (30 s three times, no answer in 90 s); Flash-Lite drafts in about 2 s. 3.8 Flash remains available via `AI_PRIMARY_DRAFT_MODEL` | $0.30 / $2.50 (3.8 Flash: $0.75 / $3.75) |
 | **Triage** (one call per ticket) | Gemini `gemini-3.5-flash-lite` (stable) | Google's recommended high-throughput model, with a much larger free quota | $0.30 / $2.50 |
 | **Fallback** for both | Groq `openai/gpt-oss-120b` (production) | A different provider (C-14), strict JSON-schema output, fast | $0.15 / $0.60 ($0.075 cached input) |
 
@@ -158,7 +158,7 @@ TriageResult = {
 
 ## 7. Knowledge Base context strategy
 
-The assignment's Knowledge Base is about 1,500–2,000 tokens. It is stored as versioned section files in `backend/src/ai/knowledge-base/` (one file per section ID), transcribed from the assignment and reviewed against it.
+The assignment's Knowledge Base is about 1,500–2,000 tokens. It is stored as a versioned TypeScript module, `backend/src/ai/knowledge-base/index.ts` (one entry per section ID, `KB_VERSION`), transcribed from the assignment PDF and reviewed against it on 2026-10-19 (D-030).
 
 | Section ID | Content |
 |---|---|
@@ -262,6 +262,13 @@ DraftResult = {
 ```
 
 **Parameters:** `max_tokens: 4096` (leaves room for adaptive thinking), effort default (`medium`), timeout `AI_DRAFT_TIMEOUT_MS` (30 s).
+
+**As built (AI-4, D-030):**
+- Prompt version `draft-2026-10-19.2`, with explicit rules for reading `paymentPossiblyOverdue`, `pendingBelowThreshold` and `production`.
+- The guards also reject a reply with no paragraph breaks.
+- The server replaces the model's closing with the standard sign-off.
+- The context hash also includes `KB_VERSION`.
+- The model is Gemini 3.5 Flash-Lite (about 2 s per draft) with Groq gpt-oss-120b as fallback.
 
 **Post-validation (server):**
 
