@@ -150,9 +150,9 @@ TriageResult = {
 }
 ```
 
-**Parameters:** `max_tokens: 1024`, `output_config.effort: "low"` (tuned via eval), timeout `AI_TRIAGE_TIMEOUT_MS` (15 s).
+**Parameters (as built, D-029):** `maxOutputTokens: 1024`, model default thinking (Flash-Lite: minimal), timeout `AI_TRIAGE_TIMEOUT_MS` (30 s; free-tier calls took 8–13 s). Prompt version `triage-2026-10-19.1` (`backend/src/ai/prompts/triage.ts`); facts and ticket are sent as JSON inside `<facts>`/`<ticket>` with `<` and `>` escaped.
 
-**Post-processing:** parse → zod validate → apply floors → persist `ai_category`, `ai_priority`, `ai_confidence`, `ai_signals`, `ai_rationale`, `ai_policy_floor`, `ai_status=completed`. Set effective `category`/`priority` only where `*_source` is null (not overridden). Emit `ticket.triaged`.
+**Post-processing:** parse → zod validate → apply floors → persist `ai_category`, `ai_priority`, `ai_confidence`, `ai_signals`, `ai_rationale`, `ai_policy_floor`, `ai_status=completed`. Set effective `category`/`priority` unless an admin set them (`*_source = 'admin'`); an earlier AI value is refreshed on re-triage. Audit `ticket.triaged` (actor null). One repair attempt on unusable output, then manual review.
 
 **Low-confidence handling:** if `confidence < 0.5` the suggestion is still stored, but the queue shows "Low confidence: check category" so a human looks at it.
 
@@ -303,7 +303,9 @@ System prompts are **not** a security boundary. Authorization, context minimisat
 | Per-user rate limits | Ticket creation 5 per 10 minutes and 20 per day per author; draft and triage endpoints per admin |
 | Usage accounting | Every call: task, provider, model, prompt version, outcome, input/output/cache tokens, latency, estimated cost |
 
-**Estimated tokens per call** (to be replaced by measured values after AI-6):
+**Measured (AI-3, 2026-10-19):** triage on `gemini-3.5-flash-lite` used about 1,100–1,150 input and 74–107 output tokens per ticket (≈ $0.0005 at list price; free tier, so not billed).
+
+**Estimated tokens per call** (design-time estimate, superseded by measurements as they arrive):
 
 | Task | Input | Output (incl. thinking) | Est. cost at Haiku 5.5 list price |
 |---|---|---|---|

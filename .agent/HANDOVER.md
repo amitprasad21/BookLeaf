@@ -1,45 +1,53 @@
 # Handover
 
 **Session:** 2026-10-19 (Claude Code)
-**Branch:** `feature/ai-core` (from `main` at `4d09a91`; three AI-1/AI-2 commits; not merged, not pushed)
+**Branch:** `feature/ai-triage` (from `main` at `9d6fc78`; five AI-3 commits; not merged, not pushed)
 
 ## Done
 
-- Merged to `main` with approval: Phase 0 through API-7. The database in project `jhszxq…` has the schema, live RLS, the exact seed, the queue urgency rank and the atomic reply function. The ticket API is complete except SSE.
-- **AI-1/AI-2** ([verification/2026-10-19-ai1-ai2.md](verification/2026-10-19-ai1-ai2.md), decision D-028):
-  - Providers:
-    - Gemini `gemini-3.5-flash-lite` (triage) and `gemini-3.8-flash` (drafts), with Groq `openai/gpt-oss-120b` as fallback, all on free tiers.
-    - REST adapters without SDKs. The Anthropic SDK install was not done: there's no Anthropic key.
+- Merged to `main` with approval: Phase 0 through API-7 and AI-1/AI-2. The ticket API is complete except SSE; the AI provider layer is Gemini primary + Groq fallback.
+- **AI-3 triage** ([verification/2026-10-19-ai3.md](verification/2026-10-19-ai3.md), decision D-029):
+  - Shared `TriageResultSchema` and signals, plus `businessDayStart`.
   - `backend/src/ai/`:
-    - `providers/` (types, http retry layer, gemini, groq, mock, json-schema).
-    - `circuit-breaker.ts`, `budget.ts`, `pricing.ts`, `usage.ts`, `router.ts`, `config.ts`.
-  - Config: new AI settings in `config/env.ts` (placeholders count as unset; production needs a real provider; the fallback must be a different provider, C-14). The system writer gained `appendUsageEvent` and `tokensUsedSince`.
-  - `npm run check:ai` / `check:ai:live`. The live run made one synthetic call per model: all OK, with 3.8 Flash OK on retry after one transient overload.
-  - `.env.example`, AI_SPEC §2, AI_PROVIDER_ORCHESTRATION, AI_FAILURE_HANDLING, CREDENTIALS_GUIDE updated; D-010 superseded; A-18 (Gemini free-tier data use).
-- Results: `npm run check` exit 0 (236 tests, 55 of them new AI tests).
+    - `facts/triage-facts.ts`, `prompts/triage.ts` (static prompt, JSON-escaped ticket, mock responder), `validation/floors.ts`.
+    - `triage.ts` (job), `queue.ts` (queue + sweeper), `control.ts`, `router.availability()`.
+    - The provider schema is shape-only.
+  - System writer: `loadTicketForTriage`, `saveTriageResult`, `markTriageFailure`, `resetTriage`, `listTicketsForSweep`.
+  - The author create queues triage; new `POST /admin/tickets/{id}/triage` (202, 3/day per ticket, 5/min per admin, 503 when AI can't serve). `server.ts` wires the queue, the sweeper and a graceful drain.
+  - Triage timeout default raised to 30 s.
+- Results:
+  - `npm run check` exit 0 (267 tests).
+  - `test:live` 57 passed, including 4 on real Gemini.
+  - Server smoke on Gemini: royalty critical, description change low, the injection attempt ignored, one live repair.
 
 ## In progress
 
-- Nothing half-done. AI-1/AI-2 are committed on `feature/ai-core`. Merging into `main` needs approval.
+- Nothing half-done. AI-3 is committed on `feature/ai-triage`. Merging into `main` needs approval.
 
 ## Needs the user
 
-- In `backend/.env` (non-secret settings): set `AI_PRIMARY_PROVIDER=gemini` and `AI_FALLBACK_PROVIDER=groq`; until then the app uses the mock. Delete `GROQ_FALLBACK_API_KEY` (unused; key cycling is not allowed, C-14). Then `npm run check:ai` should show both providers.
+- **`backend/.env` still lacks the provider settings** (file last saved 2026-10-18 20:40). Add and save:
+  - `AI_PRIMARY_PROVIDER=gemini`
+  - `AI_FALLBACK_PROVIDER=groq`
+- If the file has `AI_TRIAGE_TIMEOUT_MS=15000` (copied from the old example), change it to `30000` or delete it.
+- Delete `GROQ_FALLBACK_API_KEY` (unused, C-14).
+- Then `npm run check:ai` should show both providers.
 
 ## Broken / risky
 
 - **npm 10.2.5 on PATH** crashes on this workspace. Use Node's bundled npm 11.6.2 (`"C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js"`). Root scripts swallow extra flags; run vitest inside `backend/` when flags are needed.
-- Free-tier quotas are small and unpublished (about 20 requests/day reported for 3.8 Flash). Drafts should be cached (context hash, AI-4), and evals (AI-6) should mostly run on Flash-Lite or Groq.
-- On the Gemini free tier, Google may use prompts and outputs to improve its products (A-18). This is fine for the fictional demo data, not for production.
+- Free-tier quotas are small and unpublished. Triage uses Flash-Lite (larger quota); drafts (3.8 Flash) must be cached by context hash (AI-4).
+- Gemini's free tier may use content to improve Google's products (A-18): fine for the fictional demo data only.
+- The live AI suite's provider calls stay in `ai_usage_events` (real usage, counted in the daily budget).
 - After a DDL change the Data API's schema cache can lag for a minute: re-run `check:db`.
 - Ticket writes and their audit events are separate writes. An audit failure is logged, not retried.
-- The live suites write and delete tickets. An interrupted run can leave "RLS test ticket", "Live test: …", "Queue test Q…", "Admin test: …" or "Reply test: …" rows; delete them with the secret key.
+- The live suites write and delete tickets. An interrupted run can leave "RLS test ticket", "Live test: …", "Queue test Q…", "Admin test: …", "Reply test: …" or "AI triage test: …" rows; delete them with the secret key.
 
 ## Next
 
-1. Fast-forward `main` to `feature/ai-core` after approval.
-2. AI-3: triage (prompt, schema, policy floors, async queue after ticket creation, startup sweeper, `/triage` retry).
-3. Then AI-4 (drafts), the portals (FE-*), and API-8 (SSE).
+1. Fast-forward `main` to `feature/ai-triage` after approval.
+2. AI-4: drafts (KB sections, facts builder, prompt, validation, fact guard, context-hash reuse, `/draft`).
+3. Then the portals (FE-*), AI-5 (admin AI UI), API-8 (SSE) and AI-6 (evals).
 
 ## Do not touch
 
@@ -48,8 +56,10 @@
 
 ## Commits (approved by the user 2026-10-19)
 
-On `feature/ai-core` (hashes: `git log --oneline main..`):
+On `feature/ai-triage` (hashes: `git log --oneline main..`):
 
-1. `feat(ai): add provider adapters for Gemini, Groq and a mock` (types, http retry layer, json-schema, adapters, adapter tests)
-2. `feat(ai): add router with circuit breaker, daily budget and usage events` (router, breaker, budget, pricing, usage, config, env settings, system writer, `check:ai`, tests)
-3. `docs: record AI provider decision and AI-1/AI-2 verification`
+1. `feat(shared): add triage result contract and business day start`
+2. `feat(ai): add background triage with floors, queue and sweeper` (facts, prompt, floors, job, queue, sweeper, control, system-writer ops, router availability, provider schema, timeout, offline AI tests)
+3. `feat(api): queue triage on ticket creation and add manual re-run` (app/server wiring, author router, admin endpoint, spec, route tests)
+4. `test: add live AI triage suite`
+5. `docs: record AI-3 decisions and verification`

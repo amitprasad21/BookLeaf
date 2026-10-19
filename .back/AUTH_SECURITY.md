@@ -51,13 +51,14 @@ The secret key bypasses RLS, so its use is deliberately narrow.
 
 | Function | Purpose |
 |---|---|
-| `loadTicketForTriage(ticketId)` | Read one ticket's subject/description/author_id/book_id and that book's facts for background triage (no user JWT exists in a background job) |
-| `saveTriageResult(ticketId, result)` | Update AI columns; set effective category/priority **only where `*_source` is null** (single conditional `update … where`) |
-| `markTriageFailure(ticketId, reason, final)` | Update `ai_status`, `ai_failure_reason`, increment `ai_attempts` |
-| `listTicketsForSweep()` | IDs of tickets eligible for retry |
+| `loadTicketForTriage(ticketId)` | Read one ticket's subject, description, author, book, status, AI state and override sources, plus the author's books (catalogue and royalty fields), for background triage (no user JWT exists in a background job) **(built, AI-3)** |
+| `saveTriageResult(claim, result)` | Update AI columns and `ai_attempts`; set effective category/priority **unless `*_source = 'admin'`**; one update conditional on the loaded `version` **(built, AI-3)** |
+| `markTriageFailure(claim, reason, final)` | Update `ai_status`, `ai_failure_reason`, increment `ai_attempts`; same version condition **(built, AI-3)** |
+| `resetTriage(ticketId)` | Manual re-run: `ai_status = pending`, reason cleared, attempts 0 **(built, AI-3)** |
+| `listTicketsForSweep(olderThan, maxAttempts, limit)` | IDs of pending/failed tickets with attempts left, untouched since `olderThan` **(built, AI-3)** |
 | `appendAuditEvents(events)` | Insert into `audit_events`, one statement per batch, stamped 1 ms apart to keep order **(built, API-4/API-6)** |
-| `appendUsageEvent(event)` | Insert into `ai_usage_events` |
-| `sumTokensToday()` | Budget check |
+| `appendUsageEvent(event)` | Insert into `ai_usage_events` **(built, AI-2)** |
+| `tokensUsedSince(since)` | Budget check: input + output tokens since the business day started **(built, AI-2)** |
 
 **Guardrails:**
 - Only `backend/src/ai/**` and `backend/src/modules/audit/**` may import `system-writer`, plus the bootstrap (`server.ts` creates it; `app.ts` passes it to the audit recorder). Enforced by an ESLint `no-restricted-imports` rule in `eslint.config.mjs` (API-4; a probe import from `modules/tickets` fails lint) and checked in review (SEC-2).

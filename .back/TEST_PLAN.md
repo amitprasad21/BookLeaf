@@ -24,7 +24,7 @@ Integration tests use a dedicated test author and test admin plus tickets they c
 | U-04 | payout-calendar | `paymentPossiblyOverdue` for BK001 (true), BK016 (false: below threshold), BK002 (false: zero pending) (**implemented**, plus BK005 and published-/paid-after-quarter cases) |
 | U-05 | lifecycle | Every allowed transition passes; every other pair → InvalidTransition (**implemented**: `backend/test/admin-ticket.test.ts`) |
 | U-06 | lifecycle | Reply on `open` → `in_progress`; `statusAfter=resolved` → `resolved`; reply on `closed` rejected (**implemented** in the database function; live `test-integration/admin-replies.test.ts`) |
-| U-07 | floors | `isbn_error` + low → high; `legal_or_rights` → critical; floors never lower |
+| U-07 | floors | `isbn_error` + low → high; `legal_or_rights` → critical; floors never lower (**implemented**: `backend/test/ai-triage.test.ts`) |
 | U-08 | placeholder-guard | Detects `[insert date]`, `{{name}}` |
 | U-09 | fact-guard | `₹3,570` matches BK001 pending; `₹4,000` flagged; dates normalised across formats |
 | U-10 | serializers | Author DTO keys = exact allowlist (snapshot) |
@@ -40,8 +40,8 @@ Integration tests use a dedicated test author and test admin plus tickets they c
 | I-01 | all non-public | No token | 401 envelope with requestId |
 | I-02 | `/admin/*` | Author token | 403 |
 | I-03 | `GET /author/books` | Test author | Only own books |
-| I-04 | `POST /author/tickets` | Valid, AI mock success | 201; later `ai_status=completed` |
-| I-05 | `POST /author/tickets` | `AI_PRIMARY_PROVIDER=none` | 201; `manual_review_required` |
+| I-04 | `POST /author/tickets` | Valid, AI mock success | 201; later `ai_status=completed` (**implemented**: queueing in `triage-routes.test.ts`, job on the mock in `ai-triage.test.ts`, live on Gemini in `test-integration/ai-triage.test.ts`) |
+| I-05 | `POST /author/tickets` | `AI_PRIMARY_PROVIDER=none` | 201; `manual_review_required` (**implemented**: `ai-triage.test.ts`, reason `not_configured`) |
 | I-06 | `POST /author/tickets` | Another author's `bookId` | 400/404, nothing created |
 | I-07 | `POST /author/tickets` | Extra field `priority` / `authorId` | 400 |
 | I-08 | `GET /author/tickets/{id}` | Other author's ticket | 404 |

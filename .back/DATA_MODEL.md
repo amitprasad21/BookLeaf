@@ -155,7 +155,7 @@ The original description lives on `tickets`, not as a message.
 
 ### `audit_events` (append-only)
 
-`id` uuid PK · `ticket_id` uuid null · `actor_profile_id` uuid null (null = system/AI) · `action` text not null (`ticket.created`, `ticket.triaged`, `ticket.status_changed`, `ticket.category_overridden`, `ticket.priority_overridden`, `ticket.assigned`, `ticket.unassigned`, `ticket.reply_sent`, `ticket.note_added`, `ai.draft_generated`, `ai.draft_regenerated`) · `metadata` jsonb not null default `'{}'` (old/new values, IDs; **never message bodies**) · `created_at` (the system writer stamps batched events 1 ms apart so they keep their order; D-026).
+`id` uuid PK · `ticket_id` uuid null · `actor_profile_id` uuid null (null = system/AI) · `action` text not null (`ticket.created`, `ticket.triaged`, `ticket.status_changed`, `ticket.category_overridden`, `ticket.priority_overridden`, `ticket.assigned`, `ticket.unassigned`, `ticket.reply_sent`, `ticket.note_added`, `ticket.triage_requested`, `ai.draft_generated`, `ai.draft_regenerated`) · `metadata` jsonb not null default `'{}'` (old/new values, IDs; **never message bodies**) · `created_at` (the system writer stamps batched events 1 ms apart so they keep their order; D-026).
 
 ### `ai_usage_events` (append-only)
 

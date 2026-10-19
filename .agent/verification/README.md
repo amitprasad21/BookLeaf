@@ -25,3 +25,4 @@ Each entry records:
 | [2026-10-18-api6.md](2026-10-18-api6.md) | Admin ticket detail + PATCH (transitions, overrides, self-assign, optimistic lock, audit): 159 offline + 46 live tests, two-admin race, server smoke |
 | [2026-10-18-api7.md](2026-10-18-api7.md) | Admin replies (atomic reply function) + internal notes: 181 offline + 53 live tests, full support-loop smoke |
 | [2026-10-19-ai1-ai2.md](2026-10-19-ai1-ai2.md) | AI providers (Gemini + Groq fallback), router, breaker, budget, usage: 236 offline tests, one live call per model |
+| [2026-10-19-ai3.md](2026-10-19-ai3.md) | AI triage: queue, sweeper, floors, manual re-run; 267 offline + 57 live tests, smoke on Gemini incl. an injection attempt |

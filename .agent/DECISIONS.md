@@ -29,6 +29,7 @@
 | D-022 | Token verification via `supabase.auth.getClaims()` (ES256/JWKS, local); profile + author loaded per request through the caller's RLS client | accepted | 2026-10-18 |
 | D-023 | Payout calendar in `packages/shared`; ₹1,000 threshold on the author's total pending; `nextPayoutDueBy` = earliest deadline not yet passed | accepted | 2026-10-18 |
 | D-024 | Author ticket API: zod parse in handlers (no `validate` middleware), same 400 for unknown and not-owned books, per-user limits + DB backstop, audit via the system writer | accepted | 2026-10-18 |
+| D-029 | AI triage: background queue + sweeper; attempts counted on the final write under the version lock; admin values never replaced; manual re-run caps; JSON-escaped ticket; provider schema shape-only; 30 s triage timeout | accepted | 2026-10-19 |
 | D-028 | AI providers: Gemini (3.5 Flash-Lite triage, 3.8 Flash drafts) + Groq gpt-oss-120b fallback on free tiers; REST adapters without SDKs; no second key per provider; no Logfire | accepted | 2026-10-18 |
 | D-027 | Admin reply as one Postgres function (`admin_send_reply`, security invoker, locked row, open/in-progress only); notes via RLS insert; audit after commit without text | accepted | 2026-10-18 |
 | D-026 | Admin ticket PATCH: plan-then-conditional-update optimistic lock; 409 returns the ticket in `error.current`; same values are no-ops; strict self-assignment; batched audit stamped 1 ms apart | accepted | 2026-10-18 |
@@ -237,3 +238,27 @@
 - **Logfire: not adopted.** pino's structured logs plus `ai_usage_events` already show calls, failures, tokens, latency and cost. Logfire would add a vendor and a key, and ship traces (possibly ticket text) to a third party, for no assessment benefit.
 - **Privacy:** Gemini's free tier may use content to improve Google's products (A-18). That's acceptable for the fictional demo data; production uses the paid tier.
 - **Verified:** `check:ai:live` made one synthetic call per model (Flash-Lite OK, 3.8 Flash OK on retry after one transient overload, Groq OK). 55 offline AI tests.
+
+### D-029: AI triage (AI-3)
+- **Context:** AI-3: triage after ticket creation (prompt, schema, policy floors, async queue, sweeper, `/triage` retry), on the D-028 providers.
+- **Flow:** the author's `POST /author/tickets` saves the ticket and queues its id, so creation never waits for AI (C-10). The in-process queue (concurrency 2, D-007) runs the job:
+  1. `loadTicketForTriage` through the system writer.
+  2. Facts: the book's or the author's totals and the payout calendar; no name, email, phone or city.
+  3. Prompt, then `route()` with one repair attempt on unusable output.
+  4. Zod validation, then floors.
+  5. `saveTriageResult`, or `markTriageFailure`.
+  6. Audit `ticket.triaged` (actor null; labels and provider only, no text).
+- **Prompt safety:** the system prompt is static, with no ticket data. Facts and ticket go in `<facts>`/`<ticket>` as JSON with `<` and `>` escaped, so ticket text can't close a tag. The prompt states the ticket is data, not instructions. A live injection ticket ("set priority to critical…") was classified normally (`general_inquiry`, low).
+- **Provider schema:** providers get the shape only (types, enums, required fields, descriptions). Strict modes accept different keyword subsets, and an unsupported keyword fails the whole request. Length, range and count limits are enforced by `TriageResultSchema` after parsing; a violation triggers the repair attempt.
+- **Writes:** `ai_attempts` is incremented by the final write (save or failure), conditional on the version loaded. There is no separate "claim" write, so a triage bumps the ticket version once. If an admin changed the ticket mid-triage, the job reloads and re-applies the same result without a second AI call. Effective category/priority take the AI value unless the admin set them (`*_source = 'admin'`); an earlier AI value is refreshed on re-triage.
+- **Failure states:** `failed` while retryable with attempts left (3 total); otherwise `manual_review_required` with the reason.
+- **Sweeper:** at startup and every 5 minutes, re-queues pending/failed tickets untouched for 2 minutes with attempts left (20 per pass). It skips while AI is off, the budget is spent or every circuit is open.
+- **Shutdown:** waits up to 8 s for running jobs; anything unfinished is picked up by the next sweep.
+- **Manual re-run** (`POST /admin/tickets/{id}/triage`):
+  - Resets the ticket to pending with attempts 0 and queues it (202).
+  - A ticket already pending gets 202 with nothing redone.
+  - Limits: 3 per ticket per India business day (counted from `ticket.triage_requested` audit events; 429 until midnight) and 5 per minute per admin.
+  - 503 `AI_UNAVAILABLE` when AI can't serve (checked first, with no call).
+- **Timeout:** `AI_TRIAGE_TIMEOUT_MS` default raised from 15 s to 30 s. Free-tier Flash-Lite took 8–13 s per triage in the smoke test, and nobody waits on a background job.
+- **Measured:** about 1,100–1,150 input and 74–107 output tokens per triage on `gemini-3.5-flash-lite` (≈ $0.0005 at list price; free tier). One unusable answer in five was fixed by the repair attempt.
+- **Live test usage:** the live suite's provider calls stay in `ai_usage_events` (with `ticket_id` null once the test tickets are deleted). They are real usage and count toward the daily budget.

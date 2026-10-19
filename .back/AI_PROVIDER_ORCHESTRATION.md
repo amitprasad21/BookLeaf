@@ -1,6 +1,6 @@
 # AI Provider Orchestration
 
-**Owns:** the provider interface, provider adapters, router, circuit breaker, budget, job queue, sweeper and usage accounting. What the AI does (taxonomy, prompts, schemas) is in [AI_SPEC.md](../AI_SPEC.md); failure semantics are in [AI_FAILURE_HANDLING.md](AI_FAILURE_HANDLING.md). Status: provider layer built (AI-1/AI-2, D-028); triage, drafts, queue and sweeper planned (AI-3/AI-4).
+**Owns:** the provider interface, provider adapters, router, circuit breaker, budget, job queue, sweeper and usage accounting. What the AI does (taxonomy, prompts, schemas) is in [AI_SPEC.md](../AI_SPEC.md); failure semantics are in [AI_FAILURE_HANDLING.md](AI_FAILURE_HANDLING.md). Status: provider layer (AI-1/AI-2, D-028) and triage with queue and sweeper (AI-3, D-029) built; drafts planned (AI-4).
 
 ## 1. Module layout
 
@@ -13,7 +13,9 @@ backend/src/ai/
 ├── budget.ts              daily token budget (system writer sums ai_usage_events) (built)
 ├── pricing.ts             list-price estimate per model (built)
 ├── usage.ts               usage event recording, failures logged and swallowed (built)
-├── queue.ts               in-process job queue (concurrency 2) + startup sweeper (AI-3)
+├── queue.ts               in-process job queue (concurrency 2) + startup/periodic sweeper (built, AI-3)
+├── triage.ts              the triage job (built, AI-3)
+├── control.ts             what routes may do: enqueue, availability, manual retry (built, AI-3)
 ├── providers/             (built)
 │   ├── types.ts           LlmProvider interface + error taxonomy
 │   ├── http.ts            fetch with timeout and the one bounded retry layer
@@ -21,10 +23,10 @@ backend/src/ai/
 │   ├── gemini.ts          Gemini REST generateContent adapter (no SDK)
 │   ├── groq.ts            Groq OpenAI-compatible adapter (no SDK)
 │   └── mock.ts            deterministic provider for tests and local dev
-├── prompts/               triage.ts, draft.ts (versioned prompt builders)
+├── prompts/               triage.ts (built: system prompt, user content, repair note, mock responder), draft.ts (AI-4)
 ├── knowledge-base/        kb.*.md section files + index.ts (section registry)
-├── facts/                 build-facts.ts (uses payoutCalendar / paymentPossiblyOverdue from @bookleaf/shared)
-├── validation/            schemas (from packages/shared), floors.ts, fact-guard.ts, placeholder-guard.ts
+├── facts/                 triage-facts.ts (built); draft facts (AI-4); payout rules from @bookleaf/shared
+├── validation/            floors.ts (built); fact-guard.ts, placeholder-guard.ts (AI-4); schemas live in packages/shared
 └── eval/                  golden sets + runners
 ```
 
@@ -112,12 +114,15 @@ State is in-memory (single instance, A-15) and exposed in `GET /admin/ai/usage`.
 
 ## 6. Job queue and sweeper
 
-- `queue.enqueueTriage(ticketId)` after the ticket insert commits. Concurrency 2, in-process (D-007).
-- Job: `loadTicketForTriage` → build facts → triage prompt → `route()` → validate + floors → `saveTriageResult`, or `markTriageFailure(reason, final)`.
-  - Transient reasons (`provider_unavailable`, `circuit_open`) → `failed` (eligible for sweeper).
-  - Final reasons (`not_configured`, `budget_exhausted`, `invalid_output` after repair, `refused`, attempts ≥ 3) → `manual_review_required`.
-- Sweeper: at startup and every 5 minutes, re-enqueue `failed`/`pending` tickets older than 2 minutes with `ai_attempts < 3`, skipping while the breaker is open or the budget is exhausted.
-- Graceful shutdown: stop accepting jobs and wait up to 10 s for in-flight jobs. Anything unfinished is picked up by the next sweep.
+As built (AI-3, D-029):
+- **Enqueue:** `triage.enqueue(ticketId)` after the ticket insert commits (author router). Concurrency 2, in-process (D-007); duplicates are dropped by id.
+- **Job:** `loadTicketForTriage` → build facts → triage prompt → `route()` (one repair attempt on `invalid_output`) → zod validate + floors → `saveTriageResult`, or `markTriageFailure(reason, final)`.
+  - Both writes increment `ai_attempts` and are conditional on the version loaded. On a conflict the job reloads and re-applies the same outcome (no second AI call).
+  - Transient (router `retryable`, attempts left) → `failed`, eligible for the sweeper.
+  - Otherwise `manual_review_required`: not configured, budget exhausted, invalid output after repair, refusal, bad request, configuration error, or 3 attempts used.
+- **Sweeper:** at startup and every 5 minutes, re-enqueues `failed`/`pending` tickets untouched for 2 minutes with `ai_attempts < 3` (20 per pass). It skips while `router.availability()` is not ok: AI off, budget spent, or every circuit open.
+- **Manual re-run:** `resetTriage` (pending, attempts 0), then enqueue (`POST /admin/tickets/{id}/triage`).
+- **Graceful shutdown:** stop accepting jobs and wait up to 8 s for running ones (the process exits by 10 s). Anything unfinished is picked up by the next sweep.
 
 ## 7. Draft service
 
@@ -142,7 +147,7 @@ Every attempt (including failures and budget/circuit skips) writes one `ai_usage
 | `AI_FALLBACK_PROVIDER` (+ `_MODEL`, `_DRAFT_MODEL`) | empty | Must differ from the primary (C-14) |
 | `GEMINI_API_KEY` / `GROQ_API_KEY` | (none) | Required for each configured provider; never printed. Placeholders and empty values count as not set |
 | `AI_DAILY_TOKEN_BUDGET` | 300000 | Hard daily cap |
-| `AI_TRIAGE_TIMEOUT_MS` / `AI_DRAFT_TIMEOUT_MS` | 15000 / 30000 | Per-attempt timeouts |
+| `AI_TRIAGE_TIMEOUT_MS` / `AI_DRAFT_TIMEOUT_MS` | 30000 / 30000 | Per-attempt timeouts (triage raised from 15 s: free-tier calls took 8–13 s, D-029) |
 | `AI_MAX_RETRIES` | 2 | SDK retries for transient errors |
 | `AI_CIRCUIT_FAILURE_THRESHOLD` / `AI_CIRCUIT_COOLDOWN_MS` | 3 / 60000 | Breaker |
 

@@ -3,7 +3,7 @@
 **Owns:** the current milestone, verified facts, blockers and open questions. Update at the end of every session.
 
 **Last updated:** 2026-10-19
-**Milestone:** Phase 0, SETUP-2, SETUP-3 and API-1 are merged to `main`. DB-1 (Supabase project + credentials) is merged to `main`. DB-2 (initial schema, applied and verified) is merged to `main`. DB-3 (RLS policies) and DB-4 (seed) are **applied, seeded, verified and merged** (project `jhszxq…`). API-2 (auth, role guards, `GET /me`), API-3 (`GET /author/books` + royalty summary + shared payout calendar), API-4 (author tickets), API-5 (admin queue + summary; migration `20261018090000_queue_urgency_rank.sql` applied by the user) and API-6 (admin ticket detail + PATCH) are merged. API-7 (admin replies + internal notes; migration `20261018120000_admin_reply_function.sql` applied by the user) is merged. AI-1/AI-2 (providers: Gemini primary, Groq fallback; router, breaker, budget, usage) are done, verified and committed on `feature/ai-core`, not yet merged. No AI, portal screens or deployment yet.
+**Milestone:** Phase 0, SETUP-2, SETUP-3 and API-1 are merged to `main`. DB-1 (Supabase project + credentials) is merged to `main`. DB-2 (initial schema, applied and verified) is merged to `main`. DB-3 (RLS policies) and DB-4 (seed) are **applied, seeded, verified and merged** (project `jhszxq…`). API-2 (auth, role guards, `GET /me`), API-3 (`GET /author/books` + royalty summary + shared payout calendar), API-4 (author tickets), API-5 (admin queue + summary; migration `20261018090000_queue_urgency_rank.sql` applied by the user) and API-6 (admin ticket detail + PATCH) are merged. API-7 (admin replies + internal notes; migration `20261018120000_admin_reply_function.sql` applied by the user) is merged. AI-1/AI-2 (providers: Gemini primary, Groq fallback; router, breaker, budget, usage) are merged. AI-3 (triage: queue, sweeper, floors, manual re-run) is done, verified and committed on `feature/ai-triage`, not yet merged. No AI, portal screens or deployment yet.
 
 ## Verified facts (with evidence)
 
@@ -23,6 +23,8 @@
 | `npm run check` (format, lint, OpenAPI lint, typecheck, tests, build) exits 0; `openapi.yaml` is valid OpenAPI 3.1 with 18 operationIds; fresh `npm ci` rebuilds shared packages via `prepare` | [.agent/verification/2026-10-16-setup3.md](.agent/verification/2026-10-16-setup3.md) |
 | `main` fast-forwarded to SETUP-3 (`6898131`) with the user's approval | `git branch -v` |
 | `main` fast-forwarded to API-1 (`af9fc08`) with the user's approval | `git branch -v` |
+| AI-3: tickets are triaged in the background after saving (never blocking creation), with one repair attempt, priority floors, admin values never replaced, a sweeper for pending/failed work and a capped manual re-run; live on Gemini an injection attempt was ignored and "no royalty for six months" came out royalty/critical; 267 offline tests, 57 live tests | [.agent/verification/2026-10-19-ai3.md](.agent/verification/2026-10-19-ai3.md) |
+| `main` fast-forwarded to AI-1/AI-2 (`9d6fc78`) with the user's approval | `git branch -v` |
 | AI-1/AI-2: Gemini (`gemini-3.5-flash-lite` triage, `gemini-3.8-flash` drafts) and Groq `openai/gpt-oss-120b` fallback answer one synthetic structured call each (live, free tier); REST adapters, router failover, circuit breaker, daily budget and usage events covered by 55 offline tests (236 total) | [.agent/verification/2026-10-19-ai1-ai2.md](.agent/verification/2026-10-19-ai1-ai2.md) |
 | `main` fast-forwarded to API-7 (`4d09a91`) with the user's approval | `git branch -v` |
 | API-7: admin replies are atomic (message, first response, status in one Postgres function, refused for authors even when called directly); replies on resolved/closed tickets need a reopen; internal notes never reach authors; replies and notes audited without text; 181 offline tests, 53 live tests, full support-loop server smoke | [.agent/verification/2026-10-18-api7.md](.agent/verification/2026-10-18-api7.md) |
@@ -43,7 +45,7 @@
 
 ## Not done / not verified
 
-- No deployment. The running app still uses the mock AI provider until `AI_PRIMARY_PROVIDER=gemini` and `AI_FALLBACK_PROVIDER=groq` are set in `backend/.env`. Not built yet: SSE (API-8), AI triage and drafts (AI-3, AI-4), evals (AI-6) and the portal screens. Author follow-up messages are deferred (X-2).
+- No deployment. The running app still uses the mock AI provider until `AI_PRIMARY_PROVIDER=gemini` and `AI_FALLBACK_PROVIDER=groq` are set in `backend/.env`. Not built yet: SSE (API-8), AI drafts (AI-4), evals (AI-6) and the portal screens. Author follow-up messages are deferred (X-2).
 - Rate limits are in-memory per instance (A-15); the database trigger is the cross-instance cap.
 - Mermaid diagrams in the docs have not been rendered locally (no renderer installed); they target GitHub's renderer.
 - The blueprint PDF was not regenerated (pandoc/XeLaTeX not installed, and not required for this phase).
@@ -71,4 +73,4 @@
 
 ## Next step
 
-Fast-forward `main` to `feature/ai-core` (needs approval). Set `AI_PRIMARY_PROVIDER=gemini` and `AI_FALLBACK_PROVIDER=groq` in `backend/.env` (non-secret settings) before AI-3. Then **AI-3**: triage (prompt, schema, policy floors, async queue, startup sweeper, `/triage` retry).
+Fast-forward `main` to `feature/ai-triage` (needs approval). Save `AI_PRIMARY_PROVIDER=gemini` and `AI_FALLBACK_PROVIDER=groq` in `backend/.env` (still missing: the running app uses the mock until then). Then **AI-4**: drafts (KB sections, facts builder, prompt, validation, fact guard, context-hash reuse, `/draft`).
