@@ -1,0 +1,280 @@
+/* ---------- Header ---------- */
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-target);
+  margin-bottom: var(--space-2);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.header {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.headerMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-xl);
+  line-height: var(--leading-xl);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.headerSub {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
+/* ---------- Layout ---------- */
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.main,
+.side,
+.stack {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.sectionTitle {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-lg);
+  line-height: var(--leading-lg);
+  font-weight: 600;
+}
+
+.subheading {
+  margin: var(--space-5) 0 var(--space-3);
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  font-weight: 600;
+}
+
+.inlineNotice {
+  margin-bottom: var(--space-4);
+}
+
+.noticeText {
+  margin: 0;
+}
+
+.list {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-5);
+}
+
+.attachment {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.reopen {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px dashed var(--color-border-control);
+  border-radius: var(--radius-panel);
+}
+
+/* ---------- Reply editor ---------- */
+
+.editor {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+}
+
+.editor .sectionTitle {
+  margin: 0;
+}
+
+.editor .inlineNotice {
+  margin: 0;
+}
+
+.draftStrip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
+.draftMeta {
+  margin: 0;
+}
+
+.draftTag {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.editorActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.editorHint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* ---------- Triage ---------- */
+
+.suggestion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+}
+
+.floor,
+.aiLine,
+.rationale {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
+.rationaleLabel {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.assignment {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.assignmentText {
+  margin: 0;
+  font-weight: 600;
+}
+
+/* ---------- Author context ---------- */
+
+.books {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.book {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-control);
+}
+
+/* The ticket's own book: a strong border plus the "This ticket" badge. */
+.bookCurrent {
+  border-width: 2px;
+  border-color: var(--color-border-strong);
+}
+
+.bookTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-weight: 600;
+}
+
+.bookMeta {
+  margin: 2px 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.bookFacts {
+  margin-top: var(--space-3);
+}
+
+/* ---------- Notes ---------- */
+
+.notes {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.note {
+  padding: var(--space-3);
+  border-left: 2px solid var(--color-border-control);
+  background: var(--color-surface-raised);
+}
+
+.noteMeta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+}
+
+.noteAuthor {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.noteBody {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.noteForm {
+  margin-top: var(--space-4);
+}
