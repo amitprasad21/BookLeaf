@@ -46,10 +46,14 @@
   --space-7: 48px;
   --space-8: 64px;
 
-  /* Shape */
+  /* Shape and layout (breakpoints sm 480, md 768, lg 1024, xl 1280 are
+     written literally in media queries, which can't read custom properties) */
   --radius-control: 4px;
   --radius-panel: 8px;
   --touch-target: 44px;
+  --content-max-author: 1200px;
+  --content-max-admin: 1440px;
+  --content-max-reading: 800px;
 
   /* Motion */
   --motion-fast: 150ms ease;
@@ -74,6 +78,18 @@ body {
   margin: 0;
   min-height: 100vh;
   background: var(--color-bg);
+}
+
+a {
+  color: var(--color-text);
+  text-underline-offset: 3px;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }
 
 :focus-visible {
