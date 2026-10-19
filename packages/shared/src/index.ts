@@ -6,3 +6,4 @@ export * from "./schemas.js";
 export * from "./sla.js";
 export * from "./ticket-lifecycle.js";
 export * from "./triage.js";
+export * from "./draft.js";
