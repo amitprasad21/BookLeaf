@@ -57,8 +57,8 @@ Expandable row/card detail: royalty per copy, print partner ("Not assigned yet")
 
 ## A5. Ticket detail (`/tickets/[ticketId]`) (AUTHOR-07/09)
 
-- Header: subject, reference, `StatusBadge`, book link (or "General / Account Level"), created date.
-- Status explainer one-liner per status: Open = "Waiting for our team", In progress = "Our team is working on this", Resolved = "We believe this is sorted. Reply if it isn't." (P2 follow-ups), Closed = "This conversation is closed."
+- Header: subject, reference, `StatusBadge`, book title (or "General / Account Level"; there is no per-book page to link to), created date.
+- Status explainer one-liner per status: Open = "Waiting for our team", In progress = "Our team is working on this", Resolved = "We believe this is sorted. If it isn't, raise a new query." (changed at FE-A4: follow-up replies are P2, so there is nothing to reply with yet), Closed = "This conversation is closed."
 - Thread: the original description first (as "You"), then admin replies ("{Admin name}, BookLeaf Support"), oldest → newest, plain text with line breaks.
 - Empty replies: "No reply yet. Most queries get a first response within one working day." (copy to confirm with the product owner.)
 - P2: follow-up box when status is Open/In progress.

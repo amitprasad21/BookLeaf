@@ -39,11 +39,11 @@ Still to add, each with approval: `@anthropic-ai/sdk` (AI-2) and `@testing-libra
 | API-6 | Admin detail + `PATCH`: transitions, overrides, self-assign, optimistic lock, audit events | API-5 | done ([.agent/verification/2026-10-18-api6.md](.agent/verification/2026-10-18-api6.md)) | ADMIN-05/07/11/13/15/16/17 |
 | API-7 | Admin replies (`/messages`) and internal notes; first-response tracking | API-6 | done ([.agent/verification/2026-10-18-api7.md](.agent/verification/2026-10-18-api7.md)) | ADMIN-09/10/12 |
 | API-8 | SSE event hub + `/events`; scoped delivery | API-4 | todo | AUTHOR-09 |
-| FE-1 | `packages/ui`: tokens + primitives ([.front/COMPONENTS.md](.front/COMPONENTS.md)) | SETUP-2 | todo | NFR-03 |
-| FE-A1 | Author sign-in, session handling, portal-role check | API-2, FE-1 | todo | AUTH-01/05 |
-| FE-A2 | My Books | API-3, FE-A1 | todo | AUTHOR-01..03 |
-| FE-A3 | Submit a Query form | API-4, FE-A1 | todo | AUTHOR-04/05 |
-| FE-A4 | My Tickets list + detail + live updates (SSE + polling fallback) | API-4, API-8 | todo | AUTHOR-06/07/09 |
+| FE-1 | `packages/ui`: tokens + primitives ([.front/COMPONENTS.md](.front/COMPONENTS.md)) | SETUP-2 | in_progress: author set built (D-031); admin components with FE-M1..M4 ([.agent/verification/2026-10-19-fe1-author.md](.agent/verification/2026-10-19-fe1-author.md)) | NFR-03 |
+| FE-A1 | Author sign-in, session handling, portal-role check | API-2, FE-1 | in_progress: built; signed-out states verified; signed-in check pending | AUTH-01/05 |
+| FE-A2 | My Books | API-3, FE-A1 | in_progress: built; logic tests pass; browser check pending | AUTHOR-01..03 |
+| FE-A3 | Submit a Query form | API-4, FE-A1 | in_progress: built; validation tests pass; browser check pending | AUTHOR-04/05 |
+| FE-A4 | My Tickets list + detail + live updates (SSE + polling fallback) | API-4, API-8 | in_progress: list + detail with 15 s polling built; SSE waits for API-8; browser check pending | AUTHOR-06/07/09 |
 | FE-M1 | Admin sign-in + portal-role check | API-2, FE-1 | todo | AUTH-01/05 |
 | FE-M2 | Queue: filters in URL, urgency sort, summary bar, live updates | API-5, API-8 | todo | ADMIN-01..03/14 |
 | FE-M3 | Ticket detail: context panel, thread, notes, timeline, status/assign/override controls, conflict handling | API-6, API-7 | todo | ADMIN-05..17 |

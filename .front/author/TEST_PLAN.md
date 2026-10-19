@@ -2,6 +2,8 @@
 
 Status of every case: **not run** until recorded in [.agent/verification/](../../.agent/verification/README.md).
 
+**Run so far (2026-10-19, [2026-10-19-fe1-author.md](../../.agent/verification/2026-10-19-fe1-author.md)):** AT-01..AT-05 and AT-10 at logic level (Vitest over the view model, form validation and shared formatters: `author-frontend/src/features/**/*.test.ts`, `backend/test/format.test.ts`). Rendered component tests need Testing Library (not installed). AT-07/08 wait for SSE (API-8).
+
 ## Automated (component/integration, Vitest + Testing Library)
 
 | ID | Case | Expected |

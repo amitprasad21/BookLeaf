@@ -29,6 +29,7 @@
 | D-022 | Token verification via `supabase.auth.getClaims()` (ES256/JWKS, local); profile + author loaded per request through the caller's RLS client | accepted | 2026-10-18 |
 | D-023 | Payout calendar in `packages/shared`; ₹1,000 threshold on the author's total pending; `nextPayoutDueBy` = earliest deadline not yet passed | accepted | 2026-10-18 |
 | D-024 | Author ticket API: zod parse in handlers (no `validate` middleware), same 400 for unknown and not-owned books, per-user limits + DB backstop, audit via the system writer | accepted | 2026-10-18 |
+| D-031 | Frontend foundation: `packages/ui` is presentation-only (no `@bookleaf/shared` dependency; CSS classes over tokens); DTO types in `packages/shared` and returned by the serializers; session from `INITIAL_SESSION` + `/me`; 15 s polling until SSE; CSP with `'unsafe-inline'` scripts (nonce CSP is a hardening option) | accepted | 2026-10-19 |
 | D-030 | AI drafts: Flash-Lite for drafts (3.8 Flash too slow on the free tier), KB as a TS module with category selection, facts-reading rules in the prompt, guards with one repair, server-set sign-off, fact warnings, context-hash reuse, admin-RLS storage | accepted | 2026-10-19 |
 | D-029 | AI triage: background queue + sweeper; attempts counted on the final write under the version lock; admin values never replaced; manual re-run caps; JSON-escaped ticket; provider schema shape-only; 30 s triage timeout | accepted | 2026-10-19 |
 | D-028 | AI providers: Gemini (3.5 Flash-Lite triage, 3.8 Flash drafts) + Groq gpt-oss-120b fallback on free tiers; REST adapters without SDKs; no second key per provider; no Logfire | accepted | 2026-10-18 |
@@ -290,3 +291,25 @@
 - **Regeneration:** 201, limited to 5 per ticket per India business day (counted from `ai.draft_regenerated` audit events) and 10 per minute per admin (plain opens aren't limited). Earlier drafts become `superseded`.
 - **Storage:** drafts are stored through the admin's RLS-scoped client (policy: `requested_by` = caller; admins may only change `status`). No system writer is involved. Audit `ai.draft_generated`/`ai.draft_regenerated` records ids, provider, model, sections and the warning count, never text.
 - **Measured:** about 4–7 s per `/draft` request end to end, with the model call itself about 2 s on Flash-Lite. A reused draft returns in about 1.4 s.
+
+### D-031: Frontend foundation (FE-1, FE-A1..A4)
+- **Context:** the first portal screens. Both apps need shared visuals, the same contract types and the same session rules.
+- **`packages/ui` is presentation only.**
+  - It doesn't depend on `@bookleaf/shared`. Callers pass labels (e.g. `StatusBadge status="open" label={STATUS_LABELS.open}`), so wording stays in one place.
+  - The alternative needed a new workspace dependency and lockfile change.
+  - Styles are CSS classes in `components.css` that read `tokens.css`. Inline styles can't express hover, focus or media queries.
+  - `MoneyValue`/`DateValue` from COMPONENTS.md became shared formatters (`formatInr`, `formatDate`, `formatRelative`, `NULL_WORDING`).
+  - Admin-only components (sortable table, filter bar, pagination, dialog, tabs, reply editor, timeline, SLA indicator) come with FE-M1..M4.
+- **Contract types:** response DTOs live in `packages/shared/src/dto.ts`. The backend serializers declare them as return types, so a field the contract doesn't list fails to compile on the server before a frontend can use it.
+- **Session:**
+  - supabase-js keeps the session (localStorage, FRONTEND_ARCHITECTURE §4).
+  - On `INITIAL_SESSION` the app calls `GET /me`. Role `author` → signed in. Any other role, or 403 → local sign-out + "This account doesn't have access to the author portal." API unreachable → a retry screen instead of a sign-out.
+  - A 401 refreshes once and retries; a second 401 signs out locally and goes to `/login?reason=expired`.
+  - `next` keeps the destination; only same-site paths are accepted.
+- **Live updates:** My Tickets and the ticket page poll every 15 s (TanStack `refetchInterval`) and say "Refreshing every 15 s". API-8 adds SSE and switches the indicator to "Live".
+- **CSP:**
+  - `script-src 'self' 'unsafe-inline'` (+ `'unsafe-eval'` in dev only); `connect-src` limited to self, the API origin and the Supabase origin.
+  - The App Router's inline bootstrap scripts need `'unsafe-inline'` unless every page renders dynamically with a per-request nonce. Static pages and simpler hosting won.
+  - React escapes all text, no `dangerouslySetInnerHTML` is allowed (lint rule), and messages are plain text. A nonce CSP is the hardening upgrade.
+- **Unsent text:** the query draft (about, subject, description) is kept in `sessionStorage` until sent, so it survives errors, reloads and an expired session (FLOWS F-A5).
+- **Revisit:** at API-8 (indicator and invalidation), at hardening (nonce CSP, cookie sessions per ALTERNATIVES), and if a monochrome spec arrives (tokens only).

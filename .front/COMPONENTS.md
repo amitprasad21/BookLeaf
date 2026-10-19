@@ -2,6 +2,8 @@
 
 **Owns:** the shared component inventory in `packages/ui`, their variants and required states. Styling comes only from [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) tokens.
 
+**Build status (FE-1, D-031):** built: `AppShell`, `NavBar`, `Button`, `TextField`/`TextArea`, `Select`, `FileInput`, `Badge`, `StatusBadge`, `PriorityBadge`, `SourceTag`, `Panel`, `Notice`, `EmptyState`, `LoadingState`, `ErrorState`, `MessageThread`, `ConnectionIndicator`, `KeyFigure`, plus `PageHeader`, `ChipGroup` (status filter chips) and `Disclosure`. Tables use the `bl-table` classes. `MoneyValue`/`DateValue` are the shared formatters in `packages/shared` (`formatInr`, `formatDate`, `NULL_WORDING`), since `packages/ui` takes wording from callers. Still to build with the admin portal (FE-M1..M4): sortable `Table`, `FilterBar`, `Pagination`, `Dialog`, `Tabs`, `ReplyEditor`, `Timeline`, `SlaIndicator`.
+
 | Component | Variants / props | Required states | Accessibility notes |
 |---|---|---|---|
 | `AppShell` | `portal: author \| admin` | n/a | Skip link to main; landmark roles (`header`, `nav`, `main`) |

@@ -3,7 +3,7 @@
 **Owns:** the current milestone, verified facts, blockers and open questions. Update at the end of every session.
 
 **Last updated:** 2026-10-19
-**Milestone:** Phase 0, SETUP-2, SETUP-3 and API-1 are merged to `main`. DB-1 (Supabase project + credentials) is merged to `main`. DB-2 (initial schema, applied and verified) is merged to `main`. DB-3 (RLS policies) and DB-4 (seed) are **applied, seeded, verified and merged** (project `jhszxq…`). API-2 (auth, role guards, `GET /me`), API-3 (`GET /author/books` + royalty summary + shared payout calendar), API-4 (author tickets), API-5 (admin queue + summary; migration `20261018090000_queue_urgency_rank.sql` applied by the user) and API-6 (admin ticket detail + PATCH) are merged. API-7 (admin replies + internal notes; migration `20261018120000_admin_reply_function.sql` applied by the user) is merged. AI-1/AI-2 (providers: Gemini primary, Groq fallback; router, breaker, budget, usage) are merged. AI-3 (triage: queue, sweeper, floors, manual re-run) is merged. AI-4 (reply drafts) is done, verified and committed on `feature/ai-drafts`, not yet merged. No AI, portal screens or deployment yet.
+**Milestone:** Phase 0, SETUP-2, SETUP-3 and API-1 are merged to `main`. DB-1 (Supabase project + credentials) is merged to `main`. DB-2 (initial schema, applied and verified) is merged to `main`. DB-3 (RLS policies) and DB-4 (seed) are **applied, seeded, verified and merged** (project `jhszxq…`). API-2 (auth, role guards, `GET /me`), API-3 (`GET /author/books` + royalty summary + shared payout calendar), API-4 (author tickets), API-5 (admin queue + summary; migration `20261018090000_queue_urgency_rank.sql` applied by the user) and API-6 (admin ticket detail + PATCH) are merged. API-7 (admin replies + internal notes; migration `20261018120000_admin_reply_function.sql` applied by the user) is merged. AI-1/AI-2 (providers: Gemini primary, Groq fallback; router, breaker, budget, usage) are merged. AI-3 (triage: queue, sweeper, floors, manual re-run) is merged. AI-4 (reply drafts) is merged (`main` at `1e9a4bd`). FE-1 (UI package, author set) and the author portal FE-A1..A4 are built and committed on `feature/author-portal` (not merged): offline checks, build and the signed-out browser checks pass; the signed-in browser checks wait for an author sign-in (skipped for now at the user's request). No admin screens, SSE or deployment yet.
 
 ## Verified facts (with evidence)
 
@@ -23,6 +23,8 @@
 | `npm run check` (format, lint, OpenAPI lint, typecheck, tests, build) exits 0; `openapi.yaml` is valid OpenAPI 3.1 with 18 operationIds; fresh `npm ci` rebuilds shared packages via `prepare` | [.agent/verification/2026-10-16-setup3.md](.agent/verification/2026-10-16-setup3.md) |
 | `main` fast-forwarded to SETUP-3 (`6898131`) with the user's approval | `git branch -v` |
 | `main` fast-forwarded to API-1 (`af9fc08`) with the user's approval | `git branch -v` |
+| FE-1 + author portal (in progress): `packages/ui` primitives and icons, shared formatters and DTO types, author sign-in/session/API client, My Books, Raise a query, My Tickets and ticket detail (15 s polling). Typecheck, lint, production build, 33 new logic tests (11 shared + 22 author) and the signed-out browser checks pass; signed-in screens not yet checked | [.agent/verification/2026-10-19-fe1-author.md](.agent/verification/2026-10-19-fe1-author.md) |
+| `main` fast-forwarded to AI-4 (`1e9a4bd`) with the user's approval | `git branch -v` |
 | AI-4: admins get reply drafts grounded in the KB and the author's own facts (reused by context hash, regenerate capped, fact warnings, standard sign-off); on the free tier Gemini 3.8 Flash was too slow, so drafts use 3.5 Flash-Lite (about 2 s) with Groq fallback; a live draft that called an overdue payment "not overdue" led to explicit facts-reading rules; 290 offline tests, 61 live tests | [.agent/verification/2026-10-19-ai4.md](.agent/verification/2026-10-19-ai4.md) |
 | `main` fast-forwarded to AI-3 (`444a223`) with the user's approval | `git branch -v` |
 | AI-3: tickets are triaged in the background after saving (never blocking creation), with one repair attempt, priority floors, admin values never replaced, a sweeper for pending/failed work and a capped manual re-run; live on Gemini an injection attempt was ignored and "no royalty for six months" came out royalty/critical; 267 offline tests, 57 live tests | [.agent/verification/2026-10-19-ai3.md](.agent/verification/2026-10-19-ai3.md) |
@@ -47,7 +49,8 @@
 
 ## Not done / not verified
 
-- No deployment. The running app still uses the mock AI provider until `AI_PRIMARY_PROVIDER=gemini` and `AI_FALLBACK_PROVIDER=groq` are set in `backend/.env`. Not built yet: SSE (API-8), evals (AI-6) and the portal screens. Author follow-up messages are deferred (X-2).
+- No deployment. Not built yet: the admin portal (FE-M1..M4, AI-5), SSE (API-8) and evals (AI-6). Author follow-up messages are deferred (X-2).
+- Author portal: the signed-in screens have not been checked in a browser. Frontend component tests (Testing Library) and end-to-end tests (Playwright) are not installed; the author logic tests run with the root-hoisted Vitest, which `author-frontend/package.json` doesn't declare yet.
 - Rate limits are in-memory per instance (A-15); the database trigger is the cross-instance cap.
 - Mermaid diagrams in the docs have not been rendered locally (no renderer installed); they target GitHub's renderer.
 - The blueprint PDF was not regenerated (pandoc/XeLaTeX not installed, and not required for this phase).
@@ -75,4 +78,4 @@
 
 ## Next step
 
-Fast-forward `main` to `feature/ai-drafts` (needs approval). Then the portals: FE-1 (UI package), FE-A1..A4 (author) and FE-M1..M3 + AI-5 (admin), followed by API-8 (SSE) and AI-6 (evals).
+Check the signed-in author screens in the browser (needs an author sign-in by the user), then mark FE-A1..A4 done. Fast-forwarding `main` needs approval. Then the admin portal FE-M1..M4 + AI-5, API-8 (SSE) and AI-6 (evals).

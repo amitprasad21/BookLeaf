@@ -54,7 +54,7 @@ src/
 ## 4. Session
 
 - Sign in with `supabase.auth.signInWithPassword`. The session is kept by supabase-js and the access token is attached by `api-client`.
-- After sign-in, call `GET /me`. If `role` doesn't match the portal, sign out and show "This account doesn't have access to the {author|admin} portal."
+- After sign-in, and for a stored session on load (Supabase `INITIAL_SESSION`), call `GET /me`. If `role` doesn't match the portal (or `/me` is 403), sign out and show "This account doesn't have access to the {author|admin} portal." If the API can't be reached, show a retry screen instead of signing out.
 - On `401`: refresh the session once and retry; on a second `401`, sign out to `/login?reason=expired`.
 - **Known trade-off:** supabase-js stores the session in `localStorage` by default, which XSS could read. Mitigated by React escaping, no `dangerouslySetInnerHTML` and CSP. Cookie-based sessions (`@supabase/ssr`) are the production upgrade (see [.agent/ALTERNATIVES.md](../.agent/ALTERNATIVES.md)).
 
@@ -81,6 +81,7 @@ TanStack Query keys (shared constants):
 - `useTicketEvents()` opens `GET /events` with `fetch` + `ReadableStream`, parses SSE frames and invalidates query keys per event.
 - Reconnect with backoff 1 s → 2 s → 5 s → 15 s. While disconnected, affected queries poll every 15 s (`refetchInterval`).
 - A small indicator shows "Live" or "Refreshing every 15 s" (text, not colour).
+- **Until API-8:** there is no stream yet, so My Tickets and the ticket page poll every 15 s and the indicator reads "Refreshing every 15 s" (D-031).
 
 ## 7. Forms and validation
 
@@ -96,3 +97,5 @@ TanStack Query keys (shared constants):
 ## 9. Security headers
 
 Next.js `headers()` config: `Content-Security-Policy` (self + backend origin + Supabase origin for `connect-src`), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` minimal, `frame-ancestors 'none'`.
+
+Implemented in `author-frontend/next.config.ts` (D-031): `script-src 'self' 'unsafe-inline'` (+ `'unsafe-eval'` in dev), `style-src 'self' 'unsafe-inline'`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`. A per-request nonce would remove `'unsafe-inline'` but makes every page dynamic; it is a hardening option.
