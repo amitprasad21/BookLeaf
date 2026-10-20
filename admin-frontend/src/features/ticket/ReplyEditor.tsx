@@ -20,7 +20,17 @@ import styles from "./ticket.module.css";
 
 type StatusAfter = "in_progress" | "resolved";
 
-export function ReplyEditor({ ticket }: { ticket: AdminTicketDetailDto }) {
+export function ReplyEditor({
+  ticket,
+  onSent,
+}: {
+  ticket: AdminTicketDetailDto;
+  /**
+   * The success message (null to clear it). It lives in the parent, so it
+   * survives "Send & resolve", which replaces this editor with "Reopen to reply".
+   */
+  onSent: (message: string | null) => void;
+}) {
   const queryClient = useQueryClient();
   const draftKey = queryKeys.draft(ticket.id);
 
@@ -30,7 +40,6 @@ export function ReplyEditor({ ticket }: { ticket: AdminTicketDetailDto }) {
   const [basedOn, setBasedOn] = useState<string | null>(saved?.draftId ?? null);
   const [requested, setRequested] = useState(() => shouldDraftOnOpen(ticket));
   const [confirmRegenerate, setConfirmRegenerate] = useState(false);
-  const [sent, setSent] = useState<string | null>(null);
   const [problem, setProblem] = useState<{ text: string; requestId: string | null } | null>(null);
   const [regenerateProblem, setRegenerateProblem] = useState<string | null>(null);
 
@@ -52,7 +61,7 @@ export function ReplyEditor({ ticket }: { ticket: AdminTicketDetailDto }) {
     const from = text === null ? (draft.data?.id ?? null) : basedOn;
     setText(next);
     setBasedOn(from);
-    setSent(null);
+    onSent(null);
     saveReply(ticket.id, { text: next, draftId: from });
   }
 
@@ -91,13 +100,13 @@ export function ReplyEditor({ ticket }: { ticket: AdminTicketDetailDto }) {
       }),
     onMutate: () => {
       setProblem(null);
-      setSent(null);
+      onSent(null);
     },
     onSuccess: () => {
       reset();
       setRequested(false); // no automatic new draft right after replying
       queryClient.removeQueries({ queryKey: draftKey });
-      setSent(`Reply sent to ${ticket.author.name}.`);
+      onSent(`Reply sent to ${ticket.author.name}.`);
       void queryClient.invalidateQueries({ queryKey: queryKeys.ticket(ticket.id) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.queueLists });
       void queryClient.invalidateQueries({ queryKey: queryKeys.summary });
@@ -121,12 +130,6 @@ export function ReplyEditor({ ticket }: { ticket: AdminTicketDetailDto }) {
       <h2 id="reply-heading" className={styles.sectionTitle}>
         Reply to {ticket.author.name}
       </h2>
-
-      {sent ? (
-        <Notice tone="success" className={styles.inlineNotice}>
-          {sent}
-        </Notice>
-      ) : null}
 
       {/* AI draft state */}
       {!requested ? (

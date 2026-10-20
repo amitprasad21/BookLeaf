@@ -257,6 +257,17 @@ export function QueueScreen() {
               <Button onClick={() => apply({ ...DEFAULT_FILTERS, sort: filters.sort })}>Clear filters</Button>
             }
           />
+        ) : summary.data && summary.data.resolved + summary.data.closed > 0 ? (
+          // The default view is unresolved only: don't claim there are no tickets at all.
+          <EmptyState
+            title="Nothing open right now."
+            description="Resolved and closed tickets are under the Status filter."
+            action={
+              <Button onClick={() => apply({ ...DEFAULT_FILTERS, status: [], sort: filters.sort })}>
+                Show all statuses
+              </Button>
+            }
+          />
         ) : (
           <EmptyState
             title="No tickets yet."
@@ -339,18 +350,20 @@ function FilterForm({
         />
         <Button type="submit">Search</Button>
       </form>
-      <CheckboxGroup
-        legend="Status"
-        options={TICKET_STATUSES.map((value) => ({ value, label: STATUS_LABELS[value] }))}
-        values={filters.status}
-        onChange={(status) => onChange({ status })}
-      />
-      <CheckboxGroup
-        legend="Priority"
-        options={QUEUE_PRIORITY_FILTERS.map((value) => ({ value, label: PRIORITY_FILTER_LABELS[value] }))}
-        values={filters.priority}
-        onChange={(priority) => onChange({ priority })}
-      />
+      <div className={styles.filterPair}>
+        <CheckboxGroup
+          legend="Status"
+          options={TICKET_STATUSES.map((value) => ({ value, label: STATUS_LABELS[value] }))}
+          values={filters.status}
+          onChange={(status) => onChange({ status })}
+        />
+        <CheckboxGroup
+          legend="Priority"
+          options={QUEUE_PRIORITY_FILTERS.map((value) => ({ value, label: PRIORITY_FILTER_LABELS[value] }))}
+          values={filters.priority}
+          onChange={(priority) => onChange({ priority })}
+        />
+      </div>
       <CheckboxGroup
         legend="Category"
         options={TICKET_CATEGORIES.map((value) => ({ value, label: CATEGORY_LABELS[value] }))}

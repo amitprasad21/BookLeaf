@@ -78,6 +78,18 @@
   flex: 1 1 16rem;
 }
 
+/* Status and priority side by side from 768 px, so the table stays near the top. */
+.filterPair {
+  display: grid;
+  gap: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .filterPair {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 .filterRow {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));

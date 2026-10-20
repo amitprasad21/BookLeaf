@@ -185,6 +185,7 @@ function Conversation({
   update: (changes: TicketChanges) => void;
 }) {
   const [confirmReopen, setConfirmReopen] = useState(false);
+  const [sent, setSent] = useState<string | null>(null);
   const thread: ThreadItem[] = [
     {
       id: "original",
@@ -219,8 +220,14 @@ function Conversation({
         ) : null}
       </section>
 
+      {sent ? (
+        <Notice tone="success" className={styles.inlineNotice}>
+          {sent}
+        </Notice>
+      ) : null}
+
       {isUnresolved(ticket.status) ? (
-        <ReplyEditor key={ticket.id} ticket={ticket} />
+        <ReplyEditor key={ticket.id} ticket={ticket} onSent={setSent} />
       ) : (
         <div className={styles.reopen}>
           <p className={styles.noticeText}>
@@ -237,6 +244,7 @@ function Conversation({
             onCancel={() => setConfirmReopen(false)}
             onConfirm={() => {
               setConfirmReopen(false);
+              setSent(null);
               update({ status: "in_progress" });
             }}
           />
