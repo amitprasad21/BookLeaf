@@ -60,7 +60,7 @@ Still to add, each with approval: `@anthropic-ai/sdk` (AI-2) and `@testing-libra
 | AI-3 | Triage: prompt, schema, policy floors, async queue, startup sweeper, `/triage` retry | AI-2 | done ([.agent/verification/2026-10-19-ai3.md](.agent/verification/2026-10-19-ai3.md)) | ADMIN-04/06, AI-06 |
 | AI-4 | Draft: KB sections, facts builder, prompt, validation, fact guard, context-hash reuse, `/draft` | AI-2, API-3 | done ([.agent/verification/2026-10-19-ai4.md](.agent/verification/2026-10-19-ai4.md)) | ADMIN-08, AI-01/07/09 |
 | AI-5 | Admin UI: suggestion badges with source, low-confidence flag, draft panel, regenerate, warnings, manual-mode states | AI-3, AI-4, FE-M3 | in_progress: built (D-032); browser check with a live draft pending | ADMIN-08..10 |
-| AI-6 | Golden sets + eval runner; record results (live run needs approval: it costs money) | AI-3, AI-4 | todo | AI-08 |
+| AI-6 | Golden sets + eval runner; record results (live run needs approval: it costs money) | AI-3, AI-4 | done ([.agent/verification/2026-10-20-ai6.md](.agent/verification/2026-10-20-ai6.md)): live triage 100% category, 94.4% priority, 0 schema failures, 3/3 injections; drafts 34/38 checks | AI-08 |
 
 **Milestone M2:** tickets are triaged automatically and drafts are policy-accurate. With the provider disabled, M1 still passes.
 

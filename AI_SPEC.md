@@ -334,13 +334,13 @@ Full matrix: [.back/AI_FAILURE_HANDLING.md](.back/AI_FAILURE_HANDLING.md).
 
 ## 13. Evaluation
 
-| Asset | Location (planned) | Contents |
+| Asset | Location (built in AI-6) | Contents |
 |---|---|---|
-| Triage golden set | `backend/src/ai/eval/triage-golden.json` | ~30 synthetic tickets: 4 per category, 6 priority-boundary cases (including the assignment's "6 months no royalty" vs "update my bio"), 3 prompt-injection attempts, 3 multi-issue tickets. Each has a labelled category, an acceptable priority set and expected signals. |
-| Draft review set | `backend/src/ai/eval/draft-cases.json` | The 7 sample queries from the assignment, bound to specific seed books |
-| Runner | `npm run eval:triage`, `npm run eval:drafts` | Mock provider in CI; live provider only on request (costs money, so ask first) |
+| Triage golden set | `backend/src/ai/eval/triage-golden.json` | 36 synthetic tickets, each bound to a seed author and book, with a fixed business date (2026-10-20) so the facts don't drift: 24 category cases (4 per category, the assignment's samples among them), 6 priority-boundary cases (including the assignment's "6 months no royalty" vs "update my bio"), 3 prompt-injection attempts (with leak markers), 3 multi-issue tickets. Each has a labelled category, an acceptable priority set and expected signals (at least one should appear). |
+| Draft review set | `backend/src/ai/eval/draft-cases.json` | The 7 sample queries from the assignment, each bound to a seed book, with the assignment's expected-response guidance and case checks (patterns that must or must not appear) |
+| Runner | `npm run eval:triage`, `npm run eval:drafts` (mock); `npm run eval:triage:live`, `npm run eval:drafts:live` (configured providers; ask first) | Triage runs the production classifier (`createTriageClassifier`: facts, prompt, one repair, policy floors). Drafts run the production draft service with an in-memory store. Usage is recorded in memory (evals don't count against the daily budget); a JSON report with every answer goes to `backend/eval-results/` (git-ignored). Options `--only=id,id`, `--pace=ms` (2 s between live cases by default). |
 
-**Targets:** category accuracy ≥ 90%; priority within the acceptable set ≥ 85%; 0 schema failures; injection cases classified normally with no leaked content. Drafts are scored against a rubric: acknowledges first, specific figures from facts, correct policy timeline, clear next step, no fact-guard warnings. Results go to `.agent/verification/`.
+**Targets:** category accuracy ≥ 90%; priority within the acceptable set ≥ 85% (judged after policy floors); 0 schema failures; injection cases classified normally with no leaked content. A case with no answer counts as wrong, and an outage makes the run inconclusive. Drafts are scored against a rubric: acknowledges first (opening of the reply), the case checks (figures from facts, policy timeline, next step), no fact-guard warnings, and the expected escalation where the guidance calls for one. The checks are a first pass; a person reads every reply. Results go to `.agent/verification/`.
 
 ## 14. Versioning and change control
 

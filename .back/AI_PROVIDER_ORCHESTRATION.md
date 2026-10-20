@@ -27,7 +27,7 @@ backend/src/ai/
 ├── knowledge-base/        index.ts: the 12 KB sections, KB_VERSION, selectKbSections (built, AI-4)
 ├── facts/                 triage-facts.ts, draft-facts.ts (built); payout rules from @bookleaf/shared
 ├── validation/            floors.ts, draft-guards.ts (shape problems, fact warnings, standard sign-off) (built); schemas live in packages/shared
-└── eval/                  golden sets + runners
+└── eval/                  golden sets (triage-golden.json, draft-cases.json) + runners (AI-6; scripts/eval.ts)
 ```
 
 ## 2. Provider interface

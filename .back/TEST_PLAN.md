@@ -10,7 +10,7 @@
 | API integration | Vitest + Supertest on `createApp()` | Real Supabase project (test data) with mock AI provider |
 | RLS | Vitest + supabase-js (publishable key, real sign-ins) | Supabase project ([SUPABASE_RLS.md](SUPABASE_RLS.md) §5) |
 | Contract | Response shapes validated against `openapi.yaml` schemas | Integration responses |
-| AI eval | Eval runner | Mock in CI; live provider only with approval |
+| AI eval | Eval runner (`npm run eval:triage` / `eval:drafts`; `:live` with approval) | Mock in CI (`backend/test/ai-eval.test.ts` runs both runners on the mock); live provider only with approval |
 
 Integration tests use a dedicated test author and test admin plus tickets they create, and clean up after themselves. They never modify the 10 dataset authors or 18 books.
 

@@ -28,7 +28,7 @@ These commands exist since SETUP-3. `npm run check` runs them all in order. Reco
 
 - [ ] Mock-provider tests: success, timeout, 429, 401, 500, invalid JSON, invalid enum, refusal, budget exhausted, circuit open
 - [ ] Ticket creation succeeds with `AI_PRIMARY_PROVIDER=none`
-- [ ] Golden-set eval run (mock in CI; live only with approval) and results recorded
+- [x] Golden-set eval run (mock in `npm test`; live run approved and recorded 2026-10-20: [verification/2026-10-20-ai6.md](verification/2026-10-20-ai6.md))
 - [ ] No ticket content in logs
 
 ## Changes touching UI

@@ -29,6 +29,7 @@
 | D-022 | Token verification via `supabase.auth.getClaims()` (ES256/JWKS, local); profile + author loaded per request through the caller's RLS client | accepted | 2026-10-18 |
 | D-023 | Payout calendar in `packages/shared`; ₹1,000 threshold on the author's total pending; `nextPayoutDueBy` = earliest deadline not yet passed | accepted | 2026-10-18 |
 | D-024 | Author ticket API: zod parse in handlers (no `validate` middleware), same 400 for unknown and not-owned books, per-user limits + DB backstop, audit via the system writer | accepted | 2026-10-18 |
+| D-034 | AI evals: golden sets bound to seed data with a fixed date; the triage eval runs the production classifier and the draft eval the production draft service; usage kept in memory; mock runs in `npm test`, live runs on request; first live run meets every triage target (100% category, 94.4% priority) | accepted | 2026-10-20 |
 | D-033 | Live updates: in-process hub filtered by role and ticket owner (publisher passes the author id); streams end after 10 min to re-authenticate; 5 streams per user; events only after a successful write; portals poll only while the stream is down and re-sync on every (re)connect | accepted | 2026-10-20 |
 | D-032 | Support console: session layer copied from the author portal (no shared web package yet); polled queue offered as "Show N updates"; AI draft requested on open only when it's the team's turn; category override refetches the draft; KB and policy-floor names in `packages/shared` with a sync test | accepted | 2026-10-19 |
 | D-031 | Frontend foundation: `packages/ui` is presentation-only (no `@bookleaf/shared` dependency; CSS classes over tokens); DTO types in `packages/shared` and returned by the serializers; session from `INITIAL_SESSION` + `/me`; 15 s polling until SSE; CSP with `'unsafe-inline'` scripts (nonce CSP is a hardening option) | accepted | 2026-10-19 |
@@ -357,3 +358,20 @@
   - The console's queue keeps "Show N updates": events refresh the comparison copy, never the shown rows. Drafts are never refetched by events (each fetch can be a model call).
 - **Same runner file in both portals** (`lib/event-stream.ts`), as with the session layer (D-032).
 - **Revisit:** when running more than one backend instance (Postgres LISTEN/NOTIFY or Redis pub/sub, ALTERNATIVES.md), or if hosting cuts long-lived connections (polling remains the fallback).
+
+### D-034: AI evaluation (AI-6)
+- **Context:** AI-6. AI_SPEC section 13 asked for a labelled triage set, a draft review set and a runner, with the mock in CI and live runs only on request.
+- **Golden sets are bound to the seed data, with a fixed date (2026-10-20).** Each case names a seed author and book, so the facts (royalties, payout calendar, production stage) are the real ones, and the overdue flags don't drift with the calendar.
+- **Same path as production:**
+  - The triage eval calls `createTriageClassifier`, which was extracted from the triage service and is now shared by both: facts, prompt, one repair, policy floors. Priority is judged after floors.
+  - The draft eval calls the real draft service with an in-memory store: KB selection, facts, guards with repair, server sign-off, fact warnings.
+- **Scoring:**
+  - Triage: category exact; priority within an acceptable set; at least one expected signal; injection cases must also keep prompt text out of the rationale.
+  - A case with no answer counts as wrong, and outages make a run inconclusive (they aren't model quality).
+  - Drafts: the assignment's guidance as pattern checks plus an early acknowledgement, no fact warnings and the expected escalation. A person reads every reply, and `--rescore` re-applies fixed checks to saved replies without new calls.
+- **Isolation:** usage is recorded in memory, so evals touch neither the database nor the daily budget. Full answers go to git-ignored `backend/eval-results/`, and summaries to `.agent/verification/`.
+- **First live run (2026-10-20, free tiers):**
+  - Triage meets every target: 36/36 category, 34/36 priority, 0 schema failures, 3/3 injections.
+  - Drafts pass 34/38 checks, with no fact warnings.
+  - The full run also showed that a 2-second-paced burst exhausts both free per-minute quotas. Seven cases had to be re-run at an 8-second pace.
+- **Follow-ups (not done):** facts-reading rules in the triage prompt; tighter royalty-draft instructions (45-day window, next payout date, bank details, pending amount); stage durations in the KB; pacing the triage queue, or the paid tier for the deployed demo. Each prompt change bumps its version and needs a live re-run (approval).
