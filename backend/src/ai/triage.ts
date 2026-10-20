@@ -39,10 +39,24 @@ export interface TriageServiceDeps {
 const eligible = (ticket: TriageTicket) =>
   (ticket.aiStatus === "pending" || ticket.aiStatus === "failed") && ticket.aiAttempts < MAX_TRIAGE_ATTEMPTS;
 
-export function createTriageService({ router, writer, clock, logger, timeoutMs }: TriageServiceDeps) {
-  const audit = createAuditRecorder(writer, logger);
+/** What classification reads: the ticket text and the author's catalogue (for the facts). */
+export type TriageSubject = Pick<TriageTicket, "bookId" | "authorBooks" | "subject" | "description">;
 
-  const route = (ticketId: string, user: string) =>
+export interface Classification {
+  /** The model's validated answer, before policy floors. */
+  routed: RoutedResult<TriageResult>;
+  /** The final priority after floors, and the rule that raised it (if any). */
+  priority: TriageResult["priority"];
+  policyFloor: string | null;
+}
+
+/**
+ * Facts → prompt → route (one repair attempt on an unusable answer) →
+ * floors. Shared by the background job and the eval runner, so the golden
+ * set measures exactly what production runs.
+ */
+export function createTriageClassifier({ router, timeoutMs }: { router: AiRouter; timeoutMs: number }) {
+  const route = (ticketId: string | null, user: string) =>
     router.route(
       {
         task: "triage",
@@ -56,7 +70,7 @@ export function createTriageService({ router, writer, clock, logger, timeoutMs }
       { ticketId, promptVersion: TRIAGE_PROMPT_VERSION },
     );
 
-  async function routeWithRepair(ticketId: string, user: string): Promise<RoutedResult<TriageResult>> {
+  async function routeWithRepair(ticketId: string | null, user: string): Promise<RoutedResult<TriageResult>> {
     try {
       return await route(ticketId, user);
     } catch (error) {
@@ -64,6 +78,22 @@ export function createTriageService({ router, writer, clock, logger, timeoutMs }
       return route(ticketId, user + TRIAGE_REPAIR_NOTE); // one repair attempt
     }
   }
+
+  return async function classify(
+    ticketId: string | null,
+    ticket: TriageSubject,
+    today: string,
+  ): Promise<Classification> {
+    const user = buildTriageUserContent(buildTriageFacts(ticket.bookId, ticket.authorBooks, today), ticket);
+    const routed = await routeWithRepair(ticketId, user);
+    const floored = applyPriorityFloors(routed.value.priority, routed.value.signals);
+    return { routed, priority: floored.priority, policyFloor: floored.floor };
+  };
+}
+
+export function createTriageService({ router, writer, clock, logger, timeoutMs }: TriageServiceDeps) {
+  const audit = createAuditRecorder(writer, logger);
+  const classify = createTriageClassifier({ router, timeoutMs });
 
   /** Write with the optimistic lock; on a conflict reload and re-apply (no new AI call). */
   async function persist(
@@ -84,21 +114,16 @@ export function createTriageService({ router, writer, clock, logger, timeoutMs }
     if (!ticket || !eligible(ticket)) return "skipped";
 
     const now = clock();
-    const user = buildTriageUserContent(
-      buildTriageFacts(ticket.bookId, ticket.authorBooks, businessDate(now)),
-      ticket,
-    );
     try {
-      const routed = await routeWithRepair(ticketId, user);
+      const { routed, priority, policyFloor } = await classify(ticketId, ticket, businessDate(now));
       const value = routed.value;
-      const floored = applyPriorityFloors(value.priority, value.signals);
       const result: TriageWrite = {
         category: value.category,
-        priority: floored.priority,
+        priority,
         confidence: value.confidence,
         signals: value.signals,
         rationale: value.rationale,
-        policyFloor: floored.floor,
+        policyFloor,
         promptVersion: TRIAGE_PROMPT_VERSION,
         processedAt: clock().toISOString(),
       };
