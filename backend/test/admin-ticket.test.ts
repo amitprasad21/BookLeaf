@@ -4,6 +4,7 @@ import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { SeedDataSchema, toBookRows } from "../scripts/seed-data.js";
+import { createEventHub, type EventHub } from "../src/events/hub.js";
 import { InvalidAssignmentError, InvalidTransitionError } from "../src/lib/errors.js";
 import type {
   AdminTicketDetailRows,
@@ -20,6 +21,7 @@ import {
   captureLogger,
   fixedClock,
   settle,
+  listenTo,
 } from "./helpers.js";
 
 const spec = parse(readFileSync(new URL("../../openapi.yaml", import.meta.url), "utf8")) as {
@@ -274,7 +276,7 @@ function fakeAdminTicketStore(options: { raceOnUpdate?: boolean } = {}) {
   return { factory: () => repository, state };
 }
 
-function setup(options: { raceOnUpdate?: boolean; failAudit?: boolean } = {}) {
+function setup(options: { raceOnUpdate?: boolean; failAudit?: boolean; events?: EventHub } = {}) {
   const store = fakeAdminTicketStore(options);
   const audit = recordingSystemWriter({ fail: options.failAudit });
   const { logger, lines } = captureLogger();
@@ -283,6 +285,7 @@ function setup(options: { raceOnUpdate?: boolean; failAudit?: boolean } = {}) {
     logger,
     systemWriter: audit.writer,
     adminTicketsRepository: store.factory,
+    ...(options.events ? { events: options.events } : {}),
   });
   return { app, store, audit, lines };
 }
@@ -555,5 +558,37 @@ describe("admin ticket contract", () => {
 
     const conflict = await patchTicket(app, { version: 1, status: "resolved" });
     expect(Object.keys(conflict.body.error.current).sort()).toEqual(detailKeys);
+  });
+});
+
+describe("PATCH events (API-8)", () => {
+  function withEvents(options: { raceOnUpdate?: boolean } = {}) {
+    const events = createEventHub({ clock: () => NOW, logger: captureLogger().logger });
+    const admin = listenTo(events, { role: "admin", authorId: null });
+    const owner = listenTo(events, { role: "author", authorId: "AUTH001" });
+    return { ...setup({ ...options, events }), admin, owner };
+  }
+
+  it("tells the author about a status change, and only admins about overrides", async () => {
+    const { app, admin, owner } = withEvents();
+    const res = await patchTicket(app, { version: 3, status: "in_progress", priority: "critical" });
+    expect(res.status).toBe(200);
+    expect(admin.map(({ type, changes }) => ({ type, changes }))).toEqual([
+      { type: "ticket.updated", changes: ["status"] },
+      { type: "ticket.internal_updated", changes: ["priority"] },
+    ]);
+    expect(owner.map(({ type, changes }) => ({ type, changes }))).toEqual([
+      { type: "ticket.updated", changes: ["status"] },
+    ]);
+  });
+
+  it("publishes nothing for a no-op or a version conflict", async () => {
+    const quiet = withEvents();
+    expect((await patchTicket(quiet.app, { version: 3, status: "open" })).status).toBe(200);
+    expect(quiet.admin).toEqual([]);
+
+    const raced = withEvents({ raceOnUpdate: true });
+    expect((await patchTicket(raced.app, { version: 3, status: "resolved" })).status).toBe(409);
+    expect(raced.admin).toEqual([]);
   });
 });

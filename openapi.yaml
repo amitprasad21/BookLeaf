@@ -81,7 +81,18 @@ paths:
       description: |
         Read with fetch streaming so the bearer token stays in the header.
         Payloads carry identifiers only; clients re-fetch via REST.
-        Event names: ticket.created, ticket.updated, ticket.triaged, ticket.internal_updated.
+
+        Events and who receives them:
+        - ticket.created: admins (an author raised a ticket)
+        - ticket.updated: the ticket's author and admins (status change, admin reply)
+        - ticket.triaged: admins (AI triage finished or handed over to manual review)
+        - ticket.internal_updated: admins (note, category/priority override, assignment, AI re-run)
+
+        `changes` names what changed: created, status, messages, category,
+        priority, assignee, notes, ai. The stream opens with a `: connected`
+        comment and sends a `: ping` comment every 25 s. It ends after 10
+        minutes, so clients reconnect with a current token. At most 5 open
+        streams per user (429 beyond that).
       responses:
         '200':
           description: Event stream
@@ -91,8 +102,9 @@ paths:
                 type: string
                 example: |
                   event: ticket.updated
-                  data: {"ticketId":"4f1c2a8e-0000-4000-8000-000000000000","changes":["status","messages"],"at":"2026-10-16T10:15:00Z"}
+                  data: {"ticketId":"4f1c2a8e-0000-4000-8000-000000000000","changes":["messages","status"],"at":"2026-10-16T10:15:00Z"}
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '429': { $ref: '#/components/responses/RateLimited' }
 
   /author/books:
     get:

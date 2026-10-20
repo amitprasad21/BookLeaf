@@ -11,6 +11,7 @@ import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { authOf, authorIdOf, dbOf } from "../../middleware/authenticate.js";
 import { perUserLimit } from "../../middleware/rate-limit.js";
 import type { TriageControl } from "../../ai/control.js";
+import type { EventHub } from "../../events/hub.js";
 import type { AuditRecorder } from "../audit/service.js";
 import { listBooksForAuthor } from "../books/repository.js";
 import { toBookDto } from "../books/serializers.js";
@@ -23,6 +24,7 @@ export interface AuthorRouterDeps {
   audit: AuditRecorder;
   ticketsRepository: (db: SupabaseClient) => TicketsRepository;
   triage: TriageControl;
+  events: EventHub;
 }
 
 const TEN_MINUTES = 10 * 60 * 1000;
@@ -30,7 +32,7 @@ const ONE_DAY = 24 * 60 * 60 * 1000;
 const TICKET_LIMIT_MESSAGE = "You've raised several queries recently. Please try again in a few minutes.";
 
 /** /api/v1/author/* (role author, enforced in app.ts). */
-export function createAuthorRouter({ clock, audit, ticketsRepository, triage }: AuthorRouterDeps) {
+export function createAuthorRouter({ clock, audit, ticketsRepository, triage, events }: AuthorRouterDeps) {
   const router = Router();
   // Created per app instance, so each limiter's counts are per process (A-15).
   const ticketLimits = [
@@ -77,6 +79,7 @@ export function createAuthorRouter({ clock, audit, ticketsRepository, triage }: 
     });
     // Saved first; triage runs in the background and can never fail this request (C-10).
     triage.enqueue(ticket.id);
+    events.publish({ type: "ticket.created", ticketId: ticket.id, authorId, changes: ["created"] });
 
     res
       .status(201)

@@ -10,6 +10,7 @@ import { disabledDrafts, type DraftService } from "./ai/drafts.js";
 import type { AuthVerifier } from "./auth/types.js";
 import type { Env } from "./config/env.js";
 import type { SystemWriter } from "./db/system-writer.js";
+import { createEventHub, type EventHub } from "./events/hub.js";
 import { systemClock, type Clock } from "./lib/clock.js";
 import { authenticate } from "./middleware/authenticate.js";
 import { corsAllowlist } from "./middleware/cors.js";
@@ -21,6 +22,7 @@ import { requireRole } from "./middleware/require-role.js";
 import { createAdminRouter } from "./modules/admin/router.js";
 import { createAuditRecorder } from "./modules/audit/service.js";
 import { createAuthorRouter } from "./modules/author/router.js";
+import { createEventsRouter, type EventsRouterOptions } from "./modules/events/router.js";
 import { healthRouter } from "./modules/health/router.js";
 import { meRouter } from "./modules/me/router.js";
 import {
@@ -47,6 +49,10 @@ export interface AppDeps {
   triage?: TriageControl;
   /** AI reply drafts. Defaults to disabled (503 not_configured); server.ts wires the real one. */
   drafts?: DraftService;
+  /** Real-time event hub. Defaults to a new in-process hub; server.ts shares one with the triage queue. */
+  events?: EventHub;
+  /** Stream timings (tests shorten them). */
+  eventStream?: Omit<EventsRouterOptions, "hub">;
 }
 
 export function createApp({
@@ -59,6 +65,8 @@ export function createApp({
   adminTicketsRepository = createAdminTicketsRepository,
   triage = disabledTriage,
   drafts = disabledDrafts,
+  events = createEventHub({ clock, logger }),
+  eventStream = {},
 }: AppDeps) {
   const app = express();
   app.disable("x-powered-by");
@@ -78,15 +86,16 @@ export function createApp({
   const audit = createAuditRecorder(systemWriter, logger);
   app.use("/api/v1", authenticate(verifier));
   app.use("/api/v1/me", meRouter);
+  app.use("/api/v1/events", createEventsRouter({ hub: events, ...eventStream }));
   app.use(
     "/api/v1/author",
     requireRole("author"),
-    createAuthorRouter({ clock, audit, ticketsRepository, triage }),
+    createAuthorRouter({ clock, audit, ticketsRepository, triage, events }),
   );
   app.use(
     "/api/v1/admin",
     requireRole("admin"),
-    createAdminRouter({ clock, audit, adminTicketsRepository, triage, drafts }),
+    createAdminRouter({ clock, audit, adminTicketsRepository, triage, drafts, events, logger }),
   );
 
   app.use(notFound);

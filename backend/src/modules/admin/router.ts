@@ -13,9 +13,12 @@ import {
 } from "@bookleaf/shared";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Router } from "express";
+import type { Logger } from "pino";
 import type { Clock } from "../../lib/clock.js";
 import type { TriageControl } from "../../ai/control.js";
 import type { DraftService } from "../../ai/drafts.js";
+import type { EventHub } from "../../events/hub.js";
+import { updateEvents } from "../../events/ticket-events.js";
 import {
   AiUnavailableError,
   NotFoundError,
@@ -40,6 +43,8 @@ export interface AdminRouterDeps {
   adminTicketsRepository: (db: SupabaseClient) => AdminTicketsRepository;
   triage: TriageControl;
   drafts: DraftService;
+  events: EventHub;
+  logger: Logger;
 }
 
 const TICKET_NOT_FOUND = "We couldn't find that ticket.";
@@ -49,7 +54,15 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const TRIAGE_ACCEPTED: TriageAcceptedDto = { aiStatus: "pending" };
 
 /** /api/v1/admin/* (role admin, enforced in app.ts). */
-export function createAdminRouter({ clock, audit, adminTicketsRepository, triage, drafts }: AdminRouterDeps) {
+export function createAdminRouter({
+  clock,
+  audit,
+  adminTicketsRepository,
+  triage,
+  drafts,
+  events,
+  logger,
+}: AdminRouterDeps) {
   const router = Router();
   const triageLimit = perUserLimit({
     windowMs: 60_000,
@@ -114,6 +127,9 @@ export function createAdminRouter({ clock, audit, adminTicketsRepository, triage
 
     const detail = await repository.findDetail(ticketId);
     if (!detail) throw new NotFoundError(TICKET_NOT_FOUND);
+    const actions = plan.audit.map((event) => event.action);
+    for (const event of updateEvents(ticketId, detail.ticket.author.author_id, actions))
+      events.publish(event);
     res.json({ data: toAdminTicketDetail(detail, now) });
   });
 
@@ -123,7 +139,8 @@ export function createAdminRouter({ clock, audit, adminTicketsRepository, triage
     const { ticketId } = TicketIdParamsSchema.parse(req.params);
     const input = AdminReplyRequestSchema.parse(req.body);
     const auth = authOf(req);
-    const sent = await adminTicketsRepository(dbOf(req)).sendReply(ticketId, {
+    const repository = adminTicketsRepository(dbOf(req));
+    const sent = await repository.sendReply(ticketId, {
       body: input.body,
       statusAfter: input.statusAfter,
       draftId: input.draftId ?? null,
@@ -151,6 +168,21 @@ export function createAdminRouter({ clock, audit, adminTicketsRepository, triage
           ]
         : []),
     ]);
+
+    // The ticket's author gets the event too; without their id only admins do.
+    const authorId = await repository
+      .findTicket(ticketId)
+      .then((ticket) => ticket?.author.author_id ?? null)
+      .catch((error: unknown) => {
+        logger.warn({ err: error, ticketId }, "reply event sent to admins only: ticket author not loaded");
+        return null;
+      });
+    events.publish({
+      type: "ticket.updated",
+      ticketId,
+      authorId,
+      changes: sent.previousStatus !== sent.newStatus ? ["messages", "status"] : ["messages"],
+    });
 
     const message: ThreadMessageDto = {
       id: sent.messageId,
@@ -182,6 +214,7 @@ export function createAdminRouter({ clock, audit, adminTicketsRepository, triage
       action: "ticket.note_added",
       metadata: { noteId: note.id },
     });
+    events.publish({ type: "ticket.internal_updated", ticketId, authorId: null, changes: ["notes"] });
     res.status(201).json({ data: toInternalNote(note) });
   });
 
@@ -222,6 +255,7 @@ export function createAdminRouter({ clock, audit, adminTicketsRepository, triage
       action: "ticket.triage_requested",
       metadata: { previousAiStatus: ticket.ai_status },
     });
+    events.publish({ type: "ticket.internal_updated", ticketId, authorId: null, changes: ["ai"] });
     res.status(202).json({ data: TRIAGE_ACCEPTED });
   });
 

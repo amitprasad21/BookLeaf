@@ -9,6 +9,7 @@ import { createApp } from "./app.js";
 import { createSupabaseVerifier } from "./auth/supabase-verifier.js";
 import { loadEnv, type Env } from "./config/env.js";
 import { createSystemWriter } from "./db/system-writer.js";
+import { createEventHub } from "./events/hub.js";
 import { systemClock } from "./lib/clock.js";
 import { createLogger } from "./lib/logger.js";
 
@@ -41,7 +42,19 @@ const triageService = createTriageService({
   logger,
   timeoutMs: env.AI_TRIAGE_TIMEOUT_MS,
 });
-const triageQueue = createJobQueue({ concurrency: 2, run: (id) => triageService.run(id), logger });
+// One event hub for the HTTP routes and the background triage (D-006).
+const events = createEventHub({ clock: systemClock, logger });
+const triageQueue = createJobQueue({
+  concurrency: 2,
+  run: async (id) => {
+    const outcome = await triageService.run(id);
+    // Admins see the result (or the switch to manual review) without refreshing.
+    if (outcome !== "skipped") {
+      events.publish({ type: "ticket.triaged", ticketId: id, authorId: null, changes: ["ai"] });
+    }
+  },
+  logger,
+});
 const sweeper = createSweeper({
   writer: systemWriter,
   queue: triageQueue,
@@ -57,18 +70,22 @@ const drafts = createDraftService({
   timeoutMs: env.AI_DRAFT_TIMEOUT_MS,
 });
 
-const server = createApp({ env, logger, verifier, systemWriter, triage, drafts }).listen(env.PORT, () => {
-  logger.info(
-    { port: env.PORT, nodeEnv: env.NODE_ENV, ai: env.AI_PRIMARY_PROVIDER },
-    "BookLeaf API listening",
-  );
-  sweeper.start();
-});
+const server = createApp({ env, logger, verifier, systemWriter, triage, drafts, events }).listen(
+  env.PORT,
+  () => {
+    logger.info(
+      { port: env.PORT, nodeEnv: env.NODE_ENV, ai: env.AI_PRIMARY_PROVIDER },
+      "BookLeaf API listening",
+    );
+    sweeper.start();
+  },
+);
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.once(signal, () => {
     logger.info({ signal }, "Shutting down");
     sweeper.stop();
+    events.closeAll(); // open event streams would otherwise keep server.close() waiting
     // Running AI jobs get up to 8 s; anything unfinished is picked up by the next sweep.
     void triageQueue.close(8_000).then(() => server.close(() => process.exit(0)));
     setTimeout(() => process.exit(1), 10_000).unref();

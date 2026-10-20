@@ -2,15 +2,25 @@ import { readFileSync } from "node:fs";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
+import { createEventHub, type EventHub } from "../src/events/hub.js";
 import { InvalidTransitionError, NotFoundError, ValidationError } from "../src/lib/errors.js";
 import {
   createAdminTicketsRepository,
+  type AdminTicketRow,
   type NewReply,
   type NoteRow,
   type SentReply,
 } from "../src/modules/tickets/admin-repository.js";
 import { adminRepository, recordingSupabase, recordingSystemWriter } from "./fakes.js";
-import { ADMIN_CONTEXT, TEST_TOKENS, bearer, buildTestApp, captureLogger, settle } from "./helpers.js";
+import {
+  ADMIN_CONTEXT,
+  TEST_TOKENS,
+  bearer,
+  buildTestApp,
+  captureLogger,
+  listenTo,
+  settle,
+} from "./helpers.js";
 
 const spec = parse(readFileSync(new URL("../../openapi.yaml", import.meta.url), "utf8")) as {
   components: { schemas: Record<string, { properties?: Record<string, unknown> }> };
@@ -32,6 +42,9 @@ function setup(
     replyError?: Error;
     notes?: NoteRow[] | null;
     failAudit?: boolean;
+    events?: EventHub;
+    /** The ticket's author, for the reply event (omitted: the lookup fails). */
+    ticketAuthor?: string;
   } = {},
 ) {
   const replies: [string, NewReply][] = [];
@@ -57,10 +70,22 @@ function setup(
       notesAdded.push([ticketId, adminId, body]);
       return { ...NOTE, body };
     },
+    ...(options.ticketAuthor
+      ? {
+          async findTicket(ticketId: string) {
+            return { id: ticketId, author: { author_id: options.ticketAuthor } } as AdminTicketRow;
+          },
+        }
+      : {}),
   });
   const audit = recordingSystemWriter({ fail: options.failAudit });
   const { logger, lines } = captureLogger();
-  const app = buildTestApp({ logger, systemWriter: audit.writer, adminTicketsRepository: () => repository });
+  const app = buildTestApp({
+    logger,
+    systemWriter: audit.writer,
+    adminTicketsRepository: () => repository,
+    ...(options.events ? { events: options.events } : {}),
+  });
   return { app, replies, notesAdded, audit, lines };
 }
 
@@ -337,5 +362,54 @@ describe("Supabase admin repository: replies and notes (recorded calls)", () => 
     expect(await createAdminTicketsRepository(found.db).listNotes(TICKET_ID)).toEqual([NOTE]);
     const gone = recordingSupabase({ tickets: { data: null }, internal_notes: { data: [] } });
     expect(await createAdminTicketsRepository(gone.db).listNotes(TICKET_ID)).toBeNull();
+  });
+});
+
+describe("reply and note events (API-8)", () => {
+  function withEvents(options: { ticketAuthor?: string; sent?: Partial<SentReply> } = {}) {
+    const events = createEventHub({
+      clock: () => new Date("2026-10-20T06:30:00Z"),
+      logger: captureLogger().logger,
+    });
+    const admin = listenTo(events, { role: "admin", authorId: null });
+    const owner = listenTo(events, { role: "author", authorId: "AUTH001" });
+    const other = listenTo(events, { role: "author", authorId: "AUTH002" });
+    return { ...setup({ ...options, events }), admin, owner, other };
+  }
+
+  it("tells the ticket's author and admins about a reply and its status change", async () => {
+    const { app, admin, owner, other } = withEvents({ ticketAuthor: "AUTH001" });
+    expect((await reply(app, { body: "We've escalated this." })).status).toBe(201);
+    const expected = { type: "ticket.updated", ticketId: TICKET_ID, changes: ["messages", "status"] };
+    expect(admin).toMatchObject([expected]);
+    expect(owner).toMatchObject([expected]);
+    expect(other).toEqual([]);
+  });
+
+  it("says only messages when the status stays", async () => {
+    const { app, owner } = withEvents({
+      ticketAuthor: "AUTH001",
+      sent: { previousStatus: "in_progress", newStatus: "in_progress" },
+    });
+    expect((await reply(app, { body: "One more thing." })).status).toBe(201);
+    expect(owner).toMatchObject([{ type: "ticket.updated", changes: ["messages"] }]);
+  });
+
+  it("still tells admins (and logs) when the ticket's author can't be loaded", async () => {
+    const { app, admin, owner, lines } = withEvents();
+    expect((await reply(app, { body: "We've escalated this." })).status).toBe(201);
+    expect(admin).toHaveLength(1);
+    expect(owner).toEqual([]);
+    await settle();
+    expect(lines().some((line) => String(line.msg).startsWith("reply event sent to admins only"))).toBe(true);
+  });
+
+  it("keeps notes internal", async () => {
+    const { app, admin, owner } = withEvents({ ticketAuthor: "AUTH001" });
+    expect((await addNote(app, { body: "Finance ticket raised." })).status).toBe(201);
+    expect(admin).toMatchObject([
+      { type: "ticket.internal_updated", ticketId: TICKET_ID, changes: ["notes"] },
+    ]);
+    expect(owner).toEqual([]);
   });
 });

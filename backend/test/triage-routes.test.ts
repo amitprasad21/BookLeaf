@@ -6,9 +6,18 @@ import request from "supertest";
 import { describe, expect, it } from "vitest";
 import type { TriageControl } from "../src/ai/control.js";
 import { SeedDataSchema, toBookRows } from "../scripts/seed-data.js";
+import { createEventHub, type EventHub } from "../src/events/hub.js";
 import type { AdminTicketRow } from "../src/modules/tickets/admin-repository.js";
 import { adminRepository, fakeTicketsStore, recordingSystemWriter } from "./fakes.js";
-import { ADMIN_CONTEXT, TEST_TOKENS, bearer, buildTestApp, fixedClock } from "./helpers.js";
+import {
+  ADMIN_CONTEXT,
+  TEST_TOKENS,
+  bearer,
+  buildTestApp,
+  captureLogger,
+  fixedClock,
+  listenTo,
+} from "./helpers.js";
 
 const dataset = SeedDataSchema.parse(
   JSON.parse(readFileSync(new URL("../../supabase/seed/bookleaf_sample_data.json", import.meta.url), "utf8")),
@@ -69,6 +78,7 @@ describe("POST /api/v1/admin/tickets/:ticketId/triage", () => {
       aiStatus?: AdminTicketRow["ai_status"];
       requestsToday?: number;
       availability?: { ok: true } | { ok: false; reason: AiUnavailableReason };
+      events?: EventHub;
     } = {},
   ) {
     const counts: [string, string, string][] = [];
@@ -90,12 +100,27 @@ describe("POST /api/v1/admin/tickets/:ticketId/triage", () => {
       adminTicketsRepository: () => repository,
       triage: triage.control,
       systemWriter: audit.writer,
+      ...(options.events ? { events: options.events } : {}),
     });
     return { app, triage, audit, counts };
   }
 
   const retry = (app: ReturnType<typeof setup>["app"], id = TICKET_ID) =>
     request(app).post(`/api/v1/admin/tickets/${id}/triage`).set("Authorization", AS_ADMIN);
+
+  it("tells admins (not authors) that AI triage is running again", async () => {
+    const events = createEventHub({ clock, logger: captureLogger().logger });
+    const admin = listenTo(events, { role: "admin", authorId: null });
+    const author = listenTo(events, { role: "author", authorId: "AUTH001" });
+    const { app } = setup({ events });
+    expect((await retry(app)).status).toBe(202);
+    expect(admin).toMatchObject([{ type: "ticket.internal_updated", ticketId: TICKET_ID, changes: ["ai"] }]);
+    expect(author).toEqual([]);
+
+    const refused = setup({ events, availability: { ok: false, reason: "budget_exhausted" } });
+    expect((await retry(refused.app)).status).toBe(503);
+    expect(admin).toHaveLength(1); // nothing new when the retry is refused
+  });
 
   it("resets and re-queues the ticket (202), audited, counting today's requests from 00:00 India time", async () => {
     const { app, triage, audit, counts } = setup();

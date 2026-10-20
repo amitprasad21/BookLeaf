@@ -3,10 +3,19 @@ import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { SeedDataSchema, toBookRows } from "../scripts/seed-data.js";
+import { createEventHub } from "../src/events/hub.js";
 import { RateLimitedError, ValidationError } from "../src/lib/errors.js";
 import { mapPostgrestError } from "../src/modules/tickets/repository.js";
 import { fakeTicketsStore, recordingSystemWriter } from "./fakes.js";
-import { AUTHOR_CONTEXT, TEST_TOKENS, bearer, buildTestApp, captureLogger, settle } from "./helpers.js";
+import {
+  AUTHOR_CONTEXT,
+  TEST_TOKENS,
+  bearer,
+  buildTestApp,
+  captureLogger,
+  listenTo,
+  settle,
+} from "./helpers.js";
 
 const dataset = SeedDataSchema.parse(
   JSON.parse(readFileSync(new URL("../../supabase/seed/bookleaf_sample_data.json", import.meta.url), "utf8")),
@@ -272,5 +281,39 @@ describe("mapPostgrestError", () => {
     const unknown = mapPostgrestError({ code: "XX000", message: "secret internals" }, "insert");
     expect(unknown).not.toHaveProperty("status");
     expect(unknown.message).not.toContain("secret internals");
+  });
+});
+
+describe("ticket events (API-8)", () => {
+  function withEvents() {
+    const events = createEventHub({
+      clock: () => new Date("2026-10-20T06:30:00Z"),
+      logger: captureLogger().logger,
+    });
+    const admin = listenTo(events, { role: "admin", authorId: null });
+    const author = listenTo(events, { role: "author", authorId: AUTHOR_CONTEXT.author!.authorId });
+    const app = buildTestApp({ ticketsRepository: fakeTicketsStore(books).factory, events });
+    return { app, admin, author };
+  }
+
+  it("tells admins about a new ticket after it's saved (ids only)", async () => {
+    const { app, admin, author } = withEvents();
+    const res = await create(app, validTicket);
+    expect(res.status).toBe(201);
+    expect(admin).toEqual([
+      {
+        type: "ticket.created",
+        ticketId: res.body.data.id,
+        changes: ["created"],
+        at: "2026-10-20T06:30:00.000Z",
+      },
+    ]);
+    expect(author).toEqual([]); // authors only get updates to their tickets
+  });
+
+  it("publishes nothing when the ticket isn't saved", async () => {
+    const { app, admin } = withEvents();
+    expect((await create(app, { ...validTicket, subject: "Hi" })).status).toBe(400);
+    expect(admin).toEqual([]);
   });
 });

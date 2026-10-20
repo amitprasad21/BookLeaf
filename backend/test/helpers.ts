@@ -1,10 +1,12 @@
 import { Writable } from "node:stream";
+import type { Role, TicketEvent } from "@bookleaf/shared";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Logger } from "pino";
 import { createApp, type AppDeps } from "../src/app.js";
 import type { AuthContext, AuthVerifier } from "../src/auth/types.js";
 import { loadEnv } from "../src/config/env.js";
 import type { SystemWriter } from "../src/db/system-writer.js";
+import type { EventHub } from "../src/events/hub.js";
 import type { Clock } from "../src/lib/clock.js";
 import { ForbiddenError } from "../src/lib/errors.js";
 import { createLogger } from "../src/lib/logger.js";
@@ -102,6 +104,8 @@ export interface TestAppOptions {
   adminTicketsRepository?: AppDeps["adminTicketsRepository"];
   triage?: AppDeps["triage"];
   drafts?: AppDeps["drafts"];
+  events?: AppDeps["events"];
+  eventStream?: AppDeps["eventStream"];
 }
 
 /** App with test defaults (silent logs, dev CORS origins, fake verifier, recording audit writer). */
@@ -117,6 +121,8 @@ export function buildTestApp(options: TestAppOptions = {}) {
     ...(options.adminTicketsRepository ? { adminTicketsRepository: options.adminTicketsRepository } : {}),
     ...(options.triage ? { triage: options.triage } : {}),
     ...(options.drafts ? { drafts: options.drafts } : {}),
+    ...(options.events ? { events: options.events } : {}),
+    ...(options.eventStream ? { eventStream: options.eventStream } : {}),
   });
 }
 
@@ -147,3 +153,16 @@ export function captureLogger() {
 
 /** pino-http writes its line on response finish; let that settle before reading logs. */
 export const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+/** Subscribes a listener to the hub as the given role and collects what it receives. */
+export function listenTo(hub: EventHub, who: { role: Role; authorId: string | null; userId?: string }) {
+  const received: TicketEvent[] = [];
+  hub.subscribe({
+    userId: who.userId ?? `${who.role}-${who.authorId ?? "listener"}`,
+    role: who.role,
+    authorId: who.authorId,
+    send: (event) => received.push(event),
+    close: () => {},
+  });
+  return received;
+}
