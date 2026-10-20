@@ -31,3 +31,4 @@ Each entry records:
 | [2026-10-19-admin-portal.md](2026-10-19-admin-portal.md) | Support console + rest of FE-1: typecheck, lint, build, `npm run check`, 29 logic tests, signed-out browser checks (signed-in checks pending) |
 | [2026-10-20-api8.md](2026-10-20-api8.md) | Live updates: hub + `/events`, 20 new offline tests, live I-20 suite, client backoff tests, `npm run check`, server smoke |
 | [2026-10-20-ai6.md](2026-10-20-ai6.md) | AI evals: golden sets + runner, 341 offline tests, first live run (triage 100% / 94.4%, 3/3 injections; drafts 34/38 checks, every reply read), free-tier rate-limit finding |
+| [2026-10-20-ui-checks.md](2026-10-20-ui-checks.md) | Signed-in browser checks of both portals: live status, reply and queue updates (1–3 s), notes stay internal, 5 UI fixes; test ticket deleted |

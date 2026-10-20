@@ -1,42 +1,42 @@
 # Handover
 
 **Session:** 2026-10-20 (Claude Code)
-**Branch:** `feature/ai-evals` (from `main` at `1127692`; three commits; not merged, not pushed)
+**Branch:** `feature/ui-check-fixes` (from `main` at `d35aa0a`; three commits; not merged, not pushed)
 
 ## Done
 
-- Merged to `main` with approval: Phase 0 through API-8, AI-1..AI-5, FE-1, the author portal and the support console. Neither portal's signed-in screens have been checked in a browser yet.
-- **AI-6 evals, built and committed** ([verification/2026-10-20-ai6.md](verification/2026-10-20-ai6.md), D-034):
-  - `backend/src/ai/eval/`: `triage-golden.json` (36 cases), `draft-cases.json` (7 sample queries), `golden.ts` (schemas, loaders), `triage-eval.ts`, `draft-eval.ts` (scoring, runner, `rescoreDraftReport`).
-  - `backend/src/ai/triage.ts`: `createTriageClassifier` extracted (shared by the service and the eval; behaviour unchanged).
-  - `backend/scripts/eval.ts`, with npm scripts `eval:triage`, `eval:drafts` and the `:live` variants (root and backend).
-  - `.gitignore`: `backend/eval-results/`.
-  - Docs: AI_SPEC section 13 as built, AI_PROVIDER_ORCHESTRATION layout, .back TEST_PLAN.
-  - Tests: `backend/test/ai-eval.test.ts` (18).
-- Live run approved by the user on 2026-10-20. Triage meets every target (36/36 category, 34/36 priority, 0 schema failures, 3/3 injections). Drafts: 34/38 checks, every reply read.
+- Merged to `main` with approval: everything through AI-6 (API, AI triage/drafts/evals, live updates, both portals).
+- **Signed-in browser checks** ([verification/2026-10-20-ui-checks.md](verification/2026-10-20-ui-checks.md)): the user signed in (author Sneha, ops admin) in the Claude app's browser pane.
+  - Both portals checked, including live updates: author status and reply in 1–3 s; console "Show 1 update".
+  - One approved test ticket (BL-1277) was used and then deleted with the secret key; the database has 0 tickets.
+- **Fixes (committed) from those checks:**
+  - `author-frontend/src/features/books/`: the table fits 1024 px (ISBN one line, actions under the title, compact cells); `bookStatusText` shared with the query form.
+  - `author-frontend/src/features/tickets/NewTicketScreen.tsx`: book option wording.
+  - `admin-frontend/src/features/queue/`: "Nothing open right now" empty state; Status + Priority side by side.
+  - `admin-frontend/src/features/ticket/`: the "Reply sent" notice lives in the conversation (survives "Send & resolve").
+- Results: `npm run check` exit 0 (341 backend tests); author 29 and console 35 logic tests.
 
 ## In progress
 
-- **Signed-in browser checks for both portals** (unchanged from before). The demo passwords are in `backend/.env`, and sign-in goes to the hosted Supabase project, so the user signs in in the browser pane.
+- Nothing half-done.
 
 ## Broken / risky
 
-- **Free-tier per-minute quotas:** a burst of about 12 triage calls a minute exhausts Gemini's, and Groq's runs out soon after. Real tickets then wait for the sweeper (or go to manual review after three attempts). Pace the eval with `--pace` (8 s is safe).
-- **npm 10.2.5 on PATH** crashes on this workspace. Use Node's bundled npm 11.6.2 (`"C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js"`). Root scripts swallow extra flags: run `npx tsx scripts/eval.ts …` inside `backend/` for `--only`, `--pace` or `--rescore`.
-- **Bash heredocs in this environment halve backslashes and can trip on quotes.** Write code containing `\n` or regexes with the file editor; for multi-file text edits, write a Python script file and run it.
+- **Drafts can name the wrong overdue quarter** (seen live): fix the facts and prompt in the AI follow-up (proposed as its own session; a live re-run needs approval).
+- **Free-tier per-minute quotas:** about 12 triage calls a minute exhaust Gemini's, then Groq's. Real tickets wait for the sweeper (or manual review after three attempts).
+- **Claude in Chrome isn't connected** in this setup; signed-in UI checks run in the app's browser pane after the user signs in there.
+- **npm 10.2.5 on PATH** crashes on this workspace. Use Node's bundled npm 11.6.2 (`"C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js"`).
+- **Bash heredocs in this environment halve backslashes and can trip on quotes.** Write code with backslashes using the file editor; for multi-file text edits, write a Python script file and run it.
 - The frontend logic tests run with the root-hoisted Vitest (`npx vitest run --root author-frontend` / `--root admin-frontend`). Declaring `vitest` (and Testing Library, jsdom) in the frontends needs approval.
-- A partial-tree typecheck (e.g. while splitting commits) can trip over stale `.next/dev/types` left by a dev server; delete that git-ignored folder first.
+- Stale `.next/dev/types` from a dev server can break partial-tree typechecks; delete that git-ignored folder first.
 - The event hub is in-process: one backend instance only (A-15).
-- Free-tier Gemini: content may be used by Google (A-18).
 - `GROQ_FALLBACK_API_KEY` in `backend/.env` is unused (C-14); delete it.
-- The live suites write and delete tickets. An interrupted run can leave "RLS test ticket", "Live test: …", "Queue test Q…", "Admin test: …", "Reply test: …", "AI triage test: …", "AI draft test: …" or "Events test: …" rows; delete them with the secret key.
 
 ## Next
 
-1. Fast-forward `main` to `feature/ai-evals` (approval).
-2. Signed-in checks of both portals.
-3. AI-6 follow-ups, if wanted: facts-reading rules for the triage prompt; tighter royalty drafts; stage durations in the KB; triage queue pacing. Each prompt change bumps its version and needs a live re-run (approval).
-4. Hardening (nonce CSP, a shared web package if the copied session/stream files drift) and deployment.
+1. Fast-forward `main` to `feature/ui-check-fixes` (approval).
+2. AI follow-up: overdue quarter in the facts, triage facts-reading rules, tighter royalty drafts; live re-run with approval.
+3. Remaining manual checks (AE-01, AE-06, two-admin conflict, viewport matrix, keyboard, screen reader), hardening, deployment.
 
 ## Do not touch
 
@@ -45,8 +45,8 @@
 
 ## Commits (approved by the user 2026-10-20)
 
-On `feature/ai-evals` (hashes: `git log --oneline main..`). Each code commit was checked on its own (the rest stashed).
+On `feature/ui-check-fixes` (hashes: `git log --oneline main..`). Each code commit was checked on its own (the rest stashed).
 
-1. `refactor(ai): extract the triage classifier`
-2. `feat(ai): add golden sets and the eval runner`
-3. `docs: record AI-6 decisions and the first live eval`
+1. `fix(author): fit the book table at 1024 px and share the status wording`
+2. `fix(admin): keep the reply notice, clarify the empty queue, compact the filters`
+3. `docs: record the signed-in browser checks`

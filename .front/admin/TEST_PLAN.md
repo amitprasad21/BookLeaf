@@ -2,6 +2,8 @@
 
 Status of every case: **not run** until recorded in [.agent/verification/](../../.agent/verification/README.md).
 
+**Signed-in browser run (2026-10-20, [2026-10-20-ui-checks.md](../../.agent/verification/2026-10-20-ui-checks.md)):** ME-02 (a draft for a royalty-flagged ticket, which named the wrong overdue quarter; finding recorded), ME-05 (note not visible to the author), ME-06 (reply live in about 1.3 s), MT-09 rendered (allowed transitions only), the "Show N updates" live queue. Not run: ME-01, ME-03, ME-04, ME-07, MT-05/MM-03 (conflict).
+
 **Run so far (2026-10-19, [2026-10-19-admin-portal.md](../../.agent/verification/2026-10-19-admin-portal.md)):** MT-01 and MT-09 and the MT-04 wording at logic level (Vitest: `admin-frontend/src/features/**/*.test.ts`). Rendered component tests need Testing Library (not installed); the signed-in journeys need an admin sign-in.
 
 ## Automated (component/integration)
