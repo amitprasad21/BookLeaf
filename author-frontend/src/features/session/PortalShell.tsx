@@ -5,6 +5,7 @@ import { AppShell, Button, ErrorState, LoadingState, SignOutIcon, type NavItem }
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
+import { LiveUpdatesProvider } from "@/providers/LiveUpdatesProvider";
 import { useSession } from "@/providers/SessionProvider";
 
 const BRAND = "BookLeaf Author Portal";
@@ -72,7 +73,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
         </>
       }
     >
-      {children}
+      <LiveUpdatesProvider>{children}</LiveUpdatesProvider>
     </AppShell>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
-// A5. Ticket detail (author/SCREENS.md, STATES.md). Polls every 15 s until the
-// live stream (API-8) exists; new replies and status changes are announced
-// politely without moving focus.
+// A5. Ticket detail (author/SCREENS.md, STATES.md). Updated by the event
+// stream (polling every 15 s while it's down); new replies and status
+// changes are announced politely without moving focus.
 import {
   formatDateTime,
   STATUS_LABELS,
@@ -27,6 +27,7 @@ import { useEffect, useRef, useState } from "react";
 import { api, isApiError } from "@/lib/api-client";
 import { POLL_INTERVAL_MS, queryKeys } from "@/lib/query-client";
 import { NEW_REPLY_ANNOUNCEMENT, NO_REPLY_YET, NOT_FOUND, STATUS_EXPLAINERS } from "./copy";
+import { useLiveMode } from "@/providers/LiveUpdatesProvider";
 import { markSeen } from "./seen";
 import styles from "./tickets.module.css";
 
@@ -43,6 +44,7 @@ function BackLink() {
 
 export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const validId = TicketIdParamsSchema.safeParse({ ticketId }).success;
+  const live = useLiveMode();
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -58,7 +60,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     queryFn: ({ signal }) =>
       api.get<AuthorTicketDetailDto>(`/author/tickets/${ticketId}`, { signal }).then((body) => body.data),
     enabled: validId,
-    refetchInterval: (query) => (query.state.error ? false : POLL_INTERVAL_MS),
+    refetchInterval: (query) => (query.state.error || live === "live" ? false : POLL_INTERVAL_MS),
   });
 
   const data = ticket.data;
@@ -169,7 +171,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             </dd>
           </div>
         </dl>
-        <ConnectionIndicator mode="polling" />
+        <ConnectionIndicator mode={live} />
       </header>
 
       <p className="bl-sr-only" aria-live="polite" aria-atomic="true">

@@ -1,6 +1,7 @@
 "use client";
-// A4. My Tickets (author/SCREENS.md, STATES.md). Refreshes every 15 s until
-// the live stream (API-8) exists; the indicator says so in text.
+// A4. My Tickets (author/SCREENS.md, STATES.md). Live updates arrive over the
+// event stream; while it's down the list refreshes every 15 s, and the
+// indicator says which in text.
 import {
   formatDateTime,
   formatRelative,
@@ -31,6 +32,7 @@ import { useEffect, useRef, useState } from "react";
 import { api, isApiError } from "@/lib/api-client";
 import { POLL_INTERVAL_MS, queryKeys } from "@/lib/query-client";
 import { GENERAL_ACCOUNT, NEW_REPLY_ANNOUNCEMENT } from "./copy";
+import { useLiveMode } from "@/providers/LiveUpdatesProvider";
 import { hasNewReply, useSeenTickets } from "./seen";
 import styles from "./tickets.module.css";
 
@@ -53,6 +55,7 @@ export function TicketsScreen() {
   const statusParam = params.get("status");
   const filter: Filter = isFilter(statusParam) ? statusParam : "all";
   const status = filter === "all" ? undefined : filter;
+  const live = useLiveMode();
 
   const tickets = useQuery({
     queryKey: queryKeys.tickets({ status: status ? [status] : undefined }),
@@ -61,7 +64,7 @@ export function TicketsScreen() {
         query: { status, pageSize: PAGE_SIZE },
         signal,
       }),
-    refetchInterval: POLL_INTERVAL_MS,
+    refetchInterval: live === "live" ? false : POLL_INTERVAL_MS, // events refresh it while live
   });
   const seen = useSeenTickets();
 
@@ -86,7 +89,7 @@ export function TicketsScreen() {
         title="My Tickets"
         actions={
           <>
-            <ConnectionIndicator mode="polling" />
+            <ConnectionIndicator mode={live} />
             <Link href="/tickets/new" className={buttonClassName({ variant: "primary" })}>
               <PlusIcon />
               Raise a query
