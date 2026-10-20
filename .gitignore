@@ -52,3 +52,6 @@ next-env.d.ts
 
 # Machine-specific preview launcher (absolute npm path)
 .claude/launch.json
+
+# AI eval reports (model answers for review; summaries go to .agent/verification/)
+backend/eval-results/

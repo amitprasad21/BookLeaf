@@ -1,0 +1,188 @@
+{
+  "version": "draft-cases-2026-10-20.2",
+  "today": "2026-10-20",
+  "notes": "The assignment's seven sample queries (AI_SPEC.md section 13), each bound to a seed book. 'guidance' is the assignment's expected response, quoted for the reviewer. 'checks' are case-insensitive patterns the reply must (or, with mustNot, must not) contain; the runner also checks every reply for an early acknowledgement and for fact-guard warnings. Checks are a first pass: a person reads every reply. Version .2 (2026-10-20): numbers may be written as words, and the acknowledgement check reads past an inline greeting (two false misses in the first live run).",
+  "cases": [
+    {
+      "id": "royalty-missing",
+      "authorId": "AUTH003",
+      "bookId": "BK005",
+      "category": "royalty_payments",
+      "priority": "high",
+      "subject": "No royalty yet",
+      "description": "I published my book 4 months ago and still haven't received any royalty. What's going on?",
+      "guidance": "Acknowledge the frustration. Explain the quarterly royalty cycle and 45-day payout window. Check if their bank details are linked. Provide the specific next payout date. If the payment is genuinely overdue, escalate with a 48-hour resolution timeline.",
+      "checks": [
+        {
+          "name": "explains the quarterly cycle",
+          "pattern": "quarter"
+        },
+        {
+          "name": "mentions the 45-day window",
+          "pattern": "(45|forty-five)[ -]?day"
+        },
+        {
+          "name": "asks about bank details",
+          "pattern": "bank"
+        },
+        {
+          "name": "gives a 48-hour timeline",
+          "pattern": "(48|forty-eight)[ -]?hour"
+        },
+        {
+          "name": "states the pending amount",
+          "pattern": "₹\\s?2,546"
+        }
+      ],
+      "escalation": {
+        "needed": true,
+        "team": "finance"
+      }
+    },
+    {
+      "id": "royalty-too-low",
+      "authorId": "AUTH001",
+      "bookId": "BK001",
+      "category": "royalty_payments",
+      "priority": "medium",
+      "subject": "Royalty seems too low",
+      "description": "My royalty amount seems too low. I sold 200 copies but only received 3,000.",
+      "guidance": "Explain the net profit calculation: MRP minus printing, platform commission, and shipping. Offer to share a detailed line-by-line royalty breakdown. Don't be defensive; offer transparency.",
+      "checks": [
+        {
+          "name": "offers a line-by-line breakdown",
+          "pattern": "break ?down|line[- ]by[- ]line"
+        },
+        {
+          "name": "explains what is deducted",
+          "pattern": "printing|commission|shipping"
+        }
+      ]
+    },
+    {
+      "id": "isbn-mismatch",
+      "authorId": "AUTH002",
+      "bookId": "BK003",
+      "category": "isbn_metadata",
+      "priority": "high",
+      "subject": "Different ISBN on Amazon",
+      "description": "My book is showing a different ISBN on Amazon than what's on the physical copy.",
+      "guidance": "Treat as high priority. Acknowledge this is a serious data issue. Confirm you are escalating to the production team immediately. Provide a 48-hour resolution timeline.",
+      "checks": [
+        {
+          "name": "escalates to the production team",
+          "pattern": "production team|escalat"
+        },
+        {
+          "name": "gives a 48-hour timeline",
+          "pattern": "(48|forty-eight)[ -]?hour"
+        }
+      ],
+      "escalation": {
+        "needed": true,
+        "team": "production"
+      }
+    },
+    {
+      "id": "print-defect",
+      "authorId": "AUTH001",
+      "bookId": "BK002",
+      "category": "printing_quality",
+      "priority": "high",
+      "subject": "Terrible print quality",
+      "description": "I received my author copies and the print quality is terrible. The images are blurry and pages are misaligned.",
+      "guidance": "Apologise sincerely. Ask the author to share photos of the defective copies. Confirm that BookLeaf will arrange a free reprint once verified. Provide a timeline of 5-7 business days for the reprint.",
+      "checks": [
+        {
+          "name": "apologises",
+          "pattern": "apolog|sorry"
+        },
+        {
+          "name": "asks for photos",
+          "pattern": "photo"
+        },
+        {
+          "name": "offers a free reprint",
+          "pattern": "reprint"
+        },
+        {
+          "name": "gives 5-7 business days",
+          "pattern": "(5|five)\\s*(–|-|to)\\s*(7|seven)\\s*(business|working)?\\s*days"
+        }
+      ]
+    },
+    {
+      "id": "distribution-unavailable",
+      "authorId": "AUTH002",
+      "bookId": "BK004",
+      "category": "distribution_availability",
+      "priority": "high",
+      "subject": "Currently Unavailable on Amazon",
+      "description": "My book is published but it's showing as \"Currently Unavailable\" on Amazon.",
+      "guidance": "Explain that this is typically a stock sync issue. Confirm you're triggering a re-sync with the distribution team. Set expectation: 24-48 hours for it to go live again.",
+      "checks": [
+        {
+          "name": "explains a stock sync issue",
+          "pattern": "sync"
+        },
+        {
+          "name": "gives 24-48 hours",
+          "pattern": "(24|twenty-four)\\s*(–|-|to)\\s*(48|forty-eight)\\s*hours"
+        }
+      ]
+    },
+    {
+      "id": "production-typesetting",
+      "authorId": "AUTH009",
+      "bookId": "BK015",
+      "category": "book_status_production",
+      "priority": "medium",
+      "subject": "Still in typesetting",
+      "description": "It's been 3 weeks and my book is still in typesetting. When will it be done?",
+      "guidance": "Check the actual production status. If it's delayed, be honest about why (e.g., waiting on author approval for proofs). Provide a specific updated timeline. Don't blame the author even if the delay is on their side; frame it collaboratively.",
+      "checks": [
+        {
+          "name": "states the current stage",
+          "pattern": "typesetting"
+        },
+        {
+          "name": "names the next stage",
+          "pattern": "proofread"
+        },
+        {
+          "name": "gives a timeline",
+          "pattern": "\\d+\\s*(–|-|to)?\\s*\\d*\\s*(business |working )?(days|weeks)|by \\d{1,2}"
+        },
+        {
+          "name": "doesn't blame the author",
+          "pattern": "your fault|because you|you delayed",
+          "mustNot": true
+        }
+      ]
+    },
+    {
+      "id": "general-description",
+      "authorId": "AUTH005",
+      "bookId": "BK008",
+      "category": "general_inquiry",
+      "priority": "low",
+      "subject": "Updating my book description",
+      "description": "Can I update the description of my book on Amazon after it's already live?",
+      "guidance": "Yes, metadata updates can be submitted through the dashboard or by emailing the BookLeaf team. Changes typically reflect on platforms within 3-5 business days.",
+      "checks": [
+        {
+          "name": "says yes",
+          "pattern": "\\byes\\b|you can"
+        },
+        {
+          "name": "names the dashboard or email",
+          "pattern": "dashboard|email"
+        },
+        {
+          "name": "gives 3-5 business days",
+          "pattern": "(3|three)\\s*(–|-|to)\\s*(5|five)\\s*(business|working)?\\s*days"
+        }
+      ]
+    }
+  ]
+}
