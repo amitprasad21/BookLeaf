@@ -46,7 +46,7 @@
 | T-19 | Concurrent admin edits overwrite each other | Optimistic locking (409) | Low | API-6 tests |
 | T-20 | Expired/copied attachment URLs (if X-1 built) | Private bucket, short-lived signed URLs, owner check | n/a until built | X-1 |
 | T-21 | Vulnerable dependencies | `npm audit` before deploy; minimal dependency set; lockfile committed | Medium | SEC-2 |
-| T-22 | Event stream leaks content | Events carry IDs only; per-subscriber filtering by ownership | Low | API-8 tests |
+| T-22 | Event stream leaks content | Events carry IDs only; per-subscriber filtering by ownership; internal changes are a separate admin-only event; streams re-authenticate every 10 min | Low | API-8 tests (offline + live I-20: no reply text on the stream, nothing to another author) |
 | T-23 | Author bypasses the backend and calls the Supabase Data API directly with the public key + own JWT | RLS limits them to their own rows; insert WITH CHECK blocks setting status/priority/AI fields; DB constraints enforce lengths; DB rate-limit trigger caps inserts; AI daily budget caps cost of sweeper triage | Low–Medium | RLS-04..09 |
 
 ## Explicitly accepted risks (demo)

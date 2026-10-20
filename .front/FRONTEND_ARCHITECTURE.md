@@ -81,7 +81,7 @@ TanStack Query keys (shared constants):
 - `useTicketEvents()` opens `GET /events` with `fetch` + `ReadableStream`, parses SSE frames and invalidates query keys per event.
 - Reconnect with backoff 1 s → 2 s → 5 s → 15 s. While disconnected, affected queries poll every 15 s (`refetchInterval`).
 - A small indicator shows "Live" or "Refreshing every 15 s" (text, not colour).
-- **Until API-8:** there is no stream yet, so My Tickets and the ticket page poll every 15 s and the indicator reads "Refreshing every 15 s" (D-031). The admin queue polls a second copy of the list and offers "Show N updates" (D-032).
+- **As built (API-8, D-033):** `LiveUpdatesProvider` opens the stream once per signed-in tab (`lib/event-stream.ts`). Pages set `refetchInterval` only while it is down, and every (re)connect re-fetches what is shown. In the console, events refresh the queue's comparison copy ("Show N updates", D-032), the summary and the ticket. They never refetch drafts.
 
 ## 7. Forms and validation
 

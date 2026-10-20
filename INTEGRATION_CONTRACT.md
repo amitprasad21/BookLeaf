@@ -128,9 +128,10 @@ data: {"ticketId":"4f1c…","changes":["status","messages"],"at":"2026-10-16T10:
 | `ticket.created` | admins | Author created a ticket |
 | `ticket.updated` | ticket's author + admins | Status change, new author-visible message |
 | `ticket.triaged` | admins | AI triage finished (completed or manual review) |
-| `ticket.internal_updated` | admins | Note added, override, assignment |
+| `ticket.internal_updated` | admins | Note added, override, assignment, AI triage re-run |
 
-- Heartbeat comment every 25 s. On disconnect, clients back off (1 s, 2 s, 5 s, then 15 s) and poll the relevant list every 15 s until reconnected.
+- `changes` names what changed: `created`, `status`, `messages`, `category`, `priority`, `assignee`, `notes`, `ai`.
+- Heartbeat comment every 25 s. The server ends a stream after 10 minutes so the client reconnects with a current token; at most 5 streams per user (429). On disconnect, clients back off (1 s, 2 s, 5 s, then 15 s) and poll the relevant list every 15 s until reconnected.
 
 ## 10. Validation limits (shared schemas in `packages/shared`)
 

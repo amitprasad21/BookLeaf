@@ -90,5 +90,5 @@ packages/shared/src/schemas.ts           request schemas: author tickets (API-4)
 ## 6. SSE endpoint
 
 - Sets `Content-Type: text/event-stream`, `Cache-Control: no-cache`, `Connection: keep-alive`; flushes headers immediately.
-- Registers the subscriber with `{ userId, role, authorId }`; the hub filters: admins get all events, authors only `ticket.updated` for tickets they own (the hub checks a cached ticket→author map populated on publish).
-- Heartbeat `: ping` every 25 s; unregisters on `close`.
+- Registers the subscriber with `{ userId, role, authorId }`; the hub filters: admins get all events, authors only `ticket.updated` for tickets they own. The publishing route passes the ticket's `author_id` (no cache; D-033).
+- Heartbeat `: ping` every 25 s; unregisters on `close`; ends the stream after 10 minutes (re-authentication); at most 5 streams per user (429). Built in API-8: `src/events/hub.ts`, `src/modules/events/router.ts`.

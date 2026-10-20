@@ -8,7 +8,7 @@
 | F-02 | Supabase unavailable | DB/client errors; `/health` stays up but API calls 503 | Clear "Service temporarily unavailable, your draft is kept" message; author form keeps input | Retry with backoff in the client; no data loss because nothing was written |
 | F-03 | Supabase Auth unavailable | Sign-in errors | Sign-in page shows a service error, not "wrong password" | Wait / retry |
 | F-04 | Expired JWT mid-session | 401 from API | Silent token refresh then retry once; otherwise redirect to sign-in with "Session expired" | Re-authenticate |
-| F-05 | SSE stream drops | Stream end / error | No visible change; polling every 15 s takes over | Exponential reconnect |
+| F-05 | SSE stream drops | Stream end / error | Indicator switches to "Refreshing every 15 s"; polling every 15 s takes over | Reconnect with backoff 1, 2, 5, 15 s; everything shown is re-fetched on reconnect (D-033) |
 | F-06 | Backend restart during AI work | In-flight jobs lost | Ticket shows "AI triage pending" | Startup sweeper re-queues after 2 minutes |
 | F-07 | Backend cold start (free tier sleep) | First request slow | Loading state up to ~60 s | Documented; a paid tier or a keep-alive would remove it |
 | F-08 | Invalid environment configuration | Startup env validation fails fast (zod) | Service doesn't start (no half-configured runtime) | Fix env; logs name the **missing variable**, never values |

@@ -10,7 +10,7 @@
 | D-003 | Backend: Express 5 + TypeScript + zod | proposed | 2026-10-16 |
 | D-004 | Frontends: Next.js (App Router) + TanStack Query; shared `packages/shared` and `packages/ui` | proposed | 2026-10-16 |
 | D-005 | User-scoped DB access (RLS enforced) + narrow system writer | proposed | 2026-10-16 |
-| D-006 | Real-time via SSE (fetch streaming) with polling fallback | proposed | 2026-10-16 |
+| D-006 | Real-time via SSE (fetch streaming) with polling fallback | accepted (built in API-8, D-033) | 2026-10-16 |
 | D-007 | Save-first, asynchronous in-process AI triage with startup sweeper | proposed | 2026-10-16 |
 | D-008 | One combined triage call (category + priority) | proposed | 2026-10-16 |
 | D-009 | Deterministic facts builder + category-based KB sectioning | proposed | 2026-10-16 |
@@ -29,6 +29,7 @@
 | D-022 | Token verification via `supabase.auth.getClaims()` (ES256/JWKS, local); profile + author loaded per request through the caller's RLS client | accepted | 2026-10-18 |
 | D-023 | Payout calendar in `packages/shared`; ₹1,000 threshold on the author's total pending; `nextPayoutDueBy` = earliest deadline not yet passed | accepted | 2026-10-18 |
 | D-024 | Author ticket API: zod parse in handlers (no `validate` middleware), same 400 for unknown and not-owned books, per-user limits + DB backstop, audit via the system writer | accepted | 2026-10-18 |
+| D-033 | Live updates: in-process hub filtered by role and ticket owner (publisher passes the author id); streams end after 10 min to re-authenticate; 5 streams per user; events only after a successful write; portals poll only while the stream is down and re-sync on every (re)connect | accepted | 2026-10-20 |
 | D-032 | Support console: session layer copied from the author portal (no shared web package yet); polled queue offered as "Show N updates"; AI draft requested on open only when it's the team's turn; category override refetches the draft; KB and policy-floor names in `packages/shared` with a sync test | accepted | 2026-10-19 |
 | D-031 | Frontend foundation: `packages/ui` is presentation-only (no `@bookleaf/shared` dependency; CSS classes over tokens); DTO types in `packages/shared` and returned by the serializers; session from `INITIAL_SESSION` + `/me`; 15 s polling until SSE; CSP with `'unsafe-inline'` scripts (nonce CSP is a hardening option) | accepted | 2026-10-19 |
 | D-030 | AI drafts: Flash-Lite for drafts (3.8 Flash too slow on the free tier), KB as a TS module with category selection, facts-reading rules in the prompt, guards with one repair, server-set sign-off, fact warnings, context-hash reuse, admin-RLS storage | accepted | 2026-10-19 |
@@ -338,3 +339,21 @@
   - "Assign to me" is always visible (hover-only controls fail on touch).
   - The urgency rule is hint text under Sort, not a tooltip.
 
+### D-033: Live updates over SSE (API-8)
+- **Context:** API-8. One-way updates for both portals, under the D-006 contract (fetch streaming, identifiers only, polling fallback).
+- **Hub:** in-process (one backend instance, A-15).
+  - Admins receive every event. Authors receive only `ticket.updated` for tickets they own.
+  - The publishing route passes the ticket's `author_id`, so the hub needs no lookup or cache. The reply route looks the author up after the reply; if that fails, only admins are told and a warning is logged.
+  - Overrides and assignment are `ticket.internal_updated`, so an author never learns that an internal field changed.
+- **Published only after the write succeeded:** create, PATCH (from its audit actions), reply, note, AI re-run, and each finished triage job (from the queue wrapper in `server.ts`, so the triage service stays unaware of HTTP). Delivery errors are logged and never affect the write.
+- **Stream lifetime:** the token is checked once, at connect.
+  - The server ends each stream after 10 minutes, and the client reconnects with a current token. A signed-out or expired session stops receiving events within that time.
+  - Heartbeat `: ping` every 25 s.
+  - At most 5 streams per user (429 beyond), against tab or reconnect storms.
+- **Client:** one stream per signed-in tab, read with `fetch` (the token stays in a header), with a refresh-once on 401.
+  - Backoff 1, 2, 5, then 15 s; a stream that ends after a healthy life reconnects at once without leaving "Live".
+  - Every (re)connect re-fetches what's shown, in case an event was missed.
+  - Pages poll only while the stream is down.
+  - The console's queue keeps "Show N updates": events refresh the comparison copy, never the shown rows. Drafts are never refetched by events (each fetch can be a model call).
+- **Same runner file in both portals** (`lib/event-stream.ts`), as with the session layer (D-032).
+- **Revisit:** when running more than one backend instance (Postgres LISTEN/NOTIFY or Redis pub/sub, ALTERNATIVES.md), or if hosting cuts long-lived connections (polling remains the fallback).

@@ -56,7 +56,7 @@ Integration tests use a dedicated test author and test admin plus tickets they c
 | I-17 | `POST /admin/tickets/{id}/draft` | Twice, unchanged context | Second returns 200 cached, 1 usage event (**implemented**: offline + live) |
 | I-18 | `POST /admin/tickets/{id}/draft` | Mock invalid output | 503 `invalid_output` after one repair attempt (**implemented**) |
 | I-19 | `POST /author/tickets` | 6 within 10 min | 6th → 429 with Retry-After |
-| I-20 | `GET /events` | Author subscribed; admin replies to another author's ticket | No event delivered to this author |
+| I-20 | `GET /events` | Author subscribed; admin replies to another author's ticket | No event delivered to this author (**implemented**: `backend/test-integration/events.test.ts`, plus offline `backend/test/events.test.ts`) |
 | I-21 | error handler | Forced internal error in production mode | Generic 500, no stack, requestId present |
 | I-22 | CORS | Preflight from unlisted origin | No CORS allow headers |
 

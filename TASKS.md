@@ -38,14 +38,14 @@ Still to add, each with approval: `@anthropic-ai/sdk` (AI-2) and `@testing-libra
 | API-5 | Admin queue: filters, urgency sort, paging, summary counts, SLA state | API-4 | done ([.agent/verification/2026-10-18-api5.md](.agent/verification/2026-10-18-api5.md)) | ADMIN-01..03, ADMIN-14 |
 | API-6 | Admin detail + `PATCH`: transitions, overrides, self-assign, optimistic lock, audit events | API-5 | done ([.agent/verification/2026-10-18-api6.md](.agent/verification/2026-10-18-api6.md)) | ADMIN-05/07/11/13/15/16/17 |
 | API-7 | Admin replies (`/messages`) and internal notes; first-response tracking | API-6 | done ([.agent/verification/2026-10-18-api7.md](.agent/verification/2026-10-18-api7.md)) | ADMIN-09/10/12 |
-| API-8 | SSE event hub + `/events`; scoped delivery | API-4 | todo | AUTHOR-09 |
+| API-8 | SSE event hub + `/events`; scoped delivery | API-4 | done ([.agent/verification/2026-10-20-api8.md](.agent/verification/2026-10-20-api8.md)); portals live, browser check pending | AUTHOR-09 |
 | FE-1 | `packages/ui`: tokens + primitives ([.front/COMPONENTS.md](.front/COMPONENTS.md)) | SETUP-2 | done: author set (D-031) plus the console set (D-032) built and used by both portals ([.agent/verification/2026-10-19-fe1-author.md](.agent/verification/2026-10-19-fe1-author.md), [.agent/verification/2026-10-19-admin-portal.md](.agent/verification/2026-10-19-admin-portal.md)); rendered component tests wait for Testing Library | NFR-03 |
 | FE-A1 | Author sign-in, session handling, portal-role check | API-2, FE-1 | in_progress: built; signed-out states verified; signed-in check pending | AUTH-01/05 |
 | FE-A2 | My Books | API-3, FE-A1 | in_progress: built; logic tests pass; browser check pending | AUTHOR-01..03 |
 | FE-A3 | Submit a Query form | API-4, FE-A1 | in_progress: built; validation tests pass; browser check pending | AUTHOR-04/05 |
-| FE-A4 | My Tickets list + detail + live updates (SSE + polling fallback) | API-4, API-8 | in_progress: list + detail with 15 s polling built; SSE waits for API-8; browser check pending | AUTHOR-06/07/09 |
+| FE-A4 | My Tickets list + detail + live updates (SSE + polling fallback) | API-4, API-8 | in_progress: list + detail with live updates (SSE, polling fallback) built; browser check pending | AUTHOR-06/07/09 |
 | FE-M1 | Admin sign-in + portal-role check | API-2, FE-1 | in_progress: built; signed-out checks pass; signed-in check pending ([.agent/verification/2026-10-19-admin-portal.md](.agent/verification/2026-10-19-admin-portal.md)) | AUTH-01/05 |
-| FE-M2 | Queue: filters in URL, urgency sort, summary bar, live updates | API-5, API-8 | in_progress: built with 15 s polling ("Show N updates"); logic tests pass; browser check pending | ADMIN-01..03/14 |
+| FE-M2 | Queue: filters in URL, urgency sort, summary bar, live updates | API-5, API-8 | in_progress: built with live updates feeding "Show N updates" (polling fallback); logic tests pass; browser check pending | ADMIN-01..03/14 |
 | FE-M3 | Ticket detail: context panel, thread, notes, timeline, status/assign/override controls, conflict handling | API-6, API-7 | in_progress: built; logic tests pass; browser check pending | ADMIN-05..17 |
 | FE-M4 | Reply editor (manual first) + Send with status choice | API-7 | in_progress: built; browser check pending | ADMIN-09/10 |
 
