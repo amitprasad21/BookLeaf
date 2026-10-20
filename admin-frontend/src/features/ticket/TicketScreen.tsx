@@ -1,7 +1,7 @@
 "use client";
 // M3. Ticket detail (admin/SCREENS.md, STATES.md). Two columns from 1024 px
 // (conversation and reply | triage, author, notes, timeline); tabs below.
-// Refreshes every 15 s until the live stream (API-8).
+// Updated by the event stream (every 15 s while it's down).
 import {
   formatDateTime,
   formatRelative,
@@ -34,6 +34,7 @@ import { useState } from "react";
 import { api, isApiError } from "@/lib/api-client";
 import { queueHref, useMediaQuery } from "@/lib/browser";
 import { POLL_INTERVAL_MS, queryKeys } from "@/lib/query-client";
+import { useLiveMode } from "@/providers/LiveUpdatesProvider";
 import { useMe } from "@/providers/SessionProvider";
 import { slaLabel } from "../queue/sla-label";
 import { ContextPanel } from "./ContextPanel";
@@ -57,12 +58,13 @@ function BackLink() {
 
 export function TicketScreen({ ticketId }: { ticketId: string }) {
   const validId = TicketIdParamsSchema.safeParse({ ticketId }).success;
+  const live = useLiveMode();
   const ticket = useQuery({
     queryKey: queryKeys.ticket(ticketId),
     queryFn: ({ signal }) =>
       api.get<AdminTicketDetailDto>(`/admin/tickets/${ticketId}`, { signal }).then((body) => body.data),
     enabled: validId,
-    refetchInterval: (query) => (query.state.error ? false : POLL_INTERVAL_MS),
+    refetchInterval: (query) => (query.state.error || live === "live" ? false : POLL_INTERVAL_MS),
   });
 
   if (!validId || isApiError(ticket.error, "NOT_FOUND")) {
@@ -102,6 +104,7 @@ export function TicketScreen({ ticketId }: { ticketId: string }) {
 
 function TicketView({ ticket }: { ticket: AdminTicketDetailDto }) {
   const me = useMe();
+  const live = useLiveMode();
   const wide = useMediaQuery("(min-width: 1024px)");
   const { update, pending, message, dismiss } = useTicketUpdate(ticket);
   const sla = slaLabel(ticket);
@@ -129,7 +132,7 @@ function TicketView({ ticket }: { ticket: AdminTicketDetailDto }) {
             {formatRelative(ticket.createdAt)}
           </time>
         </p>
-        <ConnectionIndicator mode="polling" />
+        <ConnectionIndicator mode={live} />
       </header>
 
       {message ? (

@@ -1,7 +1,8 @@
 "use client";
 // M2. Queue (admin/SCREENS.md, STATES.md, FLOWS.md F-M1). Filters live in the
-// URL. The shown list changes only on the admin's own actions; a polled copy
-// offers "Show N updates" instead of reordering rows under their eyes.
+// URL. The shown list changes only on the admin's own actions; a second copy,
+// refreshed by live events (or every 15 s while the stream is down), offers
+// "Show N updates" instead of reordering rows under their eyes.
 import {
   AI_STATUS_LABELS,
   CATEGORY_LABELS,
@@ -48,6 +49,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { api, isApiError } from "@/lib/api-client";
 import { rememberQueueSearch, useMediaQuery } from "@/lib/browser";
 import { POLL_INTERVAL_MS, queryKeys } from "@/lib/query-client";
+import { useLiveMode } from "@/providers/LiveUpdatesProvider";
 import { useMe } from "@/providers/SessionProvider";
 import {
   apiQuery,
@@ -96,6 +98,8 @@ export function QueueScreen() {
   const queryClient = useQueryClient();
   const me = useMe();
   const wide = useMediaQuery("(min-width: 1024px)");
+  const live = useLiveMode();
+  const poll = live === "live" ? false : POLL_INTERVAL_MS; // events refresh the copy while live
 
   const filters = filtersFromSearch(params);
   const search = filtersToSearch(filters);
@@ -112,14 +116,14 @@ export function QueueScreen() {
   const probe = useQuery({
     queryKey: queryKeys.queueProbe(search),
     queryFn: ({ signal }) => fetchPage(signal),
-    refetchInterval: POLL_INTERVAL_MS,
+    refetchInterval: poll,
     enabled: list.isSuccess,
   });
   const summary = useQuery({
     queryKey: queryKeys.summary,
     queryFn: ({ signal }) =>
       api.get<QueueSummaryDto>("/admin/tickets/summary", { signal }).then((body) => body.data),
-    refetchInterval: POLL_INTERVAL_MS,
+    refetchInterval: poll,
   });
 
   // Tickets created after the admin opened the queue get a "New" tag.
@@ -165,7 +169,7 @@ export function QueueScreen() {
 
   return (
     <>
-      <PageHeader title="Ticket queue" actions={<ConnectionIndicator mode="polling" />} />
+      <PageHeader title="Ticket queue" actions={<ConnectionIndicator mode={live} />} />
 
       <SummaryBar
         summary={summary.data}
