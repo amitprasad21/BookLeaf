@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { api, isApiError } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-client";
+import { bookStatusText } from "../books/book-view";
 import {
   attachmentProblem,
   clearDraft,
@@ -240,7 +241,7 @@ export function NewTicketScreen() {
           </option>
           {(bookList ?? []).map((book) => (
             <option key={book.bookId} value={book.bookId}>
-              {book.title} · {book.status}
+              {book.title} · {bookStatusText(book.status)}
             </option>
           ))}
           <option value={GENERAL}>General / Account Level</option>

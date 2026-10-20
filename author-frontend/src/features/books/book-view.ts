@@ -33,6 +33,12 @@ export interface BookView {
 
 const money = (value: number | null) => (value === null ? NULL_WORDING.money : formatInr(value));
 
+/** "Published & Live", or "In production: Cover Design" for "In Production - Cover Design". */
+export function bookStatusText(status: string): string {
+  const stage = productionStage(status);
+  return stage ? `In production: ${stage.stage}` : status;
+}
+
 /**
  * The ₹1,000 minimum applies to the author's accumulated pending royalties,
  * so a book's rollover note shows only when the author's total is below it too.
@@ -48,7 +54,7 @@ export function toBookView(book: BookDto, summary: RoyaltySummaryDto): BookView 
   const onSale = book.isPublished || book.totalRoyaltyEarned > 0;
   return {
     book,
-    status: stage ? `In production: ${stage.stage}` : book.status,
+    status: bookStatusText(book.status),
     stageCaption: stage && stage.number > 0 ? `Stage ${stage.number} of ${stage.of}` : null,
     published: book.publicationDate ? formatDate(book.publicationDate) : NULL_WORDING.publicationDate,
     mrp: money(book.mrp),

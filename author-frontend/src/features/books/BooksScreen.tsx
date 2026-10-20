@@ -177,7 +177,7 @@ function StatusCell({ view }: { view: BookView }) {
   );
 }
 
-const COLUMNS = 9;
+const COLUMNS = 8;
 
 function BooksTable({ views }: { views: BookView[] }) {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
@@ -191,7 +191,7 @@ function BooksTable({ views }: { views: BookView[] }) {
 
   return (
     <div className="bl-table-wrap">
-      <table className="bl-table">
+      <table className={`bl-table ${styles.compact}`}>
         <caption className="bl-sr-only">Your books with sales and royalties</caption>
         <thead>
           <tr>
@@ -207,9 +207,6 @@ function BooksTable({ views }: { views: BookView[] }) {
             </th>
             <th scope="col">Royalties</th>
             <th scope="col">Last payout</th>
-            <th scope="col">
-              <span className="bl-sr-only">Actions</span>
-            </th>
           </tr>
         </thead>
         <tbody>
@@ -222,22 +219,7 @@ function BooksTable({ views }: { views: BookView[] }) {
                 <th scope="row" className={styles.titleCell}>
                   {title}
                   <span className={styles.caption}>{genre}</span>
-                </th>
-                <td className="bl-mono">{isbn}</td>
-                <td>
-                  <StatusCell view={view} />
-                </td>
-                <td>{view.published}</td>
-                <td className="bl-num">{view.mrp}</td>
-                <td className="bl-num">
-                  {view.copiesSold}
-                  {view.copiesCaption ? <span className={styles.caption}>{view.copiesCaption}</span> : null}
-                </td>
-                <td>
-                  <Royalties view={view} />
-                </td>
-                <td>{view.lastPayout}</td>
-                <td>
+                  {/* Actions sit under the title so the table fits 1024 px. */}
                   <div className={styles.actions}>
                     <Link href={askHref(bookId)} className={styles.actionLink}>
                       Ask about this book<span className="bl-sr-only">: {title}</span>
@@ -253,7 +235,21 @@ function BooksTable({ views }: { views: BookView[] }) {
                       <span className="bl-sr-only">: {title}</span>
                     </button>
                   </div>
+                </th>
+                <td className={`bl-mono ${styles.isbn}`}>{isbn}</td>
+                <td>
+                  <StatusCell view={view} />
                 </td>
+                <td>{view.published}</td>
+                <td className={`bl-num ${view.book.mrp === null ? styles.wrap : ""}`}>{view.mrp}</td>
+                <td className="bl-num">
+                  {view.copiesSold}
+                  {view.copiesCaption ? <span className={styles.caption}>{view.copiesCaption}</span> : null}
+                </td>
+                <td>
+                  <Royalties view={view} />
+                </td>
+                <td>{view.lastPayout}</td>
               </tr>,
               <tr key={`${bookId}-details`} id={detailsId} hidden={!open} className={styles.detailRow}>
                 <td colSpan={COLUMNS}>

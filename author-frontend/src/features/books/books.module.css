@@ -46,6 +46,22 @@
   }
 }
 
+/* Eight columns must fit 1024 px: tighter cells, ISBNs on one line (they
+   broke at every hyphen), actions under the title. */
+.compact th,
+.compact td {
+  padding-inline: var(--space-3);
+}
+
+.isbn {
+  white-space: nowrap;
+}
+
+/* Null wording ("Not yet set") may wrap; numbers stay on one line. */
+.compact td.wrap {
+  white-space: normal;
+}
+
 .titleCell {
   min-width: 10rem;
   font-weight: 600;
@@ -94,6 +110,8 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  margin-top: var(--space-1);
+  font-weight: 400;
 }
 
 .actionLink,
@@ -105,7 +123,6 @@
   font-size: var(--text-sm);
   text-decoration: underline;
   text-underline-offset: 3px;
-  white-space: nowrap;
 }
 
 .toggle {

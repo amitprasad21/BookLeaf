@@ -2,7 +2,14 @@
 // own book shapes.
 import type { BookDto, RoyaltySummaryDto } from "@bookleaf/shared";
 import { describe, expect, it } from "vitest";
-import { FULLY_PAID, ROLLOVER_NOTE, firstName, pendingCaption, toBookView } from "./book-view";
+import {
+  FULLY_PAID,
+  ROLLOVER_NOTE,
+  bookStatusText,
+  firstName,
+  pendingCaption,
+  toBookView,
+} from "./book-view";
 
 const book = (overrides: Partial<BookDto>): BookDto => ({
   bookId: "BK001",
@@ -123,6 +130,13 @@ describe("the Pending caption", () => {
     expect(pendingCaption(summary({ totalEarned: 0, totalPaid: 0, totalPending: 0 }))).toBe(
       "Royalties start once your first book is on sale",
     );
+  });
+});
+
+describe("bookStatusText", () => {
+  it("matches the wording used on My Books and in the query form", () => {
+    expect(bookStatusText("In Production - Cover Design")).toBe("In production: Cover Design");
+    expect(bookStatusText("Published & Live")).toBe("Published & Live");
   });
 });
 
