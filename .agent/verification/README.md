@@ -11,6 +11,7 @@ Each entry records:
 
 | File | Scope |
 |---|---|
+| [2026-10-22-deployment.md](2026-10-22-deployment.md) | Live Render + Vercel checks: API health, headers, docs, auth, roles, CORS, SSE, dataset books (13/13 read-only signed-in checks); author portal still built against localhost (D-1); per-IP limits not per visitor on Render (D-2) |
 | [2026-10-22-release-preparation.md](2026-10-22-release-preparation.md) | Draft .5 repair guards, runtime pacing, live Gemini/Groq results, 441 offline tests, local secret/history scan, release documents and remaining access/review gates |
 | [2026-10-21-live-ai-followup.md](2026-10-21-live-ai-followup.md) | Approved live triage 36/36 category and priority; final drafts 48/49 checks with residual manual findings; final 433 offline tests and production builds |
 | [2026-10-21-hardening-ai-followup.md](2026-10-21-hardening-ai-followup.md) | Security and redirect fixes, explicit AI payout periods, 431 offline tests, production builds, dependency audit and remaining review gates |

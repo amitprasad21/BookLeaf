@@ -1,7 +1,9 @@
 # Handover
 
 **Session:** 2026-10-22 (Codex)
-**Branch:** `main` at `aaebf7c`, pushed to `origin` (github.com/amitprasad21/BookLeaf, public); the commits below are on it. No deployment.
+**Branch:** `main` pushed to `origin` (github.com/amitprasad21/BookLeaf, public). **Deployed by the user 2026-10-22:** API https://bookleaf-338a.onrender.com/api/v1, author portal https://bookleaf-author.vercel.app, support console https://bookleafsupport.vercel.app.
+
+**Deployment check 2026-10-22 (Claude Code, branch `docs/live-deployment`):** [record](verification/2026-10-22-deployment.md). API health, headers, docs, auth, roles, CORS (both portals allowed, others refused), SSE and the dataset books pass (13/13 read-only signed-in checks). Open: **D-1** the author portal's live build still calls `http://localhost:4000/api/v1`; set `NEXT_PUBLIC_API_BASE_URL` for Production in Vercel and redeploy without the build cache. **D-2** per-IP limits aren't per visitor behind Render's proxies (follow-up proposal exists). Not yet run live: ticket → AI triage → draft → reply, AI-off path (they write records and call AI: need approval). README rewritten for evaluators; demo passwords are deliberately not in it.
 
 **Update 2026-10-22 (Claude Code, branch `docs/deployment-runbook`):** re-ran the checks on `main`: lint, OpenAPI lint, typecheck, 375 backend tests and all five builds pass; author 30 and console 36 tests pass. `npm run check` stops at lint locally only because ESLint also reads the git-ignored helper scripts in `.cache/` (absent from a clone); run `npx eslint . --ignore-pattern ".cache/**"` or delete `.cache/`. Wrote the click-by-click Render + Vercel runbook in `.back/DEPLOYMENT.md`, including a proxy check: if `TRUST_PROXY_HOPS` is too low on Render, every visitor shares one per-IP bucket and 50 failed sign-ins lock everyone out for up to 5 minutes.
 **Ownership:** Codex owns this batch and the shared trackers. Earlier uncommitted work was preserved. No concurrent agent owner is recorded.

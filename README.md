@@ -1,165 +1,252 @@
 # BookLeaf Author Support & Communication Portal
 
-A web application for BookLeaf Publishing with two experiences, both backed by one shared REST API:
+A support system for BookLeaf Publishing with two web apps on one shared REST API:
 
-- **Author portal**: authors sign in, review their books and royalties, raise support tickets and follow replies in near real time.
-- **Admin portal**: the operations team works a prioritised ticket queue. AI-suggested categories, priorities and reply drafts are always reviewed by a human before anything reaches an author.
+- **Author portal:** authors sign in, check their books and royalties, raise support queries and follow the replies live.
+- **Support console:** BookLeaf's operations team works one prioritised queue. AI suggests a category, a priority and a reply draft for every query; a person always reviews, edits and sends the reply.
 
-> **Current status: implementation complete through AI-8; release checks remain.** The API, both portals, live updates, security fixes, runtime AI pacing and draft-policy checks are built. All 441 offline tests and production builds pass. Latest approved live evaluation: triage 36/36 category and priority; drafts eight answers and 48/49 checks, with the earlier action/tone errors corrected in those samples. The remaining timeline check requires information BookLeaf has not supplied; estimates await production confirmation. The write-up and hosting configurations are ready. Full browser/accessibility checks, human security review, an unpatched development dependency advisory and deployment remain open. See [PROJECT_STATE.md](PROJECT_STATE.md), [TASKS.md](TASKS.md) and [release evidence](.agent/verification/2026-10-22-release-preparation.md).
+AI never replies to an author on its own, never changes royalty data, and the whole system keeps working in manual mode when AI is off or unavailable.
 
-## Architecture (summary)
+## Live demo
 
-```text
-author-frontend (Next.js) ─┐
-                           ├─ HTTPS + Supabase JWT ─> backend (Express + TypeScript, /api/v1)
-admin-frontend  (Next.js) ─┘                              │
-                                                          ├─> Supabase (Postgres + Auth + RLS)
-                                                          └─> AI orchestrator ─> primary LLM
-                                                                               ─> optional approved fallback
-                                                                               ─> manual mode (always available)
-```
-
-Details: [ARCHITECTURE.md](ARCHITECTURE.md). Material decisions and their rationale: [.agent/DECISIONS.md](.agent/DECISIONS.md).
-
-## Repository layout
-
-| Path | Purpose | Exists today? |
-|---|---|---|
-| `author-frontend/` | Author experience (Next.js) | Sign-in, books/royalties, query form, tickets and live replies |
-| `admin-frontend/` | Admin experience (Next.js) | Queue, filters, ticket management, notes and AI draft editor |
-| `backend/` | The single REST API and AI orchestration | Protected API, SSE, AI triage/drafts/evals and offline/live test suites |
-| `packages/shared/` | Shared contract types, enums and validation schemas | DTOs, validation, labels, payout/SLA calendars and ticket rules |
-| `packages/ui/` | Shared monochrome UI primitives and tokens | Components used by both portals |
-| `supabase/seed/bookleaf_sample_data.json` | Exact assessment dataset (10 authors, 18 books) | Yes |
-| `supabase/migrations/` | Schema, RLS policies | Applied and verified in the existing Supabase project |
-| `docs/blueprint/` | Source blueprint bundle v2 (planning reference) | Yes |
-| Root `*.md`, `.agent/`, `.front/`, `.back/` | Project documentation | Yes, see [DOCUMENTATION_MAP.md](DOCUMENTATION_MAP.md) |
-
-## Where to start reading
-
-1. [PRODUCT.md](PRODUCT.md): the problem and the people.
-2. [PRD.md](PRD.md): requirements and acceptance criteria.
-3. [ARCHITECTURE.md](ARCHITECTURE.md): system shape and trust boundaries.
-4. [AI_SPEC.md](AI_SPEC.md): how classification, priority and drafting work, fail and stay cheap.
-5. [INTEGRATION_CONTRACT.md](INTEGRATION_CONTRACT.md) + [openapi.yaml](openapi.yaml): the API contract.
-6. [TASKS.md](TASKS.md): the implementation plan and status.
-
-## Local setup
-
-**Requirements:** Node.js ≥ 20.9 (developed on 24.12) and **npm ≥ 11**. npm 10.2.x crashes on this workspace with `Cannot read properties of null (reading 'edgesOut')`, a known npm bug. Node 24 ships npm 11.
-
-Install all workspaces (exact versions from `package-lock.json`):
-
-```bash
-npm ci
-```
-
-Create `backend/.env`, `author-frontend/.env.local` and `admin-frontend/.env.local` using the corresponding sections of [.env.example](.env.example). The backend needs Supabase URL, publishable key and server-only secret key; each frontend receives only its three `NEXT_PUBLIC_*` values. The API base ends in `/api/v1`. Use `AI_PRIMARY_PROVIDER=none` for manual mode without model keys. For a new Supabase project, follow the ordered migrations and seed instructions in [deployment guidance](.back/DEPLOYMENT.md); the provided seed dry run is safe by default.
-
-Build shared packages first (the apps import their compiled output), then everything else:
-
-```bash
-npm run build
-```
-
-Run each part in its own terminal:
-
-```bash
-npm run dev:backend
-```
-
-```bash
-npm run dev:author
-```
-
-```bash
-npm run dev:admin
-```
-
-| Part | URL |
+| What | Link |
 |---|---|
-| API health | http://localhost:4000/api/v1/health |
-| API docs (Swagger UI) | http://localhost:4000/api/docs |
-| Author portal | http://localhost:3000 |
-| Admin portal | http://localhost:3001 |
+| Author portal | <https://bookleaf-author.vercel.app> |
+| Support console (admin) | <https://bookleafsupport.vercel.app> |
+| API base URL | `https://bookleaf-338a.onrender.com/api/v1` |
+| API health | <https://bookleaf-338a.onrender.com/api/v1/health> |
+| API docs (Swagger UI) | <https://bookleaf-338a.onrender.com/api/docs> |
+| OpenAPI contract | <https://bookleaf-338a.onrender.com/api/openapi.yaml> · [openapi.yaml](openapi.yaml) |
+| Source code | <https://github.com/amitprasad21/BookLeaf> |
 
-Run every check (format, lint, OpenAPI lint, typecheck, tests, build) in one go:
+> **First load can take about a minute.** The API runs on Render's free plan, which sleeps after 15 idle minutes. While it wakes up, the portals show "Waking up the server…". Opening the health link first wakes it.
 
-```bash
-npm run check
-```
+### Demo accounts
 
-Or one at a time: `npm run format:check`, `npm run lint`, `npm run lint:api`, `npm run typecheck`, `npm test`, `npm run build`. The frontend logic suites currently run separately with the root-hoisted Vitest: `npx --no-install vitest run --root author-frontend` and `npx --no-install vitest run --root admin-frontend`. `npm run check` includes the backend suite; it does not run those two frontend suites. `npm run format` rewrites code formatting (Markdown docs and `openapi.yaml` are excluded).
-
-Verify credentials without revealing them (prints configured/missing and pass/fail only):
-
-```bash
-npm run check:env
-```
-
-Verify the database schema after applying a migration (tables, client lockdown, a constraint probe; prints counts and pass/fail only):
-
-```bash
-npm run check:db
-```
-
-Check the AI configuration (providers, models and whether each key is set; never values). The `:live` variant makes one tiny synthetic call per configured model (free tier, no ticket data):
-
-```bash
-npm run check:ai
-```
-
-```bash
-npm run check:ai:live
-```
-
-Load the assessment dataset and demo logins. The default is a dry run that writes nothing; writing needs the explicit `:apply` script:
-
-```bash
-npm run seed
-```
-
-```bash
-npm run seed:apply
-```
-
-Run the live integration suites against Supabase: access rules, authentication, books and author tickets, all with real sign-ins. They need both migrations applied and the seed done. The access-rule and ticket suites create their own tickets and delete them afterwards with the secret key. `npm run test:rls` runs the access-rule part alone.
-
-```bash
-npm run test:live
-```
-
-Each runtime reads its own environment file. Variable names (never values) are listed in [.env.example](.env.example), and how to obtain each one is in [.agent/CREDENTIALS_GUIDE.md](.agent/CREDENTIALS_GUIDE.md).
-
-## Test login credentials
-
-The seed (`npm run seed:apply`) creates 12 demo logins:
+The database holds the assessment dataset exactly (10 authors, 18 books) plus 12 logins:
 
 | Who | Email | Password |
 |---|---|---|
-| 10 authors | The `email` of each author in [supabase/seed/bookleaf_sample_data.json](supabase/seed/bookleaf_sample_data.json), e.g. `priya.sharma@email.com` (AUTH001) | Shared author demo password |
-| Ops admin | `admin@bookleaf.test` | Admin demo password |
-| Support lead | `support.lead@bookleaf.test` | Admin demo password |
+| Authors (10) | The `email` of each author in [the dataset](supabase/seed/bookleaf_sample_data.json), e.g. `priya.sharma@email.com` (AUTH001, 2 books), `rohit.kapoor@email.com` (AUTH002) | Shared author demo password: provided to evaluators with the submission |
+| Ops admin | `admin@bookleaf.test` | Admin demo password: provided with the submission |
+| Support lead | `support.lead@bookleaf.test` | Admin demo password: provided with the submission |
 
-*Demo passwords will be published here for evaluators once the live demo is deployed (task DOCS-2).* Locally they live in `backend/.env` (`SEED_AUTHOR_PASSWORD`, `SEED_ADMIN_PASSWORD`), which is git-ignored.
+Sign-ups are disabled; every account comes from the seed script.
+
+### Five-minute tour
+
+1. **Author portal:** sign in as `priya.sharma@email.com`. *My Books* shows both books with copies sold, royalty earned, paid and pending, plus the next payout date.
+2. **Raise a query:** choose a book (or "General / Account Level"), describe a problem, e.g. "My royalty for last quarter hasn't arrived", and send. It's saved at once; AI never delays it.
+3. **Support console** (another browser or a private window): sign in as `admin@bookleaf.test`. The new ticket appears within seconds; AI triage then fills in the category and priority (e.g. *Royalty & Payments*, high) with its confidence, usually within half a minute on the free AI tiers.
+4. **Open the ticket:** author context (books, royalties, payout status), the thread, internal notes, the timeline and the AI draft grounded in BookLeaf's knowledge base and the author's own figures. Edit the draft and send it with a status (e.g. *Resolved*).
+5. **Back in the author portal:** the reply and the new status appear without a refresh. Internal notes never do.
+
+## Features
+
+**Author portal** ([author-frontend/](author-frontend/))
+
+- Sign-in with Supabase Auth; only author accounts get in.
+- *My Books:* every book with ISBN, status, MRP, copies sold, royalty earned / paid / pending and last payout; a royalty summary with the next payout deadline. Books still in production show their stage instead of zeros. Table from 1024 px, cards on smaller screens.
+- *Raise a query:* about a specific book or the account, with validation and a per-author limit.
+- *My Tickets:* status filters and a detail page with the conversation, updated live over Server-Sent Events (polling only while the stream is down).
+
+**Support console** ([admin-frontend/](admin-frontend/))
+
+- Queue across all authors sorted by urgency, filters for status, category, priority, assignee, AI status, overdue and search, kept in the URL. Summary counts (open, in progress, unassigned, critical, SLA breached, needs manual triage) and SLA indicators.
+- "Show N updates" when the queue changes in the background, so rows never jump under the cursor.
+- Ticket page: author context with royalty figures, conversation, internal notes, audit timeline, status changes along allowed transitions, category/priority overrides (showing what AI suggested and how confident it was), self-assignment.
+- Reply editor with the AI draft: missing-information list, escalation hint, warnings for amounts or dates that don't match the facts, regenerate (capped), or write manually. Sending can resolve the ticket in one step.
+- Two admins editing one ticket get a version conflict, never a silent overwrite.
+
+**API** ([backend/](backend/))
+
+- Express 5 + TypeScript REST API under `/api/v1`, documented in [openapi.yaml](openapi.yaml) and served as Swagger UI.
+- Every route except `/health` requires a Supabase access token; author and admin routes are separated by role.
+- Database access runs as the signed-in user, so Postgres row-level security applies even if an API check were wrong.
+- Tickets are saved first; AI triage runs in a background queue with retries, pacing, a daily budget and a circuit breaker.
+
+## Architecture
+
+```text
+author-frontend (Next.js, Vercel) ─┐
+                                   ├─ HTTPS + Supabase JWT ─> backend (Express + TypeScript, Render, /api/v1)
+admin-frontend  (Next.js, Vercel) ─┘          │                     │
+           │                                  │ SSE /events         ├─> Supabase Postgres (RLS) + Auth
+           └──── Supabase Auth (sign-in) ─────┘                     └─> AI router ─> Gemini (primary)
+                                                                                  ─> Groq (fallback)
+                                                                                  ─> manual mode
+```
+
+| Layer | Technology |
+|---|---|
+| Frontends | Next.js 16 (App Router), React 19, TanStack Query 5, shared `packages/ui` components (monochrome design tokens) |
+| API | Node.js 24, Express 5, TypeScript 6, zod 4 validation, pino logging, helmet, express-rate-limit |
+| Data and auth | Supabase Postgres with row-level security, Supabase Auth (ES256-signed JWTs, verified locally against the project's keys) |
+| AI | Gemini `gemini-3.5-flash-lite` (primary), Groq `openai/gpt-oss-120b` (fallback), plain REST adapters |
+| Shared code | `packages/shared`: DTO types, enums, validation schemas, labels, payout and SLA calendars |
+| Hosting | Render (API, one instance), Vercel (two portals), Supabase cloud |
+
+Key decisions (full list with reasons in [.agent/DECISIONS.md](.agent/DECISIONS.md)):
+
+- **Save first, AI later:** a ticket is stored before any model call, so AI outages never lose or delay a query.
+- **Defence in depth:** the API filters by the caller's identity *and* Postgres RLS enforces the same rules; the RLS-bypassing secret key is confined to one small "system writer" module.
+- **Live updates over SSE:** an in-process event hub sends identifier-only events (admins: all tickets; authors: only their own), and the portals refetch what changed.
+- **One backend instance:** the event hub, rate limits and AI queue live in memory. Scaling out would need Redis or Postgres LISTEN/NOTIFY first.
+
+More: [ARCHITECTURE.md](ARCHITECTURE.md), [INTEGRATION_CONTRACT.md](INTEGRATION_CONTRACT.md).
+
+## API reference
+
+Base URL `https://bookleaf-338a.onrender.com/api/v1` (local: `http://localhost:4000/api/v1`). Send `Authorization: Bearer <Supabase access token>`. Responses are `{ "data": … }`; errors are `{ "error": { "code", "message", "requestId" } }` with no internal details.
+
+| Method | Path | Who | Purpose |
+|---|---|---|---|
+| GET | `/health` | public | Liveness check |
+| GET | `/me` | signed in | Profile and role |
+| GET | `/events` | signed in | Server-Sent Events stream of ticket changes, scoped to the caller |
+| GET | `/author/books` | author | The caller's books with royalty figures and a summary |
+| GET | `/author/tickets` | author | The caller's tickets |
+| POST | `/author/tickets` | author | Create a ticket |
+| GET | `/author/tickets/{ticketId}` | author | One ticket with its author-visible thread |
+| GET | `/admin/tickets` | admin | Queue with filters, urgency sort and paging |
+| GET | `/admin/tickets/summary` | admin | Queue counts |
+| GET | `/admin/tickets/{ticketId}` | admin | Ticket with author context, thread, notes, AI suggestion and timeline |
+| PATCH | `/admin/tickets/{ticketId}` | admin | Status, category/priority override, (un)assign; optimistic locking |
+| POST | `/admin/tickets/{ticketId}/messages` | admin | Send a reply (optionally changing status) |
+| GET, POST | `/admin/tickets/{ticketId}/notes` | admin | Internal notes, never visible to authors |
+| POST | `/admin/tickets/{ticketId}/draft` | admin | Cached AI draft, or generate/regenerate one |
+| POST | `/admin/tickets/{ticketId}/triage` | admin | Re-run AI triage for a ticket in manual review |
+
+Specified but not built (P2): author follow-up messages (`POST /author/tickets/{ticketId}/messages`) and the AI usage view (`GET /admin/ai/usage`).
+
+**Rate limits:** new queries 5 per 10 min and 20 per day per author (plus a database backstop); draft regeneration 10 per min per admin and 5 per ticket per day; triage re-runs 5 per min per admin; 300 requests per 5 min per signed-in user overall; requests without a valid session and health checks are also limited per IP. Over a limit: `429` with `Retry-After`.
+
+## AI integration
+
+| Step | What happens |
+|---|---|
+| Triage (background) | Category (the six assignment categories), priority, confidence and a short rationale. Policy floors raise priority for known urgent cases (e.g. long-missing royalties). Admin overrides always win. |
+| Facts | Only the ticket author's own records: the selected book or their royalty totals and payout calendar. No other author's data reaches the model. |
+| Knowledge base | A small, versioned BookLeaf KB in code, selected by category (no vector search). |
+| Draft (on request) | Empathetic reply grounded in the KB and facts, a missing-information list and an escalation hint. Server-side checks enforce the house style; amounts or dates that don't match the facts are flagged to the admin. |
+| Guardrails | Ticket text is passed as escaped, delimited data (prompt-injection attempts are treated as content); strict output schemas with one repair attempt; Groq fallback; circuit breaker; daily token budget; requests paced (`AI_REQUEST_MIN_INTERVAL_MS`, default 8 s). |
+| Failure | Ticket goes to manual review; the admin triages and replies by hand. Setting `AI_PRIMARY_PROVIDER=none` turns AI off entirely. |
+
+**Evaluation** (golden sets bound to the seed data, run through the production code; [details](.agent/verification/README.md)):
+
+- Triage, 36 labelled tickets: **36/36 category, 36/36 priority**, 3/3 prompt-injection cases handled normally.
+- Drafts, the assignment's sample queries: 48/49 automatic checks; every reply was also read by a person. The one failing check needs production timelines BookLeaf hasn't supplied, so drafts say the estimate is awaiting confirmation instead of inventing one.
+
+Full behaviour: [AI_SPEC.md](AI_SPEC.md). Approach and trade-offs: [WRITEUP.md](WRITEUP.md).
+
+## Security
+
+- Authentication on every route except health; role separation between `/author/*` and `/admin/*`; identity always from the verified token, never from the request body.
+- Row-level security on every table, tested with two authors and an admin; another author's ticket answers `404`.
+- Strict zod schemas (unknown fields rejected), plain-text rendering only, 32 KB body limit.
+- CORS allowlist of the two portal origins; helmet headers including HSTS; a Content-Security-Policy on both portals; no stack traces or provider errors in responses.
+- Secrets live only in the API's environment (never `NEXT_PUBLIC_*`); the deployed JavaScript was scanned and contains none.
+- Admin actions (status, overrides, assignment, replies, notes, AI drafts) are written to an audit log without message text.
+
+Checklist and findings: [.agent/SECURITY_REVIEW_CHECKLIST.md](.agent/SECURITY_REVIEW_CHECKLIST.md). Threats: [.agent/THREAT_MODEL.md](.agent/THREAT_MODEL.md).
+
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `author-frontend/` | Author portal (Next.js) |
+| `admin-frontend/` | Support console (Next.js) |
+| `backend/` | REST API, AI triage/drafts/evals, offline and live test suites |
+| `packages/shared/` | Contract types, enums, validation schemas, labels, payout/SLA calendars |
+| `packages/ui/` | Shared UI components and design tokens |
+| `supabase/migrations/` | Schema and row-level security policies |
+| `supabase/seed/bookleaf_sample_data.json` | The assessment dataset, byte-identical to the provided file |
+| `render.yaml`, `*/vercel.json` | Hosting configuration |
+| Root `*.md`, `.agent/`, `.front/`, `.back/` | Product, design, API and process documentation ([map](DOCUMENTATION_MAP.md)) |
+| `docs/blueprint/` | The planning blueprint the project followed |
+
+## Run it locally
+
+**Requirements:** Node.js 24 (≥ 20.9 works) and **npm ≥ 11**. npm 10.2.x crashes on this workspace (`Cannot read properties of null (reading 'edgesOut')`); Node 24 ships npm 11.
+
+1. Install every workspace from the lockfile:
+
+   ```bash
+   npm ci
+   ```
+
+2. Create `backend/.env`, `author-frontend/.env.local` and `admin-frontend/.env.local` from the sections of [.env.example](.env.example). The API needs the Supabase URL, publishable key and secret key; each portal gets only its three `NEXT_PUBLIC_*` values (API base ending in `/api/v1`). With `AI_PRIMARY_PROVIDER=none` no model keys are needed. Where each value comes from: [.agent/CREDENTIALS_GUIDE.md](.agent/CREDENTIALS_GUIDE.md).
+3. For a new Supabase project, apply `supabase/migrations/` in order, then load the dataset (`npm run seed` is a dry run; `npm run seed:apply` writes). See [.back/DEPLOYMENT.md](.back/DEPLOYMENT.md).
+4. Build the shared packages and apps once:
+
+   ```bash
+   npm run build
+   ```
+
+5. Start each part in its own terminal:
+
+   ```bash
+   npm run dev:backend
+   ```
+
+   ```bash
+   npm run dev:author
+   ```
+
+   ```bash
+   npm run dev:admin
+   ```
+
+| Part | Local URL |
+|---|---|
+| Author portal | http://localhost:3000 |
+| Support console | http://localhost:3001 |
+| API health | http://localhost:4000/api/v1/health |
+| Swagger UI | http://localhost:4000/api/docs |
+
+Helper checks that print names and pass/fail only, never secret values: `npm run check:env` (credentials), `npm run check:db` (schema, policies, grants), `npm run check:ai` (AI configuration; `check:ai:live` makes one tiny call per model).
+
+## Tests
+
+| Suite | Command | Result (2026-10-22) |
+|---|---|---|
+| Format, lint, OpenAPI lint, typecheck, backend tests, all builds | `npm run check` | Pass; 375 backend tests |
+| Author portal logic | `npx --no-install vitest run --root author-frontend` | 30 pass |
+| Support console logic | `npx --no-install vitest run --root admin-frontend` | 36 pass |
+| Live suites against Supabase (RLS, auth, books, tickets, events) | `npm run test:live` | Pass in earlier runs; they create and delete their own tickets |
+| AI evals | `npm run eval:triage`, `npm run eval:drafts` (mock); `:live` variants call the providers | See the AI section |
+
+Backend tests cover every documented route for anonymous (401) and wrong-role (403) access, production error handling, CORS, rate limits, token checks, ticket rules, the queue, replies, notes, SSE scoping and the AI pipeline. Evidence for each milestone: [.agent/verification/](.agent/verification/README.md).
+
+## Deployment
+
+| Piece | Host | Key settings |
+|---|---|---|
+| API | Render web service (free) | Root directory: repo root. Build `npx -y npm@11.6.2 ci --include=dev && npm run build:packages && npm run build -w backend`. Start `npm run start -w backend`. Health check `/api/v1/health`. Node 24 |
+| Author portal | Vercel | Root directory `author-frontend`; install and build come from its `vercel.json` |
+| Support console | Vercel | Root directory `admin-frontend`; same pattern |
+
+API environment: `NODE_ENV=production`, `CORS_ALLOWED_ORIGINS` (the two portal origins), `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `AI_PRIMARY_PROVIDER=gemini`, `AI_FALLBACK_PROVIDER=groq`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `TRUST_PROXY_HOPS`. Portal environment (baked in at build time): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_API_BASE_URL`. Step-by-step runbook, checks and troubleshooting: [.back/DEPLOYMENT.md](.back/DEPLOYMENT.md).
+
+## Known limitations
+
+- **Cold starts:** the free Render instance sleeps after 15 idle minutes; the first request takes about a minute.
+- **One API instance:** live updates, rate limits, the AI queue and pacing are in memory and reset on restart or redeploy (clients reconnect and re-sync).
+- **Per-IP limits on Render:** the API can't yet see each visitor's real IP behind Render's proxies, so the per-IP limits (health checks, requests without a valid session) aren't per visitor; the per-user limits are unaffected.
+- **AI on free tiers:** calls are paced 8 s apart and a draft can take 15–30 s; provider quotas can push tickets to manual review. Drafts are suggestions: an admin must review each one.
+- **Production timelines** aren't in the data, so drafts don't promise dates for books in production.
+- **Not built (P2):** real attachment upload (the form records a file name only), author follow-up messages, the AI usage dashboard.
+- **Dependencies:** the production dependency audit is clean; a development-only lint dependency (`braces`) has an advisory with no fix released.
 
 ## Assessment deliverables
 
-| Deliverable | Status |
+| Deliverable | Where |
 |---|---|
-| Public source repository | [github.com/amitprasad21/BookLeaf](https://github.com/amitprasad21/BookLeaf) |
-| Live demo URL (both portals, pre-seeded) | Render/Vercel configurations prepared; deployment pending (runbook: [.back/DEPLOYMENT.md](.back/DEPLOYMENT.md)) |
-| README: setup, architecture, AI integration, API docs, limitations | Prepared; actual hosted links and intended demo credentials remain pending |
+| Public source repository | <https://github.com/amitprasad21/BookLeaf> |
+| Live demo (both portals, pre-seeded) | [Live demo](#live-demo) |
+| README: setup, architecture, AI integration, API docs, test credentials, limitations | This file |
 | One-page approach write-up | [WRITEUP.md](WRITEUP.md) |
 
-## AI integration and limits
+## Further reading
 
-Gemini `gemini-3.5-flash-lite` is the configured primary for triage and drafting, with Groq `openai/gpt-oss-120b` as the explicitly configured fallback. The small versioned KB is selected by category instead of vector search. Facts contain only the ticket author's relevant records. Schema validation, one repair attempt, policy floors, draft-policy checks, amount/date warnings and context-hash reuse constrain mistakes and repeated calls. AI never sends a reply or changes royalty records; an admin reviews, edits and sends it. See [AI_SPEC.md](AI_SPEC.md) for the complete behavior and evaluation method.
-
-Runtime calls and retries are spaced by `AI_REQUEST_MIN_INTERVAL_MS` (default 8000). Pacing, a daily token budget and circuit breakers reduce bursts and cost, but cannot guarantee provider availability or a precise billing cap. The latest paced draft run averaged 17.93 seconds per reported provider call, including one timeout; repairs/fallback may require multiple calls per draft. Manual mode remains available. Live evals call configured providers and may incur charges; their saved reports are git-ignored and summaries are under [.agent/verification](.agent/verification/README.md).
-
-Payout overdue periods are heuristic references, not a quarterly ledger. Production completion estimates are unavailable and must be confirmed by production. The service is designed for one backend instance; SSE, queue deduplication, pacing and request limits need shared infrastructure before horizontal scaling. A Render free service may take about a minute to wake after idling; the portals show a delayed loading hint. Attachments currently record a filename only; real uploads, author follow-up messages and a usage dashboard are deferred. Production dependency audit is clean; the development lint chain's unpatched braces finding and review limits are documented in [release verification](.agent/verification/2026-10-22-release-preparation.md). Hosting steps and rollback pointers are in [.back/DEPLOYMENT.md](.back/DEPLOYMENT.md).
-
-## Git workflow
-
-All Git rules live in [GIT_WORKFLOW.md](GIT_WORKFLOW.md).
+[PRODUCT.md](PRODUCT.md) (problem and users) · [PRD.md](PRD.md) (requirements) · [ARCHITECTURE.md](ARCHITECTURE.md) · [AI_SPEC.md](AI_SPEC.md) · [INTEGRATION_CONTRACT.md](INTEGRATION_CONTRACT.md) · [TASKS.md](TASKS.md) (plan and status) · [PROJECT_STATE.md](PROJECT_STATE.md) · [GIT_WORKFLOW.md](GIT_WORKFLOW.md)

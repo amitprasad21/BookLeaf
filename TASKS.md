@@ -79,10 +79,10 @@ Rendered component/end-to-end tooling is still outstanding (Testing Library / Pl
 
 | ID | Task | Depends on | Status | Req. IDs |
 |---|---|---|---|---|
-| DEP-1 | Deploy backend to Render (just-in-time hosting credentials) | SEC-2 | in_progress: Blueprint prepared with repo-root build, single instance and pacing; hosting sign-in and release review needed | NFR-02 |
-| DEP-2 | Deploy both frontends to Vercel; lock CORS to their origins | DEP-1 | in_progress: both Vercel configurations and builds verified locally; hosting sign-in and actual production origins needed | NFR-02 |
-| DEP-3 | Migrate and seed the production database; live smoke test of both journeys and the AI-down path | DEP-2 | todo | NFR-01/02 |
-| DOCS-2 | Final README: setup, architecture, AI integration, API docs link, test credentials, limitations | DEP-3 | in_progress: setup, architecture, AI rationale, evidence and limitations updated; live URLs and intended demo credentials await deployment | Documentation criterion |
+| DEP-1 | Deploy backend to Render (just-in-time hosting credentials) | SEC-2 | done: deployed by the user on Render (`bookleaf-338a.onrender.com`); health, headers, docs, auth, roles, CORS and SSE checked live, read-only ([evidence](.agent/verification/2026-10-22-deployment.md)). Per-IP limits aren't per visitor behind Render's proxies (finding D-2) | NFR-02 |
+| DEP-2 | Deploy both frontends to Vercel; lock CORS to their origins | DEP-1 | in_progress: both portals deployed (`bookleaf-author.vercel.app`, `bookleafsupport.vercel.app`) and CORS locked to them. The support console targets the Render API; the author portal's live build still calls `localhost:4000` and needs a production redeploy with the right `NEXT_PUBLIC_API_BASE_URL` (finding D-1, [evidence](.agent/verification/2026-10-22-deployment.md)) | NFR-02 |
+| DEP-3 | Migrate and seed the production database; live smoke test of both journeys and the AI-down path | DEP-2 | in_progress: existing seeded Supabase project reused (no migration or seed rerun); read-only live checks pass (dataset books, isolation, roles, SSE). Write journey, AI on Gemini and AI-off path not yet run on the live system | NFR-01/02 |
+| DOCS-2 | Final README: setup, architecture, AI integration, API docs link, test credentials, limitations | DEP-3 | in_progress: README rewritten with live URLs, tour, features, API table, AI, security, tests, deployment and limitations; demo passwords to be shared with evaluators (publishing them is the user's call) | Documentation criterion |
 | DOCS-3 | One-page write-up (`WRITEUP.md`) | DOCS-2 | done: [WRITEUP.md](WRITEUP.md) documents implementation, tradeoffs, evaluation and release limitations | Deliverable 4 |
 
 ## Stretch (P2)

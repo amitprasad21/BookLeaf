@@ -1,6 +1,6 @@
 # Deployment
 
-**Owns:** environments, environment variables, deploy order and post-deploy checks. Rollback: [.agent/ROLLBACK.md](../.agent/ROLLBACK.md). Credentials: [.agent/CREDENTIALS_GUIDE.md](../.agent/CREDENTIALS_GUIDE.md). **Status, 2026-10-22:** the repository is public on GitHub (`main`), local builds and all offline tests pass, and the hosting files are ready ([render.yaml](../render.yaml), one `vercel.json` per portal). Nothing is deployed: the runbook below is for the user to follow in the Render and Vercel dashboards. Signed-in QA, the human security sign-off and the deployed checks remain gates.
+**Owns:** environments, environment variables, deploy order and post-deploy checks. Rollback: [.agent/ROLLBACK.md](../.agent/ROLLBACK.md). Credentials: [.agent/CREDENTIALS_GUIDE.md](../.agent/CREDENTIALS_GUIDE.md). **Status, 2026-10-22:** the repository is public on GitHub (`main`), local builds and all offline tests pass, and the hosting files are ready ([render.yaml](../render.yaml), one `vercel.json` per portal). **Deployed by the user on 2026-10-22:** API https://bookleaf-338a.onrender.com/api/v1, author portal https://bookleaf-author.vercel.app, support console https://bookleafsupport.vercel.app. Live checks and open findings: [deployment record](../.agent/verification/2026-10-22-deployment.md).
 
 ## Environments
 
