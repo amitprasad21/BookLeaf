@@ -13,21 +13,37 @@ const AI_DEFAULTS = {
   AI_DAILY_TOKEN_BUDGET: 300_000,
   AI_TRIAGE_TIMEOUT_MS: 30_000,
   AI_DRAFT_TIMEOUT_MS: 30_000,
+  AI_REQUEST_MIN_INTERVAL_MS: 8_000,
   AI_MAX_RETRIES: 2,
   AI_CIRCUIT_FAILURE_THRESHOLD: 3,
   AI_CIRCUIT_COOLDOWN_MS: 60_000,
 };
 
 describe("loadEnv", () => {
+  it("bounds provider pacing and permits an explicit zero for controlled environments", () => {
+    expect(loadEnv({ NODE_ENV: "test", AI_REQUEST_MIN_INTERVAL_MS: "0" }).AI_REQUEST_MIN_INTERVAL_MS).toBe(0);
+    expect(() => loadEnv({ NODE_ENV: "test", AI_REQUEST_MIN_INTERVAL_MS: "-1" })).toThrow(
+      /AI_REQUEST_MIN_INTERVAL_MS/,
+    );
+    expect(() => loadEnv({ NODE_ENV: "test", AI_REQUEST_MIN_INTERVAL_MS: "30001" })).toThrow(
+      /AI_REQUEST_MIN_INTERVAL_MS/,
+    );
+  });
   it("applies development defaults (AI on the local mock)", () => {
     expect(loadEnv({ ...SUPABASE })).toEqual({
       NODE_ENV: "development",
       PORT: 4000,
       LOG_LEVEL: "info",
+      TRUST_PROXY_HOPS: 0,
       CORS_ALLOWED_ORIGINS: ["http://localhost:3000", "http://localhost:3001"],
       ...SUPABASE,
       ...AI_DEFAULTS,
     });
+  });
+
+  it("reads the number of trusted proxy hops (Render: 1)", () => {
+    expect(loadEnv({ ...SUPABASE, TRUST_PROXY_HOPS: "1" }).TRUST_PROXY_HOPS).toBe(1);
+    expect(() => loadEnv({ ...SUPABASE, TRUST_PROXY_HOPS: "9" })).toThrow(/TRUST_PROXY_HOPS/);
   });
 
   it("silences logs by default in tests and doesn't require Supabase there", () => {

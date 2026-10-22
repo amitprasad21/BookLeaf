@@ -4,6 +4,7 @@
 // the payout calendar and, for unpublished books, where production stands.
 import {
   isBelowPayoutThreshold,
+  latestPassedPayout,
   paymentPossiblyOverdue,
   payoutCalendar,
   PAYOUT_THRESHOLD_INR,
@@ -45,8 +46,11 @@ export interface DraftFacts {
     lastClosedQuarterDueBy: string;
     currentQuarterEnd: string;
     nextQuarterDueBy: string;
+    nextPayoutDueBy: string;
     pendingBelowThreshold: boolean;
     paymentPossiblyOverdue: boolean;
+    /** Reference period for the heuristic, not a per-quarter sales ledger. */
+    possiblyOverduePeriod: { quarter: string; dueBy: string } | null;
   };
   production: {
     currentStage: string;
@@ -97,6 +101,8 @@ export function buildDraftFacts(input: DraftFactsInput, today: string): DraftFac
     input.books.reduce((sum, candidate) => sum + paise(candidate.royalty_pending), 0) / 100;
   const listAuthorBooks =
     !book && (input.category === "royalty_payments" || input.category === "general_inquiry");
+  const possiblyOverdue = book ? overdue(book) : input.books.some(overdue);
+  const passedPayout = latestPassedPayout(today);
 
   return {
     today,
@@ -131,8 +137,12 @@ export function buildDraftFacts(input: DraftFactsInput, today: string): DraftFac
       lastClosedQuarterDueBy: calendar.lastClosedQuarterDueBy,
       currentQuarterEnd: calendar.nextQuarterEnd,
       nextQuarterDueBy: calendar.nextQuarterDueBy,
+      nextPayoutDueBy: calendar.nextPayoutDueBy,
       pendingBelowThreshold: isBelowPayoutThreshold(book ? book.royalty_pending : totalPending),
-      paymentPossiblyOverdue: book ? overdue(book) : input.books.some(overdue),
+      paymentPossiblyOverdue: possiblyOverdue,
+      possiblyOverduePeriod: possiblyOverdue
+        ? { quarter: passedPayout.quarter.label, dueBy: passedPayout.dueBy }
+        : null,
     },
     production: book ? production(book.status) : null,
   };

@@ -16,7 +16,7 @@ import { NotFoundError, RateLimitedError } from "../lib/errors.js";
 import type { Clock } from "../lib/clock.js";
 import type { AuditRecorder } from "../modules/audit/service.js";
 import type { AdminTicketsRepository, AiDraftRow } from "../modules/tickets/admin-repository.js";
-import { buildDraftFacts } from "./facts/draft-facts.js";
+import { buildDraftFacts, type DraftFacts } from "./facts/draft-facts.js";
 import { KB_VERSION, selectKbSections } from "./knowledge-base/index.js";
 import {
   buildDraftUserContent,
@@ -27,7 +27,12 @@ import {
   draftRepairNote,
 } from "./prompts/draft.js";
 import { AiRouteError, type AiRouter, type RoutedResult } from "./router.js";
-import { draftShapeProblem, factWarnings, withStandardSignOff } from "./validation/draft-guards.js";
+import {
+  draftPolicyProblem,
+  draftShapeProblem,
+  factWarnings,
+  withStandardSignOff,
+} from "./validation/draft-guards.js";
 
 /** Forced regenerations per ticket per India business day (AI_SPEC section 9). */
 export const DRAFT_REGENERATIONS_PER_DAY = 5;
@@ -75,11 +80,15 @@ export function createDraftService(deps: {
     ticketId: string,
     user: string,
     sections: readonly string[],
+    facts: DraftFacts,
+    category: TicketCategory,
   ): Promise<RoutedResult<DraftResult>> {
+    const problemFor = (draft: DraftResult) =>
+      draftShapeProblem(draft, sections) ?? draftPolicyProblem(draft, facts, category);
     let problem: string;
     try {
       const first = await route(ticketId, user);
-      const shape = draftShapeProblem(first.value, sections);
+      const shape = problemFor(first.value);
       if (!shape) return first;
       problem = shape;
     } catch (error) {
@@ -87,7 +96,7 @@ export function createDraftService(deps: {
       problem = "it did not match the required JSON format and limits";
     }
     const repaired = await route(ticketId, user + draftRepairNote(problem));
-    if (draftShapeProblem(repaired.value, sections)) throw new AiRouteError("invalid_output", false);
+    if (problemFor(repaired.value)) throw new AiRouteError("invalid_output", false);
     return repaired;
   }
 
@@ -154,7 +163,7 @@ export function createDraftService(deps: {
         },
         thread,
       });
-      const result = await generate(ticketId, user, sections);
+      const result = await generate(ticketId, user, sections, facts, category);
       const reply = withStandardSignOff(result.value.reply);
       const warnings = factWarnings(reply, {
         facts,

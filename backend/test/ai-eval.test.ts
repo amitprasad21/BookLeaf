@@ -90,8 +90,8 @@ describe("triage golden set", () => {
 });
 
 describe("draft review set", () => {
-  it("is the assignment's seven sample queries, each bound to the author's own book", () => {
-    expect(draftCases.cases).toHaveLength(7);
+  it("contains the seven assignment queries and the overdue-quarter regression, each bound to the author's own book", () => {
+    expect(draftCases.cases).toHaveLength(8);
     expect(new Set(draftCases.cases.map((testCase) => testCase.category))).toEqual(
       new Set(TICKET_CATEGORIES),
     );
@@ -230,6 +230,68 @@ describe("draft scoring", () => {
     expect(notEscalated.find((check) => check.name === "escalates to production")?.ok).toBe(false);
   });
 
+  it("rejects the reported wrong-quarter claim and accepts separate overdue and scheduled periods", () => {
+    const quarterCase = draftCases.cases.find((candidate) => candidate.id === "royalty-overdue-quarter")!;
+    const correct =
+      "Hi Sneha,\n\nI'm sorry for the delay. Earlier royalties appear overdue against the April–June 2026 reference deadline of 14 August 2026. Finance will confirm the period and update you within 48 hours. The next scheduled payout is 14 November 2026.";
+    const escalation = { needs_escalation: true, escalation_team: "finance" as const };
+    expect(scoreDraft(quarterCase, draft(correct, escalation)).every((check) => check.ok)).toBe(true);
+    const wrong = `${correct} The July–September 2026 payout appears to be overdue.`;
+    expect(
+      scoreDraft(quarterCase, draft(wrong, escalation)).find(
+        (check) => check.name === "does not repeat the wrong-quarter claim",
+      )?.ok,
+    ).toBe(false);
+  });
+
+  it("detects the unsupported balance attribution and production progress claims seen in live review", () => {
+    const royalty = draftCases.cases.find((candidate) => candidate.id === "royalty-too-low")!;
+    const wronglyAttributed = scoreDraft(
+      royalty,
+      draft("Your pending balance of ₹3,570 for the April–June 2026 period appears overdue."),
+    );
+    expect(
+      wronglyAttributed.find((check) => check.name === "does not assign the total balance to a quarter")?.ok,
+    ).toBe(false);
+    const separate = scoreDraft(
+      royalty,
+      draft(
+        "Your total pending royalty is ₹3,570. The most recent passed deadline was 14 August 2026 for April–June 2026; finance will confirm the period.",
+      ),
+    );
+    expect(
+      separate.find((check) => check.name === "does not assign the total balance to a quarter")?.ok,
+    ).toBe(true);
+    for (const reply of [
+      "Everything is progressing steadily without any unexpected hold-ups.",
+      "Our production team is working closely on your manuscript to ensure everything is prepared properly.",
+    ]) {
+      const unsupportedProgress = scoreDraft(testCase, draft(reply));
+      expect(
+        unsupportedProgress.find((check) => check.name === "does not invent a production progress update")
+          ?.ok,
+      ).toBe(false);
+    }
+  });
+
+  it("distinguishes an intended re-sync from an unsupported claim that it already happened", () => {
+    const distribution = draftCases.cases.find((candidate) => candidate.id === "distribution-unavailable")!;
+    const completed = scoreDraft(
+      distribution,
+      draft("I have gone ahead and triggered a re-sync with our distribution team."),
+    );
+    const planned = scoreDraft(
+      distribution,
+      draft("I will ask our distribution team to re-sync the listing."),
+    );
+    expect(
+      completed.find((check) => check.name === "does not claim a re-sync was already performed")?.ok,
+    ).toBe(false);
+    expect(planned.find((check) => check.name === "does not claim a re-sync was already performed")?.ok).toBe(
+      true,
+    );
+  });
+
   // Both came from the first live run, where they caused false misses.
   it("reads past a greeting on the same line as the first sentence", () => {
     expect(openingOf("Dear Kavita, I completely understand your eagerness.")).toBe(
@@ -334,7 +396,7 @@ describe("runners on the mock provider", () => {
     const at = new Date("2026-10-20T06:30:00Z");
     const drafts = createDraftService({ router, clock: () => at, audit: async () => {}, timeoutMs: 5_000 });
     const report = await runDraftEval({ drafts, cases: draftCases, authors, books });
-    expect(report.summary).toMatchObject({ cases: 7, answered: 7 });
+    expect(report.summary).toMatchObject({ cases: 8, answered: 8 });
     for (const result of report.results) {
       expect(result.reply).toMatch(/^Hi \w+,/); // greeting with the first name (draft guards)
       expect(result.kbSectionsUsed.length).toBeGreaterThan(0);

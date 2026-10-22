@@ -6,7 +6,7 @@ import type { TriageFacts } from "../facts/triage-facts.js";
 import type { MockResponder } from "../providers/mock.js";
 
 /** Bump on any wording change; stored with every result and usage event. */
-export const TRIAGE_PROMPT_VERSION = "triage-2026-10-19.1";
+export const TRIAGE_PROMPT_VERSION = "triage-2026-10-21.1";
 export const TRIAGE_SCHEMA_NAME = "triage_result";
 export const TRIAGE_MAX_OUTPUT_TOKENS = 1024;
 
@@ -34,11 +34,13 @@ Tie-breaks: if there are several issues, choose the one with the greatest financ
 <signals>
 Allowed values: ${TRIAGE_SIGNALS.join(", ")}.
 Use payment_overdue only when the payment really is late: the author says so and the facts do not contradict it (payout.paymentPossiblyOverdue true helps). Use legal_or_rights for copyright, plagiarism, contract or privacy concerns. Use isbn_error only for an actual ISBN or metadata error.
+Use listing_unavailable only for a reported unavailable live listing. Asking which regions or platforms carry a book is informational, not an outage. A new listing still within the normal 7-10 business-day window is not evidence of an outage either.
 </signals>
 
 How to work:
 - Choose exactly one category and one priority.
 - Judge priority from the author's situation and the <facts>. Do not assume facts that are not given. If a payment is described as missing and the facts show it may be overdue, treat it as overdue. Royalties below the threshold roll over to the next quarter and are not overdue.
+- payout.possiblyOverduePeriod identifies the earlier quarter and passed deadline behind paymentPossiblyOverdue. A future nextPayoutDueBy or lastClosedQuarterDueBy does not contradict that earlier overdue flag. If naming the overdue period, use possiblyOverduePeriod, not lastClosedQuarter. Never call a quarter overdue on or before its deadline, and never claim the total balance was all earned in that quarter.
 - signals: up to ${TRIAGE_LIMITS.maxSignals} values from the allowed list that apply; an empty list is fine.
 - rationale: one or two sentences (at most ${TRIAGE_LIMITS.rationale.max} characters) for a busy operations admin, naming the decisive detail.
 - confidence: your probability (0-1) that the category is correct.

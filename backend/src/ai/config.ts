@@ -10,6 +10,7 @@ import type { SystemWriter } from "../db/system-writer.js";
 import { createDailyBudget } from "./budget.js";
 import { createGeminiProvider } from "./providers/gemini.js";
 import { createGroqProvider } from "./providers/groq.js";
+import { pacedFetch } from "./providers/pacing.js";
 import { createMockProvider, MOCK_MODEL, type MockResponder } from "./providers/mock.js";
 import type { AiTask, LlmProvider, ProviderName } from "./providers/types.js";
 import { createAiRouter, type AiRouter } from "./router.js";
@@ -53,7 +54,11 @@ export interface ProviderDeps {
 }
 
 export function createProvider(plan: ProviderPlan, env: Env, deps: ProviderDeps = {}): LlmProvider {
-  const common = { models: plan.models, maxRetries: env.AI_MAX_RETRIES, fetchFn: deps.fetchFn };
+  const common = {
+    models: plan.models,
+    maxRetries: env.AI_MAX_RETRIES,
+    fetchFn: pacedFetch(deps.fetchFn ?? fetch, env.AI_REQUEST_MIN_INTERVAL_MS),
+  };
   switch (plan.provider) {
     case "gemini":
       return createGeminiProvider({ ...common, apiKey: env.GEMINI_API_KEY! });

@@ -46,6 +46,7 @@ const triageService = createTriageService({
 const events = createEventHub({ clock: systemClock, logger });
 const triageQueue = createJobQueue({
   concurrency: 2,
+  minStartIntervalMs: env.AI_REQUEST_MIN_INTERVAL_MS,
   run: async (id) => {
     const outcome = await triageService.run(id);
     // Admins see the result (or the switch to manual review) without refreshing.

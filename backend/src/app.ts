@@ -17,6 +17,7 @@ import { corsAllowlist } from "./middleware/cors.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { httpLogger } from "./middleware/http-logger.js";
 import { notFound } from "./middleware/not-found.js";
+import { perIpLimit, perUserLimit } from "./middleware/rate-limit.js";
 import { requestId } from "./middleware/request-id.js";
 import { requireRole } from "./middleware/require-role.js";
 import { createAdminRouter } from "./modules/admin/router.js";
@@ -70,6 +71,7 @@ export function createApp({
 }: AppDeps) {
   const app = express();
   app.disable("x-powered-by");
+  if (env.TRUST_PROXY_HOPS > 0) app.set("trust proxy", env.TRUST_PROXY_HOPS);
 
   app.use(requestId);
   app.use(httpLogger(logger));
@@ -78,13 +80,38 @@ export function createApp({
   app.use(express.json({ limit: "32kb" }));
 
   // Public routes (no auth by design: no data).
-  app.use("/api/v1/health", healthRouter);
+  app.use(
+    "/api/v1/health",
+    perIpLimit({ windowMs: 60_000, limit: 60, message: "Too many health checks. Please slow down." }),
+    healthRouter,
+  );
   app.use("/api", docsRouter());
 
   // Everything else under /api/v1 needs a verified session, so even unknown
   // paths answer 401 to anonymous callers and route existence isn't revealed.
   const audit = createAuditRecorder(systemWriter, logger);
+  // A client that keeps sending missing or bad tokens is slowed down per IP;
+  // only 401 answers count, so signed-in traffic doesn't use up the allowance.
+  app.use(
+    "/api/v1",
+    perIpLimit({
+      windowMs: 5 * 60_000,
+      limit: 50,
+      message: "Too many requests without a valid session. Please wait a few minutes and sign in again.",
+      counts: (res) => res.statusCode === 401,
+    }),
+  );
   app.use("/api/v1", authenticate(verifier));
+  // Abuse ceiling for every signed-in route, on top of the tighter per-route limits.
+  app.use(
+    "/api/v1",
+    perUserLimit({
+      windowMs: 5 * 60_000,
+      limit: 300,
+      skipFailedRequests: false,
+      message: "Too many requests. Please wait a few minutes and try again.",
+    }),
+  );
   app.use("/api/v1/me", meRouter);
   app.use("/api/v1/events", createEventsRouter({ hub: events, ...eventStream }));
   app.use(

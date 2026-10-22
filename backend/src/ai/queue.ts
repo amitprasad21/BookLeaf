@@ -21,6 +21,7 @@ export interface JobQueue {
 
 export function createJobQueue(options: {
   concurrency: number;
+  minStartIntervalMs?: number;
   run: (id: string) => Promise<unknown>;
   logger: Logger;
 }): JobQueue {
@@ -28,6 +29,8 @@ export function createJobQueue(options: {
   const known = new Set<string>();
   let running = 0;
   let closed = false;
+  let nextStart = 0;
+  let wake: NodeJS.Timeout | null = null;
   let idleWaiters: (() => void)[] = [];
 
   const settleIdle = () => {
@@ -39,7 +42,17 @@ export function createJobQueue(options: {
 
   const pump = () => {
     while (!closed && running < options.concurrency && waiting.length > 0) {
+      const wait = nextStart - Date.now();
+      if (wait > 0) {
+        if (!wake)
+          wake = setTimeout(() => {
+            wake = null;
+            pump();
+          }, wait);
+        break;
+      }
       const id = waiting.shift()!;
+      nextStart = Date.now() + (options.minStartIntervalMs ?? 0);
       running += 1;
       options
         .run(id)
@@ -66,6 +79,8 @@ export function createJobQueue(options: {
     },
     async close(timeoutMs) {
       closed = true;
+      if (wake) clearTimeout(wake);
+      wake = null;
       for (const id of waiting.splice(0)) known.delete(id);
       await Promise.race([this.idle(), new Promise((resolve) => setTimeout(resolve, timeoutMs).unref())]);
     },

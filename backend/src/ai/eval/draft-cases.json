@@ -1,8 +1,32 @@
 {
-  "version": "draft-cases-2026-10-20.2",
+  "version": "draft-cases-2026-10-21.3",
   "today": "2026-10-20",
-  "notes": "The assignment's seven sample queries (AI_SPEC.md section 13), each bound to a seed book. 'guidance' is the assignment's expected response, quoted for the reviewer. 'checks' are case-insensitive patterns the reply must (or, with mustNot, must not) contain; the runner also checks every reply for an early acknowledgement and for fact-guard warnings. Checks are a first pass: a person reads every reply. Version .2 (2026-10-20): numbers may be written as words, and the acknowledgement check reads past an inline greeting (two false misses in the first live run).",
+  "notes": "The assignment's seven sample queries (AI_SPEC.md section 13), plus the BK011 overdue-quarter regression found in the signed-in browser run. Each is bound to a seed book. 'checks' are case-insensitive patterns the reply must (or, with mustNot, must not) contain; the runner also checks acknowledgement and fact-guard warnings. Patterns are only a first pass: a person must read every reply. Version 2026-10-21.1 added the quarter regression and next-payout date; .2 added observed balance-attribution and progress-claim regressions; .3 also detects unconfirmed production activity and completed re-sync claims.",
   "cases": [
+    {
+      "id": "royalty-overdue-quarter",
+      "authorId": "AUTH007",
+      "bookId": "BK011",
+      "category": "royalty_payments",
+      "priority": "high",
+      "subject": "Which royalty quarter is overdue?",
+      "description": "My royalty is still pending. Which quarter's deadline has passed, and when is the next scheduled payout?",
+      "guidance": "Distinguish the April–June 2026 reference period (due 14 August) from the next scheduled payout on 14 November. July–September is not overdue on 20 October. The balance is a total, not evidence that all of it belongs to April–June. Ask finance to confirm and give an update within 48 hours.",
+      "checks": [
+        { "name": "names the earlier reference quarter", "pattern": "April\\s*[–—-]\\s*June 2026|Q2 2026" },
+        { "name": "states the passed deadline", "pattern": "14 August 2026|August 14,? 2026|2026-08-14" },
+        {
+          "name": "states the next scheduled deadline",
+          "pattern": "14 November 2026|November 14,? 2026|2026-11-14"
+        },
+        {
+          "name": "does not repeat the wrong-quarter claim",
+          "pattern": "(?:July\\s*[–—-]\\s*September 2026|Q3 2026)(?:\\s+(?:royalty|payment|payout))?\\s+(?:is|appears|seems|looks)(?:\\s+to be)?\\s+(?:already\\s+)?overdue",
+          "mustNot": true
+        }
+      ],
+      "escalation": { "needed": true, "team": "finance" }
+    },
     {
       "id": "royalty-missing",
       "authorId": "AUTH003",
@@ -32,6 +56,10 @@
         {
           "name": "states the pending amount",
           "pattern": "₹\\s?2,546"
+        },
+        {
+          "name": "states the next scheduled deadline",
+          "pattern": "14 November 2026|November 14,? 2026|2026-11-14"
         }
       ],
       "escalation": {
@@ -56,6 +84,11 @@
         {
           "name": "explains what is deducted",
           "pattern": "printing|commission|shipping"
+        },
+        {
+          "name": "does not assign the total balance to a quarter",
+          "pattern": "pending balance of[^.\\n]* (?:for|from) the [^.\\n]*(?:quarter|period)",
+          "mustNot": true
         }
       ]
     },
@@ -128,6 +161,11 @@
         {
           "name": "gives 24-48 hours",
           "pattern": "(24|twenty-four)\\s*(–|-|to)\\s*(48|forty-eight)\\s*hours"
+        },
+        {
+          "name": "does not claim a re-sync was already performed",
+          "pattern": "(?:I|we)(?: have|'ve|’ve) (?:already |gone ahead and )?triggered|(?:already|successfully) (?:triggered|re-synced|resynced)",
+          "mustNot": true
         }
       ]
     },
@@ -156,6 +194,11 @@
         {
           "name": "doesn't blame the author",
           "pattern": "your fault|because you|you delayed",
+          "mustNot": true
+        },
+        {
+          "name": "does not invent a production progress update",
+          "pattern": "everything is progressing steadily|without any unexpected hold-ups|(?:team|we) (?:is|are) working closely|(?:team|we) (?:is|are) (?:preparing|checking)",
           "mustNot": true
         }
       ]

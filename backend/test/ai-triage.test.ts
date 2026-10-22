@@ -46,8 +46,10 @@ describe("triage facts", () => {
         lastClosedQuarter: "July–September 2026",
         lastClosedQuarterDueBy: "2026-11-14",
         nextQuarterDueBy: "2027-02-14",
+        nextPayoutDueBy: "2026-11-14",
         pendingBelowThreshold: false,
         paymentPossiblyOverdue: true,
+        possiblyOverduePeriod: { quarter: "April–June 2026", dueBy: "2026-08-14" },
       },
     });
     expect(JSON.stringify(facts)).not.toMatch(/email|phone|city|name/i);
@@ -69,6 +71,7 @@ describe("triage facts", () => {
     expect(facts.book).toBeNull();
     expect(facts.authorTotals).toEqual({ books: 2, totalPending: 850, anyPaymentPossiblyOverdue: false });
     expect(facts.payout.pendingBelowThreshold).toBe(true);
+    expect(facts.payout.possiblyOverduePeriod).toBeNull();
   });
 });
 

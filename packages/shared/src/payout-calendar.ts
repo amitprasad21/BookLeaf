@@ -121,10 +121,10 @@ export function isBelowPayoutThreshold(pending: number): boolean {
   return pending > 0 && pending < PAYOUT_THRESHOLD_INR;
 }
 
-/** The most recent quarter whose payout deadline is on or before today. */
+/** The most recent quarter whose payout deadline is strictly before today. */
 export function latestPassedPayout(today: string): { quarter: Quarter; dueBy: string } {
   let quarter = previousQuarter(quarterOf(today));
-  while (payoutDueBy(quarter) > today) quarter = previousQuarter(quarter);
+  while (payoutDueBy(quarter) >= today) quarter = previousQuarter(quarter);
   return { quarter, dueBy: payoutDueBy(quarter) };
 }
 

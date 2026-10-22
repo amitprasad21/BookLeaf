@@ -4,6 +4,7 @@
 // city: classification doesn't need them, so they never leave the system.
 import {
   isBelowPayoutThreshold,
+  latestPassedPayout,
   paymentPossiblyOverdue,
   payoutCalendar,
   PAYOUT_THRESHOLD_INR,
@@ -37,8 +38,11 @@ export interface TriageFacts {
     lastClosedQuarter: string;
     lastClosedQuarterDueBy: string;
     nextQuarterDueBy: string;
+    nextPayoutDueBy: string;
     pendingBelowThreshold: boolean;
     paymentPossiblyOverdue: boolean;
+    /** Reference period for the heuristic, not a per-quarter sales ledger. */
+    possiblyOverduePeriod: { quarter: string; dueBy: string } | null;
   };
 }
 
@@ -63,6 +67,8 @@ export function buildTriageFacts(
   const totalPending =
     authorBooks.reduce((sum, candidate) => sum + paise(candidate.royalty_pending), 0) / 100;
   const pending = book ? book.royalty_pending : totalPending;
+  const possiblyOverdue = book ? overdue(book) : authorBooks.some(overdue);
+  const passedPayout = latestPassedPayout(today);
 
   return {
     today,
@@ -86,8 +92,12 @@ export function buildTriageFacts(
       lastClosedQuarter: calendar.lastClosedQuarter.label,
       lastClosedQuarterDueBy: calendar.lastClosedQuarterDueBy,
       nextQuarterDueBy: calendar.nextQuarterDueBy,
+      nextPayoutDueBy: calendar.nextPayoutDueBy,
       pendingBelowThreshold: isBelowPayoutThreshold(pending),
-      paymentPossiblyOverdue: book ? overdue(book) : authorBooks.some(overdue),
+      paymentPossiblyOverdue: possiblyOverdue,
+      possiblyOverduePeriod: possiblyOverdue
+        ? { quarter: passedPayout.quarter.label, dueBy: passedPayout.dueBy }
+        : null,
     },
   };
 }

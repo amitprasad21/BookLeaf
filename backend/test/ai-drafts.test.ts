@@ -22,6 +22,7 @@ import { AiRouteError, createAiRouter } from "../src/ai/router.js";
 import { createUsageRecorder } from "../src/ai/usage.js";
 import {
   draftShapeProblem,
+  draftPolicyProblem,
   factWarnings,
   SIGN_OFF,
   withStandardSignOff,
@@ -107,8 +108,10 @@ describe("draft facts", () => {
       lastClosedQuarterDueBy: "2026-11-14",
       currentQuarterEnd: "2026-12-31",
       nextQuarterDueBy: "2027-02-14",
+      nextPayoutDueBy: "2026-11-14",
       pendingBelowThreshold: false,
       paymentPossiblyOverdue: true,
+      possiblyOverduePeriod: { quarter: "April–June 2026", dueBy: "2026-08-14" },
     });
     expect(facts.production).toBeNull();
     expect(facts.authorBooks).toBeNull();
@@ -127,6 +130,45 @@ describe("draft facts", () => {
     expect(facts.authorBooks?.map((book) => book.royaltyPending)).toEqual(
       booksOf("AUTH009").map((b) => b.royalty_pending),
     );
+    expect(facts.payout.possiblyOverduePeriod).toBeNull();
+  });
+
+  it("separates BK011's overdue reference from the upcoming quarter in the reported browser case", () => {
+    const facts = buildDraftFacts(
+      {
+        authorName: "Sneha Kulkarni",
+        bookId: "BK011",
+        category: "royalty_payments",
+        books: booksOf("AUTH007"),
+      },
+      "2026-10-20",
+    );
+    expect(facts.payout).toMatchObject({
+      paymentPossiblyOverdue: true,
+      possiblyOverduePeriod: { quarter: "April–June 2026", dueBy: "2026-08-14" },
+      lastClosedQuarter: "July–September 2026",
+      lastClosedQuarterDueBy: "2026-11-14",
+      nextPayoutDueBy: "2026-11-14",
+    });
+    expect(
+      factWarnings(
+        "Earlier royalties appear overdue against the April–June 2026 deadline of 14 August 2026. The next scheduled payout is 14 November 2026.",
+        { facts, authorText: "Where is my royalty?" },
+      ),
+    ).toEqual([]);
+    expect(factWarnings("The earlier deadline was 15 August 2026.", { facts, authorText: "" })).toHaveLength(
+      1,
+    );
+  });
+
+  it.each([0, 850])("does not attach an overdue period to a balance of %s", (pending) => {
+    const book = { ...booksOf("AUTH001")[0]!, royalty_pending: pending };
+    const facts = buildDraftFacts(
+      { authorName: "Priya Sharma", bookId: book.book_id, category: "royalty_payments", books: [book] },
+      TODAY,
+    );
+    expect(facts.payout.paymentPossiblyOverdue).toBe(false);
+    expect(facts.payout.possiblyOverduePeriod).toBeNull();
   });
 
   it("for a book in production: the stage, its position of 9, the next stage and known delay points", () => {
@@ -211,6 +253,71 @@ describe("draft prompt", () => {
 // ----------------------------------------------------------------- guards
 
 describe("draft guards", () => {
+  it("rejects unsupported completed actions and requires an apology and period confirmation for overdue royalties", () => {
+    const facts = buildDraftFacts(
+      { authorName: "Priya", bookId: "BK001", category: "royalty_payments", books: booksOf("AUTH001") },
+      TODAY,
+    );
+    const valid = {
+      reply: "Hi Priya,\n\nI'm sorry for the apparent delay. I will ask finance to investigate.",
+      kb_sections_used: ["kb.royalty"],
+      needs_escalation: true,
+      escalation_team: "finance",
+      internal_checklist: ["Ask finance to confirm the period."],
+      missing_information: ["Affected royalty period"],
+    } as DraftResult;
+    expect(draftPolicyProblem(valid, facts, "royalty_payments")).toBeNull();
+    for (const reply of [
+      "I will update you within 48 hours and have asked our finance team to investigate.",
+      "I've already contacted finance.",
+      "We triggered a re-sync.",
+    ]) {
+      expect(draftPolicyProblem({ ...valid, reply }, facts, "royalty_payments")).toMatch(/already happened/);
+    }
+    expect(
+      draftPolicyProblem({ ...valid, reply: "I understand. I will ask finance." }, facts, "royalty_payments"),
+    ).toMatch(/apology/);
+    expect(draftPolicyProblem({ ...valid, missing_information: [] }, facts, "royalty_payments")).toMatch(
+      /confirm.*period/,
+    );
+    expect(
+      draftPolicyProblem(
+        {
+          ...valid,
+          reply: "I am sorry. Your pending balance of ₹3,570 for the April–June period is overdue.",
+        },
+        facts,
+        "royalty_payments",
+      ),
+    ).toMatch(/total pending/);
+  });
+
+  it("requires a missing production estimate only for a production question", () => {
+    const facts = buildDraftFacts(
+      {
+        authorName: "Kavita",
+        bookId: "BK015",
+        category: "book_status_production",
+        books: booksOf("AUTH009"),
+      },
+      TODAY,
+    );
+    const draft = {
+      reply: "I will ask production to confirm the estimate.",
+      missing_information: [],
+    } as unknown as DraftResult;
+    expect(draftPolicyProblem(draft, facts, "book_status_production")).toMatch(
+      /no production completion estimate/,
+    );
+    expect(
+      draftPolicyProblem(
+        { ...draft, missing_information: ["Estimated completion date"] },
+        facts,
+        "book_status_production",
+      ),
+    ).toBeNull();
+    expect(draftPolicyProblem(draft, facts, "general_inquiry")).toBeNull();
+  });
   const ok = { reply: "Hi Priya,\n\nThanks for writing in.", kb_sections_used: ["kb.royalty"] };
 
   it("send back a reply written as one block (seen live), so the repair attempt adds paragraphs", () => {
@@ -386,6 +493,30 @@ function draftSetup(options: { responder?: MockResponder; primary?: LlmProvider 
 }
 
 describe("draft service", () => {
+  it("repairs a completed-action claim once and never persists a repeatedly failing draft", async () => {
+    let calls = 0;
+    const repaired = draftSetup({
+      responder: (req) => {
+        const valid = mockDraftResponder(req) as DraftResult;
+        calls += 1;
+        return calls === 1
+          ? { ...valid, reply: valid.reply.replace("I will share", "I have shared") }
+          : valid;
+      },
+    });
+    expect((await repaired.get()).draft.reply).toContain("I will share");
+    expect(calls).toBe(2);
+    const blocked = draftSetup({
+      responder: (req) => {
+        const valid = mockDraftResponder(req) as DraftResult;
+        return { ...valid, reply: valid.reply.replace("I will share", "I have shared") };
+      },
+    });
+    await expect(blocked.get()).rejects.toMatchObject({ reason: "invalid_output", status: 503 });
+    expect(blocked.drafts).toHaveLength(0);
+    expect(blocked.events).toHaveLength(0);
+    expect(blocked.usage).toHaveLength(2);
+  });
   it("generates a draft once, then reuses it while the context is unchanged (no second AI call)", async () => {
     const { get, drafts, usage, events } = draftSetup();
     const first = await get();

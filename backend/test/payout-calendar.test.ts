@@ -79,6 +79,26 @@ describe("threshold and overdue heuristics", () => {
     });
   });
 
+  it.each([
+    ["2026-11-13", "April–June 2026", "2026-08-14"],
+    ["2026-11-14", "April–June 2026", "2026-08-14"],
+    ["2026-11-15", "July–September 2026", "2026-11-14"],
+    ["2027-02-14", "July–September 2026", "2026-11-14"],
+    ["2027-02-15", "October–December 2026", "2027-02-14"],
+  ])("keeps the deadline day inclusive on %s", (today, label, dueBy) => {
+    expect(latestPassedPayout(today)).toMatchObject({ quarter: { label }, dueBy });
+  });
+
+  it("does not mark a newly payable quarter overdue until the day after its deadline", () => {
+    const book = {
+      royaltyPending: 2000,
+      lastRoyaltyPayoutDate: null,
+      publicationDate: "2026-07-10",
+    };
+    expect(paymentPossiblyOverdue(book, "2026-11-14")).toBe(false);
+    expect(paymentPossiblyOverdue(book, "2026-11-15")).toBe(true);
+  });
+
   it("U-04 flags dataset books as the AI spec expects on 2026-10-16", () => {
     const today = "2026-10-16";
     // BK001: ₹3,570 pending, last paid 2025-10-15 -> possibly overdue

@@ -44,6 +44,11 @@ const EnvSchema = z
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
     PORT: z.coerce.number().int().min(1).max(65535).default(4000),
     LOG_LEVEL: z.enum(LOG_LEVELS).optional(),
+    /**
+     * Proxies in front of the app (Render: 1). Express then reads the client
+     * IP from X-Forwarded-For, which the per-IP health-check limit needs.
+     */
+    TRUST_PROXY_HOPS: optionalSetting(z.coerce.number().int().min(0).max(5)).default(0),
     CORS_ALLOWED_ORIGINS: OriginList.optional(),
     // Public project values; the backend uses them to verify tokens and to
     // build request-scoped clients that carry the caller's JWT (RLS applies).
@@ -66,6 +71,8 @@ const EnvSchema = z
     // Triage runs in the background; free-tier Flash-Lite took 8-13 s per call (D-029).
     AI_TRIAGE_TIMEOUT_MS: optionalSetting(z.coerce.number().int().min(1_000)).default(30_000),
     AI_DRAFT_TIMEOUT_MS: optionalSetting(z.coerce.number().int().min(1_000)).default(30_000),
+    /** Minimum time between provider HTTP starts, including retries and repairs. */
+    AI_REQUEST_MIN_INTERVAL_MS: optionalSetting(z.coerce.number().int().min(0).max(30_000)).default(8_000),
     AI_MAX_RETRIES: optionalSetting(z.coerce.number().int().min(0).max(5)).default(2),
     AI_CIRCUIT_FAILURE_THRESHOLD: optionalSetting(z.coerce.number().int().min(1)).default(3),
     AI_CIRCUIT_COOLDOWN_MS: optionalSetting(z.coerce.number().int().min(1_000)).default(60_000),

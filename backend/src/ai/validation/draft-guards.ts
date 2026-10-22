@@ -4,6 +4,43 @@
 // amounts and dates that aren't in the facts or the author's own words, so
 // the admin checks them before sending.
 import type { DraftFacts } from "../facts/draft-facts.js";
+import type { DraftResult, TicketCategory } from "@bookleaf/shared";
+
+// Conservative: generated replies describe next actions. Only an admin can
+// confirm completed operational work; an author message cannot establish it.
+const COMPLETED_ACTION =
+  /\b(?:(?:have|has|had|I['’]ve|we['’]ve)\s+(?:(?:already|just)\s+|gone ahead and\s+)?(?:asked|contacted|escalated|triggered|sent|shared|processed|resolved|arranged|updated)|(?:I|we)\s+(?:already\s+)?(?:contacted|escalated|triggered|sent|processed|resolved|arranged))\b/i;
+
+export function draftPolicyProblem(
+  draft: DraftResult,
+  facts: DraftFacts,
+  category: TicketCategory,
+): string | null {
+  if (COMPLETED_ACTION.test(draft.reply)) {
+    return "the reply claims an operational action has already happened; describe it as a future next step, such as 'I will ask finance', and put the task in internal_checklist";
+  }
+  if (category === "royalty_payments" && facts.payout.paymentPossiblyOverdue) {
+    if (!/\b(?:sorry|apologi[sz]e|apologies)\b/i.test(draft.reply)) {
+      return "acknowledge the apparent overdue payment with an explicit apology, while preserving uncertainty about the affected period";
+    }
+    if (!draft.missing_information.some((item) => /period|quarter/i.test(item))) {
+      return "missing_information must require finance to confirm the affected royalty period";
+    }
+    if (
+      /pending (?:balance|royalty) of[^.\n]* (?:for|from) the [^.\n]*(?:quarter|period)/i.test(draft.reply)
+    ) {
+      return "do not assign a total pending balance to a quarter; finance must confirm the affected period";
+    }
+  }
+  if (
+    category === "book_status_production" &&
+    facts.production &&
+    !draft.missing_information.some((item) => /completion|estimate|timeline/i.test(item))
+  ) {
+    return "no production completion estimate is supplied; list it in missing_information and ask the team to confirm it";
+  }
+  return null;
+}
 
 /** A reason the draft must be repaired, or null when it is usable. */
 export function draftShapeProblem(
@@ -89,7 +126,9 @@ function factDates(facts: DraftFacts): string[] {
     facts.payout.lastClosedQuarterDueBy,
     facts.payout.currentQuarterEnd,
     facts.payout.nextQuarterDueBy,
+    facts.payout.nextPayoutDueBy,
   ];
+  if (facts.payout.possiblyOverduePeriod) dates.push(facts.payout.possiblyOverduePeriod.dueBy);
   if (facts.book)
     dates.push(
       ...[facts.book.publicationDate, facts.book.lastRoyaltyPayoutDate].filter(
