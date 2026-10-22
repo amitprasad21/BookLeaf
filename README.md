@@ -147,8 +147,8 @@ The seed (`npm run seed:apply`) creates 12 demo logins:
 
 | Deliverable | Status |
 |---|---|
-| Public source repository | Local repository prepared; remote publication pending |
-| Live demo URL (both portals, pre-seeded) | Render/Vercel configurations prepared; hosting sign-in and deployment pending |
+| Public source repository | [github.com/amitprasad21/BookLeaf](https://github.com/amitprasad21/BookLeaf) |
+| Live demo URL (both portals, pre-seeded) | Render/Vercel configurations prepared; deployment pending (runbook: [.back/DEPLOYMENT.md](.back/DEPLOYMENT.md)) |
 | README: setup, architecture, AI integration, API docs, limitations | Prepared; actual hosted links and intended demo credentials remain pending |
 | One-page approach write-up | [WRITEUP.md](WRITEUP.md) |
 

@@ -1,7 +1,9 @@
 # Handover
 
 **Session:** 2026-10-22 (Codex)
-**Branch:** `feature/hardening`; local `main` remains at `0c37073`. Code committed as `4576bcf`, hosting/loading preparation as `36b11ff`; documentation is recorded in the following docs commit. No remote, push, merge or deployment.
+**Branch:** `main` at `aaebf7c`, pushed to `origin` (github.com/amitprasad21/BookLeaf, public); the commits below are on it. No deployment.
+
+**Update 2026-10-22 (Claude Code, branch `docs/deployment-runbook`):** re-ran the checks on `main`: lint, OpenAPI lint, typecheck, 375 backend tests and all five builds pass; author 30 and console 36 tests pass. `npm run check` stops at lint locally only because ESLint also reads the git-ignored helper scripts in `.cache/` (absent from a clone); run `npx eslint . --ignore-pattern ".cache/**"` or delete `.cache/`. Wrote the click-by-click Render + Vercel runbook in `.back/DEPLOYMENT.md`, including a proxy check: if `TRUST_PROXY_HOPS` is too low on Render, every visitor shares one per-IP bucket and 50 failed sign-ins lock everyone out for up to 5 minutes.
 **Ownership:** Codex owns this batch and the shared trackers. Earlier uncommitted work was preserved. No concurrent agent owner is recorded.
 **Authorization:** User approved implementation and live AI evaluations, then requested completion of the listed release work. Production estimates are unavailable: keep them awaiting production confirmation. User explicitly selected **Keep review local only**; do not send source to Claude or another external reviewer. A separate human release review is still required.
 
