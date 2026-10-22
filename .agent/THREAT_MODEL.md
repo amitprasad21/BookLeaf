@@ -1,6 +1,6 @@
 # Threat Model
 
-**Owns:** actors, assets, abuse cases, mitigations and residual risk. The control checklist and review findings are in [SECURITY_REVIEW_CHECKLIST.md](SECURITY_REVIEW_CHECKLIST.md). **Status: planned mitigations; none verified yet.**
+**Owns:** actors, assets, abuse cases, mitigations and residual risk. The control checklist and review findings are in [SECURITY_REVIEW_CHECKLIST.md](SECURITY_REVIEW_CHECKLIST.md). Verification is recorded per control; deployment checks remain outstanding.
 
 ## Assets
 
@@ -49,7 +49,16 @@
 | T-22 | Event stream leaks content | Events carry IDs only; per-subscriber filtering by ownership; internal changes are a separate admin-only event; streams re-authenticate every 10 min | Low | API-8 tests (offline + live I-20: no reply text on the stream, nothing to another author) |
 | T-23 | Author bypasses the backend and calls the Supabase Data API directly with the public key + own JWT | RLS limits them to their own rows; insert WITH CHECK blocks setting status/priority/AI fields; DB constraints enforce lengths; DB rate-limit trigger caps inserts; AI daily budget caps cost of sweeper triage | Low–Medium | RLS-04..09 |
 
-## Explicitly accepted risks (demo)
+## Hardening review: 2026-10-21
+
+- D-035 adds the global authenticated-request ceiling (failures count), failed-auth IP ceiling and health-check IP ceiling. `TRUST_PROXY_HOPS` defaults to zero; the deployed proxy topology still needs verification. Limits remain per instance and reset on restart.
+- Asymmetric JWT header filtering reduces unnecessary legacy verification calls; it is not signature validation. A generated-key regression verifies that tampered claims never reach the profile query.
+- D-036 separates the passed payout reference period from the upcoming scheduled deadline. Prompts preserve uncertainty and human review. Date/amount guards still cannot prove the semantic correctness of every model statement; live eval and admin review remain necessary.
+- The 2026-10-21 audit found five high entries from one `braces` advisory in the development lint dependency chain; the production-only audit returned zero. No patched `braces` release is listed. This is an open SEC-2 finding, not an accepted risk or an audit pass. See the verification record.
+
+**2026-10-22 follow-up:** provider/queue pacing now reduces bursts, including repairs and HTTP retries, but remains process-local and cannot guarantee provider quotas or an exact billing cap. Draft-policy guards send known action/tone/period failures through one repair attempt; they do not establish semantic correctness. The latest eight live drafts correct the prior observed failures. Missing production estimates remain explicit by user choice. Local secret scanning found no configured server keys/demo passwords in working files, Git history or static frontend bundles. The user chose local-only review; no source was sent to Claude, and independent human review remains open. The development braces advisory remains unpatched and has not received maintainer risk acceptance.
+
+## Explicitly accepted risks (demo, unchanged)
 
 - **Shared demo passwords** published in the README (required by the assignment). Mitigation: demo-only data and accounts.
 - **In-memory rate limiting and event hub** reset on restart and don't span instances (A-15).

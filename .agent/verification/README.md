@@ -11,6 +11,9 @@ Each entry records:
 
 | File | Scope |
 |---|---|
+| [2026-10-22-release-preparation.md](2026-10-22-release-preparation.md) | Draft .5 repair guards, runtime pacing, live Gemini/Groq results, 441 offline tests, local secret/history scan, release documents and remaining access/review gates |
+| [2026-10-21-live-ai-followup.md](2026-10-21-live-ai-followup.md) | Approved live triage 36/36 category and priority; final drafts 48/49 checks with residual manual findings; final 433 offline tests and production builds |
+| [2026-10-21-hardening-ai-followup.md](2026-10-21-hardening-ai-followup.md) | Security and redirect fixes, explicit AI payout periods, 431 offline tests, production builds, dependency audit and remaining review gates |
 | [2026-10-16-phase0.md](2026-10-16-phase0.md) | Source inspection, seed data integrity, documentation tree and link checks |
 | [2026-10-16-setup2.md](2026-10-16-setup2.md) | Workspace scaffold: install, build, typecheck, tests, live smoke |
 | [2026-10-16-setup3.md](2026-10-16-setup3.md) | Tooling: ESLint, Prettier, OpenAPI lint, full `check`, fresh-clone install |

@@ -1,52 +1,49 @@
 # Handover
 
-**Session:** 2026-10-20 (Claude Code)
-**Branch:** `feature/ui-check-fixes` (from `main` at `d35aa0a`; three commits; not merged, not pushed)
+**Session:** 2026-10-22 (Codex)
+**Branch:** `feature/hardening`; local `main` remains at `0c37073`. Code committed as `4576bcf`, hosting/loading preparation as `36b11ff`; documentation is recorded in the following docs commit. No remote, push, merge or deployment.
+**Ownership:** Codex owns this batch and the shared trackers. Earlier uncommitted work was preserved. No concurrent agent owner is recorded.
+**Authorization:** User approved implementation and live AI evaluations, then requested completion of the listed release work. Production estimates are unavailable: keep them awaiting production confirmation. User explicitly selected **Keep review local only**; do not send source to Claude or another external reviewer. A separate human release review is still required.
 
 ## Done
 
-- Merged to `main` with approval: everything through AI-6 (API, AI triage/drafts/evals, live updates, both portals).
-- **Signed-in browser checks** ([verification/2026-10-20-ui-checks.md](verification/2026-10-20-ui-checks.md)): the user signed in (author Sneha, ops admin) in the Claude app's browser pane.
-  - Both portals checked, including live updates: author status and reply in 1–3 s; console "Show 1 update".
-  - One approved test ticket (BL-1277) was used and then deleted with the secret key; the database has 0 tickets.
-- **Fixes (committed) from those checks:**
-  - `author-frontend/src/features/books/`: the table fits 1024 px (ISBN one line, actions under the title, compact cells); `bookStatusText` shared with the query form.
-  - `author-frontend/src/features/tickets/NewTicketScreen.tsx`: book option wording.
-  - `admin-frontend/src/features/queue/`: "Nothing open right now" empty state; Status + Priority side by side.
-  - `admin-frontend/src/features/ticket/`: the "Reply sent" notice lives in the conversation (survives "Send & resolve").
-- Results: `npm run check` exit 0 (341 backend tests); author 29 and console 35 logic tests.
+- SEC-1 hardening: global request ceiling counts failures; auth/IP health limits; asymmetric JWT prefilter plus real generated-key signature regression; normalized login redirect escape fixed in both portals.
+- AI-7: overdue reference quarter and next scheduled deadline separated; deadline day remains inclusive. Draft .5 adds one-repair policy enforcement for observed completed actions, overdue tone/period omissions, balance attribution and missing production estimates. Repeated failure stores no generated draft; manual replies remain available.
+- AI-8: configurable provider HTTP pacing (default eight seconds) shared across tasks, repairs and retries; triage queue start pacing, duplicate suppression, cancellation and shutdown covered.
+- AI-9: authoritative estimates remain unavailable. User accepted the missing-estimate fallback; data enrichment is deferred and the original specific-timeline rubric still fails honestly.
+- Latest approved live drafts: eight answers, 48/49 automatic checks, seven whole cases, zero amount/date warnings; every reply/checklist inspected. Earlier action/tone issues corrected in these samples. Both Gemini and Groq exercised; 15 calls (14 success, one timeout), estimated list price USD 0.017848. Previous triage result remains 36/36 category and priority, 3/3 injection cases; not rerun unnecessarily.
+- Full `npm run check` passed: format, lint, API lint, types, 375 backend tests and all five workspace builds. Separate author/admin suites passed 30 and 36 tests: total 441.
+- Read-only live Supabase auth/books retest passed 12 tests; two alternate missing-credentials sentinel tests were skipped as designed. Real sessions, tampered JWT rejection, role guards and exact/isolation/rollover books for three authors pass. This made no application writes and no AI calls; it does not replace browser QA.
+- Refreshed dependency audit: production 0; development 5 high entries from one braces advisory, still unpatched. Local review and configured-secret scan: no matches across 369 working files, 808 historical blobs and 39 static bundle files. No migration/seed/dependency changes.
+- Render/Vercel files prepared, including pacing; deployment guide corrected for repo-root workspace builds and actual provider names. Hosting YAML/JSON parse and expected targets match; Render formatting passes. README updated; `WRITEUP.md` complete. Initial 22-file Markdown check passed; final 18-file docs batch has 245 checked local links, none missing.
+- Evidence: [release preparation](verification/2026-10-22-release-preparation.md). Historical [hardening](verification/2026-10-21-hardening-ai-followup.md) and [live AI](verification/2026-10-21-live-ai-followup.md) records remain unchanged as history. Decisions D-037/D-038 record current choices.
 
-## In progress
+## Open release gates
 
-- Nothing half-done.
+1. **QA-1:** author/admin portals are signed out. User was asked to sign in directly, not share passwords. Author login checked at observed 320×568 (44 px controls, no width overflow, keyboard order and empty-submit error focus); admin login visually checked at observed 1280×720. Further viewport requests did not alter measured dimensions, so the matrix is not passed. Full signed-in/zoom/keyboard/screen-reader journey, additional-author checks and two-admin UI conflict remain. Earlier signed-in evidence exists from October 20.
+2. **SEC-2:** local review is recorded, not independent human sign-off. The external Claude source-bundle command was rejected by automatic approval review before execution; user then chose local-only. No source was sent. The unpatched development braces finding needs maintainer disposition; no major package downgrade was attempted. Deployed CORS/proxy/HTTPS still need verification.
+3. **DEP-1..3:** Render and Vercel dashboards need sign-in. No external project/repository created, no actual URLs. Confirm the Supabase demo project; the existing development project is already seeded, so don't blindly rerun migrations/seed. One backend instance is required.
+4. **DOCS-2:** actual hosted links and intended public demo credentials await deployment. Do not publish backend/provider secrets. WRITEUP is complete but must reflect final deployment state if it changes.
 
-## Broken / risky
+## Browser and processes
 
-- **Drafts can name the wrong overdue quarter** (seen live): fix the facts and prompt in the AI follow-up (proposed as its own session; a live re-run needs approval).
-- **Free-tier per-minute quotas:** about 12 triage calls a minute exhaust Gemini's, then Groq's. Real tickets wait for the sweeper (or manual review after three attempts).
-- **Claude in Chrome isn't connected** in this setup; signed-in UI checks run in the app's browser pane after the user signs in there.
-- **npm 10.2.5 on PATH** crashes on this workspace. Use Node's bundled npm 11.6.2 (`"C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js"`).
-- **Bash heredocs in this environment halve backslashes and can trip on quotes.** Write code with backslashes using the file editor; for multi-file text edits, write a Python script file and run it.
-- The frontend logic tests run with the root-hoisted Vitest (`npx vitest run --root author-frontend` / `--root admin-frontend`). Declaring `vitest` (and Testing Library, jsdom) in the frontends needs approval.
-- Stale `.next/dev/types` from a dev server can break partial-tree typechecks; delete that git-ignored folder first.
-- The event hub is in-process: one backend instance only (A-15).
-- `GROQ_FALLBACK_API_KEY` in `backend/.env` is unused (C-14); delete it.
+- In-app browser id `2`; last kept tabs: author `6` (localhost:3000/login), admin `7` (localhost:3001/login), Render `8`, Vercel `9`. They were marked for handoff; use inventory if stale. Hosting tabs show login pages. The viewport reset API was called, but subsequent measured author dimensions remained 320×568; don't claim responsive sizes that did not apply.
+- Existing local Next dev/API processes from prior work remain. Attempts to start production frontends reported EADDRINUSE; no process was killed. Existing API was originally started with AI disabled for QA. Inspect actual process/port state before starting more servers or claiming which build is served.
+- Node bundled npm 11: `C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js`; put Node's directory first on PATH. Elevated loopback access needed for Vitest HTTP tests. Avoid concurrent Next dev/build operations on shared output.
+- GitHub CLI is installed and earlier elevated auth verified `amitprasad21`; no remote exists. Render/Vercel CLIs/tokens were not installed/configured.
 
-## Next
+## Do not touch / limits
 
-1. Fast-forward `main` to `feature/ui-check-fixes` (approval).
-2. AI follow-up: overdue quarter in the facts, triage facts-reading rules, tighter royalty drafts; live re-run with approval.
-3. Remaining manual checks (AE-01, AE-06, two-admin conflict, viewport matrix, keyboard, screen reader), hardening, deployment.
+- Preserve ignored credential files (`backend/.env` and both frontend `.env.local` files); never output their values. Use presence checks and direct user entry in hosting settings.
+- Keep the seed JSON byte-identical; preserve `docs/blueprint/`. No hosted DB writes occurred in this continuation; live model evals use in-memory stores.
+- Pacing/limits/SSE are single-process. Queue waiting consumes call timeout; the latest mean 17.93 s is per reported provider call, not a promise for whole-draft latency. Multiple calls may be needed for repair/fallback. Guards and finite evals do not replace admin review.
+- Frontend AGENTS.md/CLAUDE.md files were generated by Next dev; inspected and preserved. Follow their local Next documentation requirement before future frontend code changes.
+- Local helpers under ignored `.cache/` scan configured secrets/history/bundles and documentation links without printing secrets. They are not deployed artifacts.
 
-## Do not touch
+## Local commits
 
-- `backend/.env`, `author-frontend/.env.local`, `admin-frontend/.env.local`: real credentials, git-ignored, never read into chat.
-- `supabase/seed/bookleaf_sample_data.json` (byte-identical). `docs/blueprint/`.
+- `4576bcf` — `fix: harden API boundaries and AI draft processing`
+- `36b11ff` — `chore: prepare portal loading states and hosting configuration`
+- This handover and release evidence are included in `docs: record release verification and remaining access gates`; obtain its hash from `git log`.
 
-## Commits (approved by the user 2026-10-20)
-
-On `feature/ui-check-fixes` (hashes: `git log --oneline main..`). Each code commit was checked on its own (the rest stashed).
-
-1. `fix(author): fit the book table at 1024 px and share the status wording`
-2. `fix(admin): keep the reply notice, clarify the empty queue, compact the filters`
-3. `docs: record the signed-in browser checks`
+Verify final status from Git. The next release action depends on signed-in sessions and human security review; do not claim deployment is complete.

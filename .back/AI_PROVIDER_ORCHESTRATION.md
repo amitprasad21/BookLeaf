@@ -116,6 +116,7 @@ State is in-memory (single instance, A-15) and exposed in `GET /admin/ai/usage`.
 
 As built (AI-3, D-029):
 - **Enqueue:** `triage.enqueue(ticketId)` after the ticket insert commits (author router). Concurrency 2, in-process (D-007); duplicates are dropped by id.
+- **Pacing (AI-8):** queue starts are separated by `AI_REQUEST_MIN_INTERVAL_MS` (default 8000). A shared gate per provider instance also spaces HTTP attempts across triage, drafts, repairs and retries. Cancelled waiting requests are not sent; closing the queue clears its wake timer. Waiting consumes provider timeout, so busy periods may use fallback/manual mode. Pacing reduces bursts rather than guaranteeing token/minute quotas; it is single-process only.
 - **Job:** `loadTicketForTriage` → build facts → triage prompt → `route()` (one repair attempt on `invalid_output`) → zod validate + floors → `saveTriageResult`, or `markTriageFailure(reason, final)`.
   - Both writes increment `ai_attempts` and are conditional on the version loaded. On a conflict the job reloads and re-applies the same outcome (no second AI call).
   - Transient (router `retryable`, attempts left) → `failed`, eligible for the sweeper.
@@ -130,7 +131,7 @@ As built (AI-3, D-029):
 1. Load ticket (admin client) → build `TicketFacts` → select KB sections → compute `context_hash`.
 2. If `!regenerate` and a `ready` draft with this hash exists → return it (200).
 3. Check regeneration caps → `route()` with the draft prompt.
-4. Validate (schema, KB subset, placeholder guard). On failure, make one repair attempt with the error appended, then `AiUnavailable('invalid_output')`.
+4. Validate schema, KB subset, shape and draft-policy guards. Policy checks target observed completed-action claims, missing overdue apologies/period confirmation, total-balance quarter attribution and missing production estimates. On failure, make one repair attempt with the error appended, then `AiUnavailable('invalid_output')`; no failed draft is persisted. Amount/date warnings remain advisory.
 5. Run the fact guard → `fact_warnings`.
 6. Mark earlier drafts `superseded`; insert the new draft; audit `ai.draft_generated` / `ai.draft_regenerated`; return 201.
 

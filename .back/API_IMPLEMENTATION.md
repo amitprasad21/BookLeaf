@@ -54,7 +54,9 @@ packages/shared/src/schemas.ts           request schemas: author tickets (API-4)
 | 4 | `cors` | all | Exact-match allowlist from `CORS_ALLOWED_ORIGINS`; methods GET/POST/PATCH; headers Authorization, Content-Type, X-Request-Id |
 | 5 | `express.json({ limit: '32kb' })` | all | Oversized → 413 envelope |
 | 6 | Public routes | `/api/v1/health`, `/api/docs`, `/api/openapi.yaml` | No auth |
+| 6a | `perIpLimit` | `/api/v1` except health | 50 failed authentications (401) / 5 min per IP; other responses do not consume this quota. After it is exhausted all requests from that IP wait until reset |
 | 7 | `authenticate` | everything else under `/api/v1` | Verifies JWT, loads profile → `req.auth = { userId, role, authorId, displayName }` |
+| 7a | Global `perUserLimit` | all authenticated routes | 300 requests / 5 min per user, including failed requests; route quotas below still ignore failures |
 | 8 | `requireRole('author')` / `requireRole('admin')` | `/author/*`, `/admin/*` routers | 403 on mismatch |
 | 9 | Route-level `perUserLimit(...)` | per route | In-memory, keyed by user id; failed requests don't count |
 | 9a | `Schema.parse(req.body / req.query / req.params)` in the handler | per route | Strict zod schemas from `packages/shared`; a `ZodError` becomes a 400 with field details (D-024) |
@@ -84,7 +86,8 @@ packages/shared/src/schemas.ts           request schemas: author tickets (API-4)
 | `POST /author/tickets/{id}/messages` | user | 10 / 10 min |
 | `POST /admin/tickets/{id}/draft` (regenerate) | user | 10 / min; plus 5 regenerations / ticket / day (DB count) |
 | `POST /admin/tickets/{id}/triage` | user | 5 / min; plus 3 manual retries / ticket / day |
-| All authenticated routes | user | 300 / 5 min (abuse ceiling) |
+| All authenticated routes | user | 300 / 5 min (abuse ceiling; failures count) |
+| Failed authentication | IP | 50 responses with status 401 / 5 min |
 | `/health` | IP | 60 / min |
 
 ## 6. SSE endpoint

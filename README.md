@@ -5,9 +5,9 @@ A web application for BookLeaf Publishing with two experiences, both backed by o
 - **Author portal**: authors sign in, review their books and royalties, raise support tickets and follow replies in near real time.
 - **Admin portal**: the operations team works a prioritised ticket queue. AI-suggested categories, priorities and reply drafts are always reviewed by a human before anything reaches an author.
 
-> **Current status: API and both portals built, with live updates; signed-in checks pending.** The Supabase database has the schema and row-level security policies, verified by 15 live access-rule tests, and is seeded with the exact assessment dataset (10 authors, 18 books) plus 12 demo logins. The API verifies Supabase sign-ins on every `/api/v1` route (except health), enforces author/admin role guards, and serves `GET /api/v1/me` and `GET /api/v1/author/books` (books + royalty summary with the next payout deadline). It also serves the author ticket endpoints (create, list, detail; saved before any AI, rate-limited and audited), the admin queue (filters, urgency sort, first-response SLA state, summary counts), the admin ticket view and updates (status changes, category/priority overrides, self-assignment; safe against two admins editing at once, every change audited), and admin replies (first response and status recorded in one transaction) with internal notes that authors never see, plus Swagger UI at `/api/docs`. The AI provider layer is built and live-checked: Gemini 3.5 Flash-Lite (triage and drafts) with Groq gpt-oss-120b as fallback, plus circuit breaker, daily token budget and usage accounting. AI triage runs in the background after every new ticket: category, priority, confidence and a rationale for the admin. It never blocks ticket creation, never overrides an admin's choice, and admins can re-run it. Admins can request an AI reply draft grounded in the assignment's knowledge base and the author's own royalty and production data. Drafts are reused while nothing changes, and any figure that isn't in the records is flagged. A draft is never sent automatically: the admin edits and sends. The author portal (sign-in, My Books with royalties, Raise a query, My Tickets) and the support console (queue with filters and summary counts, ticket page with triage controls, notes, timeline and a reply editor with the AI draft) are built. Both update live over Server-Sent Events: an admin's reply appears for the author without a refresh, and new tickets show up for admins. If the stream drops, they refresh every 15 seconds until it's back. The AI is measured against a labelled golden set (`npm run eval:triage`, `npm run eval:drafts`): on the first live run triage picked the right category for 36 of 36 tickets and an acceptable priority for 34 of 36. Deployment comes next. [PROJECT_STATE.md](PROJECT_STATE.md) is the source of truth for what is actually done and verified.
+> **Current status: implementation complete through AI-8; release checks remain.** The API, both portals, live updates, security fixes, runtime AI pacing and draft-policy checks are built. All 441 offline tests and production builds pass. Latest approved live evaluation: triage 36/36 category and priority; drafts eight answers and 48/49 checks, with the earlier action/tone errors corrected in those samples. The remaining timeline check requires information BookLeaf has not supplied; estimates await production confirmation. The write-up and hosting configurations are ready. Full browser/accessibility checks, human security review, an unpatched development dependency advisory and deployment remain open. See [PROJECT_STATE.md](PROJECT_STATE.md), [TASKS.md](TASKS.md) and [release evidence](.agent/verification/2026-10-22-release-preparation.md).
 
-## Planned architecture (summary)
+## Architecture (summary)
 
 ```text
 author-frontend (Next.js) ─┐
@@ -25,13 +25,13 @@ Details: [ARCHITECTURE.md](ARCHITECTURE.md). Material decisions and their ration
 
 | Path | Purpose | Exists today? |
 |---|---|---|
-| `author-frontend/` | Author experience (Next.js) | Scaffold: placeholder page |
-| `admin-frontend/` | Admin experience (Next.js) | Scaffold: placeholder page |
-| `backend/` | The single REST API and AI orchestration | Scaffold: `/api/v1/health` + tests |
-| `packages/shared/` | Shared contract types, enums and validation schemas | Enums and labels |
-| `packages/ui/` | Shared monochrome UI primitives and tokens | Tokens + `Panel` |
+| `author-frontend/` | Author experience (Next.js) | Sign-in, books/royalties, query form, tickets and live replies |
+| `admin-frontend/` | Admin experience (Next.js) | Queue, filters, ticket management, notes and AI draft editor |
+| `backend/` | The single REST API and AI orchestration | Protected API, SSE, AI triage/drafts/evals and offline/live test suites |
+| `packages/shared/` | Shared contract types, enums and validation schemas | DTOs, validation, labels, payout/SLA calendars and ticket rules |
+| `packages/ui/` | Shared monochrome UI primitives and tokens | Components used by both portals |
 | `supabase/seed/bookleaf_sample_data.json` | Exact assessment dataset (10 authors, 18 books) | Yes |
-| `supabase/migrations/` | Schema, RLS policies | Planned (task DB-2) |
+| `supabase/migrations/` | Schema, RLS policies | Applied and verified in the existing Supabase project |
 | `docs/blueprint/` | Source blueprint bundle v2 (planning reference) | Yes |
 | Root `*.md`, `.agent/`, `.front/`, `.back/` | Project documentation | Yes, see [DOCUMENTATION_MAP.md](DOCUMENTATION_MAP.md) |
 
@@ -53,6 +53,8 @@ Install all workspaces (exact versions from `package-lock.json`):
 ```bash
 npm ci
 ```
+
+Create `backend/.env`, `author-frontend/.env.local` and `admin-frontend/.env.local` using the corresponding sections of [.env.example](.env.example). The backend needs Supabase URL, publishable key and server-only secret key; each frontend receives only its three `NEXT_PUBLIC_*` values. The API base ends in `/api/v1`. Use `AI_PRIMARY_PROVIDER=none` for manual mode without model keys. For a new Supabase project, follow the ordered migrations and seed instructions in [deployment guidance](.back/DEPLOYMENT.md); the provided seed dry run is safe by default.
 
 Build shared packages first (the apps import their compiled output), then everything else:
 
@@ -87,7 +89,7 @@ Run every check (format, lint, OpenAPI lint, typecheck, tests, build) in one go:
 npm run check
 ```
 
-Or one at a time: `npm run format:check`, `npm run lint`, `npm run lint:api`, `npm run typecheck`, `npm test`, `npm run build`. `npm run format` rewrites code formatting (Markdown docs and `openapi.yaml` are excluded).
+Or one at a time: `npm run format:check`, `npm run lint`, `npm run lint:api`, `npm run typecheck`, `npm test`, `npm run build`. The frontend logic suites currently run separately with the root-hoisted Vitest: `npx --no-install vitest run --root author-frontend` and `npx --no-install vitest run --root admin-frontend`. `npm run check` includes the backend suite; it does not run those two frontend suites. `npm run format` rewrites code formatting (Markdown docs and `openapi.yaml` are excluded).
 
 Verify credentials without revealing them (prints configured/missing and pass/fail only):
 
@@ -145,10 +147,18 @@ The seed (`npm run seed:apply`) creates 12 demo logins:
 
 | Deliverable | Status |
 |---|---|
-| Public source repository | Not started (local repository only) |
-| Live demo URL (both portals, pre-seeded) | Not started |
-| README: setup, architecture, AI integration, API docs, limitations | In progress (this file grows with the build) |
-| One-page approach write-up | Not started (task DOCS-3) |
+| Public source repository | Local repository prepared; remote publication pending |
+| Live demo URL (both portals, pre-seeded) | Render/Vercel configurations prepared; hosting sign-in and deployment pending |
+| README: setup, architecture, AI integration, API docs, limitations | Prepared; actual hosted links and intended demo credentials remain pending |
+| One-page approach write-up | [WRITEUP.md](WRITEUP.md) |
+
+## AI integration and limits
+
+Gemini `gemini-3.5-flash-lite` is the configured primary for triage and drafting, with Groq `openai/gpt-oss-120b` as the explicitly configured fallback. The small versioned KB is selected by category instead of vector search. Facts contain only the ticket author's relevant records. Schema validation, one repair attempt, policy floors, draft-policy checks, amount/date warnings and context-hash reuse constrain mistakes and repeated calls. AI never sends a reply or changes royalty records; an admin reviews, edits and sends it. See [AI_SPEC.md](AI_SPEC.md) for the complete behavior and evaluation method.
+
+Runtime calls and retries are spaced by `AI_REQUEST_MIN_INTERVAL_MS` (default 8000). Pacing, a daily token budget and circuit breakers reduce bursts and cost, but cannot guarantee provider availability or a precise billing cap. The latest paced draft run averaged 17.93 seconds per reported provider call, including one timeout; repairs/fallback may require multiple calls per draft. Manual mode remains available. Live evals call configured providers and may incur charges; their saved reports are git-ignored and summaries are under [.agent/verification](.agent/verification/README.md).
+
+Payout overdue periods are heuristic references, not a quarterly ledger. Production completion estimates are unavailable and must be confirmed by production. The service is designed for one backend instance; SSE, queue deduplication, pacing and request limits need shared infrastructure before horizontal scaling. A Render free service may take about a minute to wake after idling; the portals show a delayed loading hint. Attachments currently record a filename only; real uploads, author follow-up messages and a usage dashboard are deferred. Production dependency audit is clean; the development lint chain's unpatched braces finding and review limits are documented in [release verification](.agent/verification/2026-10-22-release-preparation.md). Hosting steps and rollback pointers are in [.back/DEPLOYMENT.md](.back/DEPLOYMENT.md).
 
 ## Git workflow
 

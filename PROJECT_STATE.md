@@ -2,13 +2,16 @@
 
 **Owns:** the current milestone, verified facts, blockers and open questions. Update at the end of every session.
 
-**Last updated:** 2026-10-20
-**Milestone:** Phase 0, SETUP-2, SETUP-3 and API-1 are merged to `main`. DB-1 (Supabase project + credentials) is merged to `main`. DB-2 (initial schema, applied and verified) is merged to `main`. DB-3 (RLS policies) and DB-4 (seed) are **applied, seeded, verified and merged** (project `jhszxq…`). API-2 (auth, role guards, `GET /me`), API-3 (`GET /author/books` + royalty summary + shared payout calendar), API-4 (author tickets), API-5 (admin queue + summary; migration `20261018090000_queue_urgency_rank.sql` applied by the user) and API-6 (admin ticket detail + PATCH) are merged. API-7 (admin replies + internal notes; migration `20261018120000_admin_reply_function.sql` applied by the user) is merged. AI-1/AI-2 (providers: Gemini primary, Groq fallback; router, breaker, budget, usage) are merged. AI-3 (triage: queue, sweeper, floors, manual re-run) is merged. AI-4 (reply drafts) is merged (`main` at `1e9a4bd`). FE-1 (UI package, author set) and the author portal FE-A1..A4 are merged (`main` at `7a688a9`): offline checks, build and the signed-out browser checks pass; the signed-in browser checks wait for an author sign-in (skipped for now at the user's request). The support console (FE-M1..M4 + AI-5, rest of FE-1) is merged (`main` at `a60195e`); signed-in checks wait for an admin sign-in. API-8 (live updates over SSE) is merged (`main` at `1127692`). AI-6 (evals) is merged (`main` at `d35aa0a`). The signed-in browser checks of both portals passed, including live updates; five UI fixes from them are committed on `feature/ui-check-fixes` (not merged). No deployment yet.
+**Last updated:** 2026-10-22
+**Milestone:** Core data/auth, API-1..8, both portals, shared UI and AI-1..8 are implemented. `feature/hardening` contains security fixes, provider/queue pacing, draft-policy repair checks and hosting preparation. The latest draft .5 run corrects the previously observed action/tone failures: eight answers, 48/49 automatic checks and no fact warnings, with Gemini and Groq exercised. Production estimates remain awaiting confirmation by the user's choice (AI-9 deferred). All 441 offline tests and production builds pass. The write-up is complete; README and deployment instructions are prepared. Browser QA, human security review, an unpatched development advisory and hosting access still prevent release. No deployment or Git remote exists.
 
 ## Verified facts (with evidence)
 
 | Fact | Evidence |
 |---|---|
+| 2026-10-22 release preparation: 441 offline tests, 12 read-only live Supabase auth/books tests, all builds; draft .5 live review; runtime pacing; local secret/history scan; production audit zero. Code/hosting committed locally as `4576bcf` / `36b11ff`. User chose local-only review and confirmation-pending production estimates | [.agent/verification/2026-10-22-release-preparation.md](.agent/verification/2026-10-22-release-preparation.md) |
+| 2026-10-21 hardening: global abuse limit counts failures, JWT signature regression, normalized redirect escape fixed in both portals. Payout facts separate the earlier passed deadline from the next scheduled one. Production audit zero; development audit has 5 high entries from one braces advisory | [.agent/verification/2026-10-21-hardening-ai-followup.md](.agent/verification/2026-10-21-hardening-ai-followup.md) |
+| 2026-10-21 approved live evaluation: triage 36/36 category and priority, 3/3 injections; final draft prompt .4 scores 48/49 checks, 7/8 cases, no amount/date warnings. Missing production ETA and manual findings (unsupported finance-contact claim, missed apologies) remain open. Final full check and 433 offline tests pass | [.agent/verification/2026-10-21-live-ai-followup.md](.agent/verification/2026-10-21-live-ai-followup.md) |
 | Assignment PDF, sample JSON and blueprint bundle v2 were read in full | Session 2026-10-16; see [SOURCE_REGISTER.md](SOURCE_REGISTER.md) |
 | Sample data: 10 authors, 18 books; for every book, copies × royalty-per-copy = earned and paid + pending = earned | Python check run 2026-10-16 ([.agent/verification/2026-10-16-phase0.md](.agent/verification/2026-10-16-phase0.md)) |
 | `supabase/seed/bookleaf_sample_data.json` is byte-identical to the provided file | `cmp` run 2026-10-16 (same record) |
@@ -57,7 +60,7 @@
 
 ## Not done / not verified
 
-- No deployment. Author follow-up messages are deferred (X-2). AI-6 follow-ups (prompt facts-reading rules for triage, tighter royalty drafts, stage durations in the KB, triage pacing on the free tier) are recorded, not done.
+- No deployment. Author follow-up messages remain deferred (X-2). Current draft-policy guards target observed errors but do not prove semantic correctness; admins still review every reply. Authoritative stage durations (AI-9) are deferred because the user confirmed they are unavailable. Runtime pacing is implemented; the latest live draft run exercised both Gemini and Groq.
 - Signed-in browser checks not yet run: AE-01, AE-06, the conflict notice with two admins, the full viewport matrix, 200% zoom, keyboard-only and screen reader (see the ui-checks record). Frontend component tests (Testing Library) and end-to-end tests (Playwright) are not installed; the author logic tests run with the root-hoisted Vitest, which `author-frontend/package.json` doesn't declare yet.
 - Rate limits are in-memory per instance (A-15); the database trigger is the cross-instance cap.
 - Mermaid diagrams in the docs have not been rendered locally (no renderer installed); they target GitHub's renderer.
@@ -71,6 +74,8 @@
 | B-02 | ~~Supabase project credentials~~ | Resolved 2026-10-17 (DB-1) | n/a |
 | B-04 | ~~Migration route~~ | Resolved 2026-10-17: SQL Editor by the user, verified with `npm run check:db` (D-021) | n/a |
 | B-03 | ~~LLM provider confirmation + key~~ | Resolved 2026-10-18: Gemini + Groq keys provided; D-028 | n/a |
+| B-05 | BookLeaf and hosting dashboards are signed out | Remaining signed-in browser QA and DEP-1/2 | User signs in directly in the open tabs; never paste credentials into chat |
+| B-06 | Development-only braces advisory has no listed patch; separate human security review outstanding | Release acceptance | Maintainer reviews documented exposure and disposition. User selected local-only review; no source sent to Claude |
 
 ## Open questions
 
@@ -83,7 +88,8 @@
 | Q-05 | May the live demo be pre-loaded with a handful of demo tickets submitted through the real API? | An empty queue demos poorly; must not be confused with the provided dataset | Don't seed tickets unless approved |
 | Q-06 | Confirm hosting: Vercel (two frontends) + Render (backend) + Supabase cloud | Accounts and credentials | Proposed default |
 | Q-07 | Collaborator email from BookLeaf | Repository access for evaluators | Add when provided |
+| Q-08 | Approved production durations / affected book's completion estimate | Answered: user says unavailable; keep estimates awaiting production confirmation | Missing estimate is explicit; AI-9 data enrichment deferred, original rubric remains failing |
 
 ## Next step
 
-Fast-forward `main` to `feature/ui-check-fixes` (needs approval). Then the AI prompt follow-up (wrong overdue quarter, triage facts rules, royalty drafts; live re-run needs approval), hardening and deployment.
+Finish signed-in browser QA after the user signs in, obtain human disposition of the local security record, then publish/deploy the reviewed release using the prepared configurations. Fill in real demo URLs and intended demo credentials only after hosting is verified. Do not invent production estimates or treat the local-only review as an independent Claude/human review.

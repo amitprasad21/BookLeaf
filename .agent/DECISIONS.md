@@ -5,6 +5,10 @@
 
 | ID | Decision | Status | Date |
 |---|---|---|---|
+| D-037 | Repair-enforced draft policies and configurable provider/triage pacing | implemented and verified | 2026-10-22 |
+| D-038 | Production estimates await confirmation; source review stays local; development advisory remains open | user-directed scope; release review pending | 2026-10-22 |
+| D-035 | Hardening: all-route request ceiling, failed-auth and health IP limits, asymmetric JWT prefilter with signature verification retained, same-origin parsed login redirects | accepted | 2026-10-21 |
+| D-036 | AI facts identify the passed payout reference period separately from the next scheduled deadline; deadline day stays inclusive; prompts preserve uncertainty and the eval set covers the reported BK011 error | accepted; live review limitations recorded | 2026-10-21 |
 | D-001 | Two frontend apps + one backend in an npm-workspaces monorepo | accepted | 2026-10-16 |
 | D-002 | Supabase Postgres + Supabase Auth | accepted | 2026-10-16 |
 | D-003 | Backend: Express 5 + TypeScript + zod | proposed | 2026-10-16 |
@@ -374,4 +378,35 @@
   - Triage meets every target: 36/36 category, 34/36 priority, 0 schema failures, 3/3 injections.
   - Drafts pass 34/38 checks, with no fact warnings.
   - The full run also showed that a 2-second-paced burst exhausts both free per-minute quotas. Seven cases had to be re-run at an 8-second pace.
-- **Follow-ups (not done):** facts-reading rules in the triage prompt; tighter royalty-draft instructions (45-day window, next payout date, bank details, pending amount); stage durations in the KB; pacing the triage queue, or the paid tier for the deployed demo. Each prompt change bumps its version and needs a live re-run (approval).
+- **Follow-ups at the 2026-10-20 checkpoint:** facts-reading rules in the triage prompt; tighter royalty-draft instructions (45-day window, next payout date, bank details, pending amount); stage durations in the KB; pacing the triage queue, or the paid tier for the deployed demo. D-036 records the subsequent prompt changes and live results; current remaining work is tracked as AI-7..9. Each prompt change bumps its version and needs a live re-run (approval).
+
+### D-035: Hardening request and redirect boundaries
+
+- **Context:** Existing work on `feature/hardening`, authorised for completion on 2026-10-21.
+- **Choice:** Parse login return paths as URLs, require the same origin and reject normalized double-slash pathnames before passing the result to the router. A dot-segment regression demonstrated the latter issue before the fix.
+- **API:** Global 300 requests / 5 min per verified user counts failures. Existing per-route quotas still exclude failures. Failed authentication has a 50 / 5 min per-IP ceiling and health has 60 / min per-IP; deployed proxy trust needs confirmation.
+- **Auth:** Reject symmetric or missing-key-id JWT headers locally before Supabase's legacy verification fallback. The header alone grants no access; signature/expiry/profile checks remain. A real offline ES256 signing test covers tampered subjects and the successful path.
+- **Alternative:** A single parsing pass still allowed a normalized `//host` to be reinterpreted by the router; returning that value was rejected. Counting only successful global requests left repeated forbidden requests uncapped.
+- **Evidence:** [2026-10-21 verification](verification/2026-10-21-hardening-ai-followup.md). In-memory limits remain a documented single-instance constraint.
+
+### D-036: Separate overdue reference periods from upcoming payouts
+
+- **Context:** The browser run's BK011 draft called July–September 2026 overdue before its 14 November deadline.
+- **Choice:** Supply `possiblyOverduePeriod` (reference quarter and strictly passed deadline) separately from `nextPayoutDueBy` in both triage and draft facts. Keep the deadline day inclusive. At this checkpoint, prompts `triage-2026-10-21.1` and `draft-2026-10-21.4` explicitly distinguish the periods and require uncertainty about how a total balance maps to quarters. D-037 records the subsequent draft .5 repair guards and stricter planned-action policy.
+- **Other prompt corrections:** Missing-payment replies include the known amount, 45-day policy, next scheduled date and confirmation that bank details are linked; informational distribution questions are not outages. Stage durations are not invented.
+- **Alternative:** Merely adding another generic warning to the prompt would still leave the earlier quarter unstated. Parsing every possible natural-language overdue claim with regex was rejected as unreliable; regression scoring is explicitly only a first pass.
+- **Evidence:** Date-boundary/facts/guard regressions and an eighth draft evaluation case. Final full checks pass (367 backend tests, plus 66 frontend logic tests). Approved live triage scores 36/36 category and priority; drafts score 48/49 checks. Manual review still found an unsupported finance-contact claim and missed apologies; the production ETA remains missing. These are open quality findings, not excused by the score. See [live evidence](verification/2026-10-21-live-ai-followup.md).
+
+### D-037: Enforce observed draft policies and pace provider requests
+
+- **Context:** The user asked to complete the remaining release work after approving implementation and live AI evaluations. Prompt-only changes still produced unsupported completed actions and missing apologies; the runtime queue did not use the eval runner's pacing.
+- **Choice:** Draft .5 always describes operational work as planned. Server-side policy guards require a repair for known completed-action wording, overdue replies without an apology/period confirmation, a known total-balance quarter attribution pattern and production replies missing an estimate request. Repeated failure returns manual mode without storing the draft. Amount/date warnings remain advisory.
+- **Pacing:** `AI_REQUEST_MIN_INTERVAL_MS=8000` spaces triage job starts and all HTTP starts through one shared gate per provider instance. Repairs/retries share that gate. Zero explicitly disables it. No key cycling or quota bypass is introduced.
+- **Tradeoff:** queued time consumes the request timeout; throughput/latency trade off against bursts. Token/minute and daily limits still require budget/breaker controls. Regex policy guards can reject benign phrasing and miss unfamiliar phrasing; humans must still review every draft.
+- **Evidence:** 375 backend + 66 frontend tests pass. Latest live draft .5: eight answers, 48/49 checks, zero fact warnings, both providers exercised, prior observed semantic/tone failures corrected in these samples. See [release evidence](verification/2026-10-22-release-preparation.md).
+
+### D-038: Missing estimates and local-only release review
+
+- **Production data:** User explicitly confirmed no approved duration/estimate is available and requested awaiting production confirmation. Keep the missing estimate explicit; defer data enrichment. Do not invent an ETA or change the original failed rubric check to claim a full pass.
+- **Review boundary:** User chose **Keep review local only** after automatic approval review rejected transmission of a source bundle to Claude. The attempted command did not execute; no source was sent. Local review proceeds, while separate human review remains outstanding.
+- **Dependency finding:** the refreshed production audit is clean; development audit has five high entries rooted in the same unpatched braces advisory. Static lint roots reduce the current exposure but are not a patch or maintainer risk acceptance. Do not apply npm's suggested major Next lint-config downgrade blindly.

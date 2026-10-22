@@ -21,6 +21,7 @@
 | Document | Owns |
 |---|---|
 | [README.md](README.md) | Entry point, setup, credentials for the demo, deliverables status |
+| [WRITEUP.md](WRITEUP.md) | One-page approach, tradeoffs, evaluation and delivery limitations |
 | [PRODUCT.md](PRODUCT.md) | Problem, users, outcomes, scope, non-goals |
 | [PRD.md](PRD.md) | Requirements, acceptance criteria, evaluation mapping |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System map, components, trust boundaries, topology |

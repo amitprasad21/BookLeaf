@@ -8,6 +8,7 @@
 2. Each API request carries `Authorization: Bearer <access_token>`.
 3. `authenticate` middleware ([backend/src/middleware/authenticate.ts](../backend/src/middleware/authenticate.ts)), mounted on every `/api/v1` route except `/health`. Unknown paths therefore answer 401 to anonymous callers:
    - Rejects a missing header, a non-`Bearer` scheme, anything not shaped like a JWT (three base64url segments), or a token over 4 KB → 401, without any network call.
+   - Before `getClaims`, rejects headers without an ES256/RS256 algorithm and nonempty key id, avoiding the legacy symmetric-token network fallback (D-035). This header check grants no access: signature/expiry verification and the profile lookup still follow. An offline signed-token test confirms a modified subject cannot reach the profile lookup.
    - Verifies the token with **`supabase.auth.getClaims(token)`** ([backend/src/auth/supabase-verifier.ts](../backend/src/auth/supabase-verifier.ts), D-022). The project signs tokens with **ES256** (asymmetric), so verification is local against the cached JWKS. Expired, tampered or forged tokens → 401. The `role` claim must be `authenticated`.
    - Creates the request-scoped Supabase client with that token ([backend/src/db/user-client.ts](../backend/src/db/user-client.ts)).
    - Loads the profile **and** author summary in one RLS-scoped query (`profiles` + embedded `authors`). No profile → 403. Supabase unreachable → 500 (generic body, details in the log).

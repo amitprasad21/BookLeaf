@@ -199,6 +199,8 @@ Tone guidelines are not a retrievable section. They are part of the static draft
 | `payout.lastClosedQuarter` | Most recent calendar quarter that has ended, e.g. "July–September 2026" |
 | `payout.lastClosedQuarterDueBy` | Quarter end + 45 days (Jul–Sep → 14 Nov; Oct–Dec → 14 Feb; Jan–Mar → 15 May; Apr–Jun → 14 Aug) |
 | `payout.nextQuarterEnd` / `nextQuarterDueBy` | Same rule, for the current quarter |
+| `payout.nextPayoutDueBy` | Earliest payout deadline that has not passed, including the deadline day itself; use this for the next scheduled payout, not the overdue period |
+| `payout.possiblyOverduePeriod` | When `paymentPossiblyOverdue` is true, `{ quarter, dueBy }` identifies the latest quarter whose deadline is strictly before today. Otherwise null. This is the reference period for the heuristic, not proof of which quarter earned the outstanding balance |
 | `payout.pendingBelowThreshold` | `0 < royaltyPending < 1000` → will roll over |
 | `payout.paymentPossiblyOverdue` | `royaltyPending ≥ 1000` **and** the most recent payout due date has passed **and** the last payout (or publication, if never paid) is before the end of the quarter that due date covers |
 | `production` | For unpublished books: current stage, its 1-based index of 9, next stage, and whether it is a known delay point (Cover Design, Proofreading) |
@@ -206,6 +208,10 @@ Tone guidelines are not a retrievable section. They are part of the static draft
 **Worked example (BK016, AUTH009, today 2026-10-16):** pending ₹850 → `pendingBelowThreshold: true`. The draft explains the ₹1,000 minimum and the rollover, and gives the next quarter's due date (14 Feb 2027) rather than promising a payment.
 
 **Data caveat:** the sample dataset's latest payout is 2025-12-01. Measured from a 2026 date, most pending balances qualify as `paymentPossiblyOverdue`, so drafts will acknowledge them as overdue. This is a correct reading of the data, but the admin must verify before sending. A configurable business "as-of date" for demos is open question Q-03 ([PROJECT_STATE.md](PROJECT_STATE.md)).
+
+**Current prompt versions (verified 2026-10-22):** `triage-2026-10-21.1` and `draft-2026-10-21.5`. Drafts require exact supplied dates, separate total balances from quarterly references, answer royalty-amount questions with a breakdown offer, and describe operational work as future next steps for an admin to confirm. The eight-case set remains `draft-cases-2026-10-21.3`. Approved live results: triage 36/36 category and priority; latest drafts 48/49 checks, eight answers and no amount/date warnings, using both Gemini and Groq. Manual inspection found the previous completed-action claim and missed apologies corrected in these samples. Production estimates remain unavailable; the user accepted asking production to confirm. The original timeline rubric remains failed, not silently waived or rescored. See [release verification](.agent/verification/2026-10-22-release-preparation.md); admin review remains required. Earlier results above describe historical versions.
+
+The overdue reference and the next scheduled payout must remain distinct. On 2026-10-21 an overdue reference is April–June 2026 (due 14 August), while July–September 2026 is not due until 14 November. A deadline is not overdue on the deadline day. Prompts must retain the uncertainty of the heuristic, ask finance to confirm, and never assign the entire pending balance to a specific quarter. Missing-payment drafts state the quarterly/45-day policy, the known pending balance and next scheduled date, and ask the author to confirm that bank details are linked without requesting account details in the ticket. Informational distribution questions and new listings within the normal window are not evidence of an unavailable live listing.
 
 ## 9. Draft call
 
@@ -275,7 +281,10 @@ DraftResult = {
 1. Schema validation (zod) and `kb_sections_used ⊆ provided`.
 2. **Placeholder guard:** reject `[…]`-style placeholders (`[insert`, `[date]`, `{{`) and empty greetings.
 3. **Fact guard:** extract every ₹ amount and calendar date in `reply` and compare them with the values in `TicketFacts` and the KB (thresholds, day counts). Mismatches become `factWarnings` shown above the editor. They don't block the draft; they focus the admin's review.
-4. On failure of 1–2: one repair attempt with the validation error appended. Then `AI_UNAVAILABLE (invalid_output)` and manual mode.
+4. **Draft-policy guard:** reject known completed-action claims; overdue royalty replies must apologise and list the affected period for finance confirmation. Reject a known total-balance-to-quarter attribution pattern. Production-category replies must list the missing completion estimate. These conservative patterns target observed failures, not every possible semantic error.
+5. On schema, shape or policy failure: one repair attempt with the validation error appended. A repeated failure returns `AI_UNAVAILABLE (invalid_output)` without persisting/auditing a generated draft; manual reply remains available. Amount/date warnings remain advisory.
+
+**Runtime pacing (AI-8):** `AI_REQUEST_MIN_INTERVAL_MS` defaults to 8000 (0 disables; maximum 30000). One gate per provider instance spaces outbound calls across triage, drafts, repairs and retries; cancelled waiting calls are not sent. The triage queue also spaces job starts, preserves deduplication and leaves queued jobs to the sweeper on shutdown. Pacing is process-local and waiting consumes the request timeout. It reduces bursts, but provider token/day quotas still require budget, breaker and manual fallback controls. In the latest live draft run mean reported provider-call latency was 17.93 s, including pacing and one timed-out call; a complete draft may involve multiple calls. Do not reuse the earlier approximately two-second latency as a current service promise.
 
 **Reuse and regeneration:**
 

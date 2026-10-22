@@ -16,7 +16,7 @@
 
 **SETUP-2 installed packages** (approved 2026-10-16; exact pins, newest release ≥ 14 days old, D-018). The versions are listed in [.agent/skills-and-tools.md](.agent/skills-and-tools.md).
 SETUP-3 added the root dev tools (ESLint, Prettier, Redocly CLI) under the same policy.
-Still to add, each with approval: `@anthropic-ai/sdk` (AI-2) and `@testing-library/react` (FE tasks).
+Rendered component/end-to-end tooling is still outstanding (Testing Library / Playwright; installation needs approval). The implemented Gemini/Groq REST adapters do not need an Anthropic SDK.
 
 ## Phase 1: Data and auth
 
@@ -38,7 +38,7 @@ Still to add, each with approval: `@anthropic-ai/sdk` (AI-2) and `@testing-libra
 | API-5 | Admin queue: filters, urgency sort, paging, summary counts, SLA state | API-4 | done ([.agent/verification/2026-10-18-api5.md](.agent/verification/2026-10-18-api5.md)) | ADMIN-01..03, ADMIN-14 |
 | API-6 | Admin detail + `PATCH`: transitions, overrides, self-assign, optimistic lock, audit events | API-5 | done ([.agent/verification/2026-10-18-api6.md](.agent/verification/2026-10-18-api6.md)) | ADMIN-05/07/11/13/15/16/17 |
 | API-7 | Admin replies (`/messages`) and internal notes; first-response tracking | API-6 | done ([.agent/verification/2026-10-18-api7.md](.agent/verification/2026-10-18-api7.md)) | ADMIN-09/10/12 |
-| API-8 | SSE event hub + `/events`; scoped delivery | API-4 | done ([.agent/verification/2026-10-20-api8.md](.agent/verification/2026-10-20-api8.md)); portals live, browser check pending | AUTHOR-09 |
+| API-8 | SSE event hub + `/events`; scoped delivery | API-4 | done ([.agent/verification/2026-10-20-api8.md](.agent/verification/2026-10-20-api8.md)); portals live; signed-in browser delivery checked 2026-10-20 | AUTHOR-09 |
 | FE-1 | `packages/ui`: tokens + primitives ([.front/COMPONENTS.md](.front/COMPONENTS.md)) | SETUP-2 | done: author set (D-031) plus the console set (D-032) built and used by both portals ([.agent/verification/2026-10-19-fe1-author.md](.agent/verification/2026-10-19-fe1-author.md), [.agent/verification/2026-10-19-admin-portal.md](.agent/verification/2026-10-19-admin-portal.md)); rendered component tests wait for Testing Library | NFR-03 |
 | FE-A1 | Author sign-in, session handling, portal-role check | API-2, FE-1 | done: signed-in browser checks with live updates ([.agent/verification/2026-10-20-ui-checks.md](.agent/verification/2026-10-20-ui-checks.md)) | AUTH-01/05 |
 | FE-A2 | My Books | API-3, FE-A1 | done: signed-in browser checks with live updates ([.agent/verification/2026-10-20-ui-checks.md](.agent/verification/2026-10-20-ui-checks.md)) | AUTHOR-01..03 |
@@ -61,6 +61,9 @@ Still to add, each with approval: `@anthropic-ai/sdk` (AI-2) and `@testing-libra
 | AI-4 | Draft: KB sections, facts builder, prompt, validation, fact guard, context-hash reuse, `/draft` | AI-2, API-3 | done ([.agent/verification/2026-10-19-ai4.md](.agent/verification/2026-10-19-ai4.md)) | ADMIN-08, AI-01/07/09 |
 | AI-5 | Admin UI: suggestion badges with source, low-confidence flag, draft panel, regenerate, warnings, manual-mode states | AI-3, AI-4, FE-M3 | done: signed-in browser checks with live updates ([.agent/verification/2026-10-20-ui-checks.md](.agent/verification/2026-10-20-ui-checks.md)) | ADMIN-08..10 |
 | AI-6 | Golden sets + eval runner; record results (live run needs approval: it costs money) | AI-3, AI-4 | done ([.agent/verification/2026-10-20-ai6.md](.agent/verification/2026-10-20-ai6.md)): live triage 100% category, 94.4% priority, 0 schema failures, 3/3 injections; drafts 34/38 checks | AI-08 |
+| AI-7 | Follow up AI-6 findings: explicit overdue period, missing-payment details, triage facts rules; re-evaluate | AI-6 | done: draft .5 adds repair-enforced policy checks; the latest eight live answers correct the observed completed-action and missed-apology issues, with 48/49 checks and no fact warnings. Tracked timeline exception is AI-9; human draft review still required ([evidence](.agent/verification/2026-10-22-release-preparation.md)) | AI-01/08/09 |
+| AI-8 | Pace the runtime triage queue for configured provider limits without bypassing quotas | AI-3 | done: configurable eight-second queue starts and shared per-provider HTTP pacing include repairs/retries and cancellation; offline regression tests and live Gemini/Groq run pass ([evidence](.agent/verification/2026-10-22-release-preparation.md)) | AI-05/06 |
+| AI-9 | Obtain authoritative production durations / completion estimates, add them to the KB/facts and re-evaluate the production case | BookLeaf input, AI-4 | deferred: user confirms estimates unavailable and accepts awaiting production confirmation. Missing-estimate behavior implemented/tested; original specific-timeline rubric remains failed until authoritative data exists | AI-01/09 |
 
 **Milestone M2:** tickets are triaged automatically and drafts are policy-accurate. With the provider disabled, M1 still passes.
 
@@ -68,19 +71,19 @@ Still to add, each with approval: `@anthropic-ai/sdk` (AI-2) and `@testing-libra
 
 | ID | Task | Depends on | Status | Req. IDs |
 |---|---|---|---|---|
-| SEC-1 | Security tests: anonymous admin access, cross-author ID substitution, note leakage, injection tickets, rate limits, invalid AI output | M2 | todo | AUTH-03, AI-07, NFR-05 |
-| SEC-2 | Security review checklist pass, `npm audit`, frontend bundle grep for secrets | SEC-1 | todo | AI-02, NFR-05 |
-| QA-1 | Accessibility and viewport checks; empty/loading/error states | M1 | todo | NFR-03/04/06 |
+| SEC-1 | Security tests: anonymous admin access, cross-author ID substitution, note leakage, injection tickets, rate limits, invalid AI output | M2 | done: offline security coverage and regressions pass in 367 backend tests; prior live isolation evidence retained ([verification](.agent/verification/2026-10-21-live-ai-followup.md)) | AUTH-03, AI-07, NFR-05 |
+| SEC-2 | Security review checklist pass, `npm audit`, frontend bundle grep for secrets | SEC-1 | in_progress: local review recorded and production audit clean; unpatched development advisory needs maintainer disposition. User chose local-only review; no source sent to Claude. Separate human review and deployed checks remain ([evidence](.agent/verification/2026-10-22-release-preparation.md)) | AI-02, NFR-05 |
+| QA-1 | Accessibility and viewport checks; empty/loading/error states | M1 | in_progress: built portals available; signed-in matrix, two-admin UI conflict, keyboard journey and screen reader checks still outstanding | NFR-03/04/06 |
 
 ## Phase 5: Deploy and document
 
 | ID | Task | Depends on | Status | Req. IDs |
 |---|---|---|---|---|
-| DEP-1 | Deploy backend to Render (just-in-time hosting credentials) | SEC-2 | todo | NFR-02 |
-| DEP-2 | Deploy both frontends to Vercel; lock CORS to their origins | DEP-1 | todo | NFR-02 |
+| DEP-1 | Deploy backend to Render (just-in-time hosting credentials) | SEC-2 | in_progress: Blueprint prepared with repo-root build, single instance and pacing; hosting sign-in and release review needed | NFR-02 |
+| DEP-2 | Deploy both frontends to Vercel; lock CORS to their origins | DEP-1 | in_progress: both Vercel configurations and builds verified locally; hosting sign-in and actual production origins needed | NFR-02 |
 | DEP-3 | Migrate and seed the production database; live smoke test of both journeys and the AI-down path | DEP-2 | todo | NFR-01/02 |
-| DOCS-2 | Final README: setup, architecture, AI integration, API docs link, test credentials, limitations | DEP-3 | todo | Documentation criterion |
-| DOCS-3 | One-page write-up (`WRITEUP.md`) | DOCS-2 | todo | Deliverable 4 |
+| DOCS-2 | Final README: setup, architecture, AI integration, API docs link, test credentials, limitations | DEP-3 | in_progress: setup, architecture, AI rationale, evidence and limitations updated; live URLs and intended demo credentials await deployment | Documentation criterion |
+| DOCS-3 | One-page write-up (`WRITEUP.md`) | DOCS-2 | done: [WRITEUP.md](WRITEUP.md) documents implementation, tradeoffs, evaluation and release limitations | Deliverable 4 |
 
 ## Stretch (P2)
 
