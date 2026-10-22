@@ -1,0 +1,53 @@
+# Render Blueprint for the BookLeaf API (DEP-1, .back/DEPLOYMENT.md).
+# Nothing here is a secret: every secret is "sync: false", so Render asks for
+# the value once, in its dashboard, when the Blueprint is first applied.
+services:
+  - type: web
+    name: bookleaf-api
+    runtime: node
+    plan: free
+    # Pick the region nearest the Supabase project (each request reads the
+    # caller's profile there). It can't be changed after creation.
+    region: singapore
+    branch: main
+    # Deploys only when someone presses "Manual Deploy" (C-16: no deploy without approval).
+    autoDeployTrigger: "off"
+    # npm 10 crashes on this workspace (README), so the install pins npm 11.
+    # --include=dev: NODE_ENV=production would otherwise skip TypeScript.
+    buildCommand: npx -y npm@11.6.2 ci --include=dev && npm run build:packages && npm run build -w backend
+    startCommand: npm run start -w backend
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      # Render's proxy sits in front of the app: read the client IP from
+      # X-Forwarded-For for the per-IP limits (check at DEP-3).
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      # The two exact Vercel production origins, comma-separated, no trailing slash.
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      # Bypasses RLS. Server-only; used by the system writer alone.
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      # AI (D-028, D-030): Gemini first, Groq as the fallback provider.
+      - key: AI_PRIMARY_PROVIDER
+        value: gemini
+      - key: AI_FALLBACK_PROVIDER
+        value: groq
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: AI_DAILY_TOKEN_BUDGET
+        value: "300000"
+      - key: AI_REQUEST_MIN_INTERVAL_MS
+        value: "8000"

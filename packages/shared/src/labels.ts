@@ -28,6 +28,12 @@ export const PRIORITY_LABELS: Record<TicketPriority, string> = {
 
 export const UNTRIAGED_LABEL = "Needs triage";
 
+/**
+ * Shown when a request is still waiting after 5 s: the free API host sleeps
+ * when idle and the first request wakes it (.back/DEPLOYMENT.md).
+ */
+export const SLOW_SERVER_HINT = "Waking up the server… This can take up to a minute after a quiet spell.";
+
 // ---------- Support console ----------
 
 export const AI_STATUS_LABELS: Record<AiStatus, string> = {

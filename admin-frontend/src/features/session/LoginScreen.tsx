@@ -1,6 +1,7 @@
 "use client";
 // M1. Sign in (admin/SCREENS.md): the author sign-in pattern for the support console.
-import { Button, Notice, TextField } from "@bookleaf/ui";
+import { SLOW_SERVER_HINT } from "@bookleaf/shared";
+import { Button, DelayedHint, Notice, TextField } from "@bookleaf/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { NO_ACCESS_MESSAGE, useSession } from "@/providers/SessionProvider";
@@ -90,6 +91,7 @@ export function LoginScreen() {
           <Button type="submit" variant="primary" loading={submitting} loadingLabel="Signing in…">
             Sign in
           </Button>
+          {submitting ? <DelayedHint text={SLOW_SERVER_HINT} /> : null}
         </form>
 
         <p className={styles.help}>

@@ -1,6 +1,7 @@
 "use client";
 // Frame and guard for the signed-in author routes. The guard is UX only:
 // the API checks the token and role on every request.
+import { SLOW_SERVER_HINT } from "@bookleaf/shared";
 import { AppShell, Button, ErrorState, LoadingState, SignOutIcon, type NavItem } from "@bookleaf/ui";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -52,7 +53,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
   if (session.status !== "signed_in") {
     return (
       <main id="main" className="bl-main">
-        <LoadingState label="Checking your session…" />
+        <LoadingState label="Checking your session…" slowHint={SLOW_SERVER_HINT} />
       </main>
     );
   }

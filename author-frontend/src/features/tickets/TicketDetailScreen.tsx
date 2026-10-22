@@ -4,6 +4,7 @@
 // changes are announced politely without moving focus.
 import {
   formatDateTime,
+  SLOW_SERVER_HINT,
   STATUS_LABELS,
   TicketIdParamsSchema,
   type AuthorTicketDetailDto,
@@ -96,7 +97,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   if (ticket.isPending) {
     return (
       <div className="bl-reading">
-        <LoadingState label="Loading your query…">
+        <LoadingState label="Loading your query…" slowHint={SLOW_SERVER_HINT}>
           <Skeleton width="60%" height="2rem" />
           <Skeleton width="40%" />
           <Skeleton height="8rem" />

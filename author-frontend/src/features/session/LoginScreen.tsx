@@ -1,6 +1,7 @@
 "use client";
 // A1. Sign in (author/SCREENS.md). Accounts are provisioned: no sign-up link.
-import { Button, Notice, TextField } from "@bookleaf/ui";
+import { SLOW_SERVER_HINT } from "@bookleaf/shared";
+import { Button, DelayedHint, Notice, TextField } from "@bookleaf/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { NO_ACCESS_MESSAGE, useSession } from "@/providers/SessionProvider";
@@ -90,6 +91,7 @@ export function LoginScreen() {
           <Button type="submit" variant="primary" loading={submitting} loadingLabel="Signing in…">
             Sign in
           </Button>
+          {submitting ? <DelayedHint text={SLOW_SERVER_HINT} /> : null}
         </form>
 
         <p className={styles.help}>Need access? Contact your BookLeaf publishing manager.</p>

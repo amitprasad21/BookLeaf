@@ -1,7 +1,7 @@
 "use client";
 // A2. My Books (author/SCREENS.md, author/STATES.md): royalty summary, then a
 // table from 1024 px and cards below it.
-import { formatInr, type AuthorBooksDto } from "@bookleaf/shared";
+import { formatInr, SLOW_SERVER_HINT, type AuthorBooksDto } from "@bookleaf/shared";
 import {
   buttonClassName,
   Disclosure,
@@ -64,7 +64,7 @@ export function BooksScreen() {
 
 function BooksLoading() {
   return (
-    <LoadingState label="Loading your books…">
+    <LoadingState label="Loading your books…" slowHint={SLOW_SERVER_HINT}>
       <div className={styles.skeletonFigures}>
         {[0, 1, 2].map((index) => (
           <Skeleton key={index} height="6.5rem" />

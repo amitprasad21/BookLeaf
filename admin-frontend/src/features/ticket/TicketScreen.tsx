@@ -5,6 +5,7 @@
 import {
   formatDateTime,
   formatRelative,
+  SLOW_SERVER_HINT,
   STATUS_LABELS,
   TicketIdParamsSchema,
   type AdminTicketDetailDto,
@@ -77,7 +78,7 @@ export function TicketScreen({ ticketId }: { ticketId: string }) {
   }
   if (ticket.isPending) {
     return (
-      <LoadingState label="Loading the ticket…">
+      <LoadingState label="Loading the ticket…" slowHint={SLOW_SERVER_HINT}>
         <Skeleton width="40%" />
         <Skeleton width="70%" height="2rem" />
         <Skeleton height="12rem" />

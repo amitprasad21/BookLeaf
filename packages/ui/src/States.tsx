@@ -1,6 +1,6 @@
 "use client";
 // Empty, loading and error states (COMPONENTS.md, author/STATES.md).
-import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 type HeadingLevel = 2 | 3;
 
@@ -33,19 +33,55 @@ export interface LoadingStateProps {
   label?: string;
   lines?: number;
   children?: ReactNode;
+  /** Shown if loading takes longer than `slowAfterMs`, e.g. while the API wakes up. */
+  slowHint?: string;
+  slowAfterMs?: number;
 }
 
 const LINE_WIDTHS = ["100%", "92%", "80%", "96%", "70%"];
 
-export function LoadingState({ label = "Loading…", lines = 3, children }: LoadingStateProps) {
+export function LoadingState({
+  label = "Loading…",
+  lines = 3,
+  children,
+  slowHint,
+  slowAfterMs,
+}: LoadingStateProps) {
   return (
-    <div className="bl-skeleton-stack" aria-busy="true">
-      <p className="bl-sr-only">{label}</p>
-      {children ??
-        Array.from({ length: lines }, (_, index) => (
-          <Skeleton key={index} width={LINE_WIDTHS[index % LINE_WIDTHS.length]} />
-        ))}
-    </div>
+    <>
+      <div className="bl-skeleton-stack" aria-busy="true">
+        <p className="bl-sr-only">{label}</p>
+        {children ??
+          Array.from({ length: lines }, (_, index) => (
+            <Skeleton key={index} width={LINE_WIDTHS[index % LINE_WIDTHS.length]} />
+          ))}
+      </div>
+      {slowHint ? <DelayedHint text={slowHint} afterMs={slowAfterMs} /> : null}
+    </>
+  );
+}
+
+export interface DelayedHintProps {
+  text: string;
+  /** Default 5 s (DEPLOYMENT.md: the free API host sleeps when idle). */
+  afterMs?: number;
+}
+
+/**
+ * Text that appears only after a delay. The live region is there from the
+ * start (empty), so screen readers announce the text when it arrives.
+ * Mount it while the wait is in progress; unmounting resets the timer.
+ */
+export function DelayedHint({ text, afterMs = 5000 }: DelayedHintProps) {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setShown(true), afterMs);
+    return () => clearTimeout(timer);
+  }, [afterMs]);
+  return (
+    <p role="status" className="bl-delayed-hint">
+      {shown ? text : null}
+    </p>
   );
 }
 

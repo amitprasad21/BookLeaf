@@ -9,6 +9,7 @@ import {
   formatDateTime,
   formatRelative,
   PRIORITY_LABELS,
+  SLOW_SERVER_HINT,
   STATUS_LABELS,
   TICKET_CATEGORIES,
   TICKET_STATUSES,
@@ -237,7 +238,7 @@ export function QueueScreen() {
       ) : null}
 
       {list.isPending ? (
-        <LoadingState label="Loading the queue…">
+        <LoadingState label="Loading the queue…" slowHint={SLOW_SERVER_HINT}>
           {Array.from({ length: 8 }, (_, index) => (
             <Skeleton key={index} height="3rem" />
           ))}

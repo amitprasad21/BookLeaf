@@ -5,6 +5,7 @@
 import {
   formatDateTime,
   formatRelative,
+  SLOW_SERVER_HINT,
   STATUS_LABELS,
   TICKET_STATUSES,
   type AuthorTicketSummaryDto,
@@ -106,7 +107,7 @@ export function TicketsScreen() {
       </div>
 
       {tickets.isPending ? (
-        <LoadingState label="Loading your queries…">
+        <LoadingState label="Loading your queries…" slowHint={SLOW_SERVER_HINT}>
           {[0, 1, 2].map((index) => (
             <Skeleton key={index} height="3.5rem" />
           ))}
